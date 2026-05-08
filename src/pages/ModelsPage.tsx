@@ -161,20 +161,20 @@ export function ModelsPage() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.pageTitle}>{t('system_info.models_title')}</h1>
-      <div className={styles.content}>
-        <Card
-          extra={
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => fetchModels({ forceRefresh: true })}
-              loading={modelsLoading}
-            >
-              {t('common.refresh')}
-            </Button>
-          }
+      <div className={styles.titleRow}>
+        <h1 className={styles.pageTitle}>{t('system_info.models_title')}</h1>
+        <Button
+          className={styles.titleRowAction}
+          variant="secondary"
+          size="sm"
+          onClick={() => fetchModels({ forceRefresh: true })}
+          loading={modelsLoading}
         >
+          {t('common.refresh')}
+        </Button>
+      </div>
+      <div className={styles.content}>
+        <Card>
           <p className={styles.sectionDescription}>{t('system_info.models_desc')}</p>
           {modelStatus && (
             <div className={`status-badge ${modelStatus.type}`}>{modelStatus.message}</div>
