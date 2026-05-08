@@ -10,10 +10,53 @@ A single-file Web UI (React + TypeScript) for operating and troubleshooting the 
 
 Since version 6.0.19, the Web UI ships with the main program; access it via `/management.html` on the API port once the service is running.
 
-## What this is (and isn’t)
+## What this is (and isn't)
 
 - This repository is the Web UI only. It talks to the CLI Proxy API **Management API** (`/v0/management`) to read/update config, upload credentials, and view logs.
 - It is **not** a proxy and does not forward traffic.
+
+## Custom Changes (基于上游的自定义改动)
+
+本项目基于 [router-for-me/Cli-Proxy-API-Management-Center](https://github.com/router-for-me/Cli-Proxy-API-Management-Center) 进行了自定义修改，以下为详细的改动记录：
+
+### UI/UX 改进
+
+- **新增模型列表独立页面**
+  - 将原 SystemPage 中的"可用模型列表"提取为独立的 ModelsPage
+  - 添加侧边栏菜单项"模型列表"，路径为 `/models`
+  - 添加专用图标 `IconSidebarModels`
+  - 页面宽度改为全宽，与其他页面保持一致
+
+- **菜单顺序调整**
+  - 将"OAuth 登录"菜单调整到"认证文件"之前
+  - 逻辑：先进行 OAuth 认证，才会有认证文件，更符合用户操作流程
+
+- **开关颜色优化**
+  - ToggleSwitch 组件的开启状态颜色从灰色（`--primary-color`）改为绿色（`--success-color`）
+  - 更符合用户对"开启/启用"状态的直觉认知
+
+### 国际化
+
+- **语言精简**
+  - 移除 zh-TW（繁体中文）和 ru（俄语）语言支持
+  - 仅保留 en（英语）和 zh-CN（简体中文）两种语言
+  - 简化维护复杂度，提升加载性能
+
+### 页面布局
+
+- **认证文件页面**
+  - 优化禁用状态的卡片操作，保持可见性
+  - 改进交互体验
+
+- **AI 提供商页面**
+  - 修复 OpenAI 提供商卡片溢出问题
+  - 优化显示效果
+
+### 系统信息页面
+
+- **精简页面内容**
+  - 移除"可用模型列表"模块（已独立为单独页面）
+  - 保留关于信息、版本信息、快速链接和清除登录存储功能
 
 ## Quick start
 
