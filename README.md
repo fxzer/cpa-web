@@ -11,6 +11,17 @@
 
 从6.0.19版本开始，Web UI 随主程序一起提供；服务运行后，通过 API 端口上的"/management.html"访问它。
 
+## 配对后端（fxzer / CLIProxyAPI）
+
+本管理界面中与 **监控中心**、**凭证中心**、聚合用量等页面对齐的接口，由下列 fork 提供；与上游官方发行包相比，需在服务端包含对应路由与实现。
+
+| 项 | 链接 / 说明 |
+|----|-------------|
+| **本仓库（前端）** | <https://github.com/fxzer/cliproxyapi-management.git> |
+| **后端仓库** | <https://github.com/fxzer/CLIProxyAPI> · `git clone https://github.com/fxzer/CLIProxyAPI.git` |
+| **后端改动摘要** | 见该仓库 README **「fxzer fork」**小节（位于 **Sponsor / 赞助商** 上方），含 `GET /v0/management/usage`、`GET /v0/management/auth-refresh-queue` 等。 |
+| **部署提示** | Homebrew 默认 `cliproxyapi` bottle 可能尚未包含上述路由；需使用含改动的构建（参见后端仓库内 `scripts/deploy-brew-service.sh` 或自行 `go build` 并配置与 brew 一致的 `DefaultConfigPath`）。 |
+
 ## 这是什么（以及不是什么）
 
 - 本仓库只包含 Web 管理界面本身，通过 CLI Proxy API 的 **Management API**（`/v0/management`）读取/修改配置、上传凭据与查看日志。
