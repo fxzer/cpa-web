@@ -23,6 +23,10 @@ import {
   IconSidebarQuota,
   IconSidebarSystem,
 } from '@/components/ui/icons';
+import {
+  IconSidebarCredentialCenter,
+  IconSidebarMonitoring,
+} from '@/components/layout/forkSidebarIcons';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
 import {
   useAuthStore,
@@ -38,6 +42,8 @@ import type { Theme } from '@/types';
 
 const sidebarIcons: Record<string, ReactNode> = {
   dashboard: <IconSidebarDashboard size={18} />,
+  monitoring: <IconSidebarMonitoring size={18} />,
+  credentialCenter: <IconSidebarCredentialCenter size={18} />,
   aiProviders: <IconSidebarProviders size={18} />,
   authFiles: <IconSidebarAuthFiles size={18} />,
   oauth: <IconSidebarOauth size={18} />,
@@ -388,6 +394,12 @@ export function MainLayout() {
 
   const navItems = [
     { path: '/', label: t('nav.dashboard'), icon: sidebarIcons.dashboard },
+    { path: '/monitor', label: t('nav.monitoring_center'), icon: sidebarIcons.monitoring },
+    {
+      path: '/credential-center',
+      label: t('nav.credential_center'),
+      icon: sidebarIcons.credentialCenter,
+    },
     { path: '/config', label: t('nav.config_management'), icon: sidebarIcons.config },
     { path: '/ai-providers', label: t('nav.ai_providers'), icon: sidebarIcons.aiProviders },
     { path: '/oauth', label: t('nav.oauth', { defaultValue: 'OAuth' }), icon: sidebarIcons.oauth },
@@ -396,7 +408,7 @@ export function MainLayout() {
     ...(config?.loggingToFile
       ? [{ path: '/logs', label: t('nav.logs'), icon: sidebarIcons.logs }]
       : []),
-    { path: '/models', label: t('nav.models', { defaultValue: '模型列表' }), icon: sidebarIcons.models },
+    { path: '/models', label: t('nav.models'), icon: sidebarIcons.models },
     { path: '/system', label: t('nav.system_info'), icon: sidebarIcons.system },
   ];
   const navOrder = navItems.map((item) => item.path);
@@ -450,8 +462,14 @@ export function MainLayout() {
       pathname === '/auth-files' || pathname.startsWith('/auth-files/');
     const isAiProviders = (pathname: string) =>
       pathname === '/ai-providers' || pathname.startsWith('/ai-providers/');
+    const isMonitorCredential = (pathname: string) =>
+      pathname === '/monitor' ||
+      pathname === '/credential-center' ||
+      pathname.startsWith('/monitor/') ||
+      pathname.startsWith('/credential-center/');
     if (isAuthFiles(from) && isAuthFiles(to)) return 'ios';
     if (isAiProviders(from) && isAiProviders(to)) return 'ios';
+    if (isMonitorCredential(from) && isMonitorCredential(to)) return 'ios';
     return 'vertical';
   }, []);
 

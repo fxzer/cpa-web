@@ -20,10 +20,14 @@ import { ConfigPage } from '@/pages/ConfigPage';
 import { LogsPage } from '@/pages/LogsPage';
 import { ModelsPage } from '@/pages/ModelsPage';
 import { SystemPage } from '@/pages/SystemPage';
+import { MonitoringCenterPage } from '@/pages/MonitoringCenterPage';
+import { CredentialCenterPage } from '@/pages/CredentialCenterPage';
 
 const mainRoutes = [
   { path: '/', element: <DashboardPage /> },
   { path: '/dashboard', element: <DashboardPage /> },
+  { path: '/monitor', element: <MonitoringCenterPage /> },
+  { path: '/credential-center', element: <CredentialCenterPage /> },
   { path: '/settings', element: <Navigate to="/config" replace /> },
   { path: '/api-keys', element: <Navigate to="/config" replace /> },
   { path: '/ai-providers/gemini/new', element: <AiProvidersGeminiEditPage /> },
