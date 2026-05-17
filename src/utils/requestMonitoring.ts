@@ -71,6 +71,21 @@ const shortHash = (hash: string): string => {
   return normalized.length > 16 ? `${normalized.slice(0, 12)}...` : normalized;
 };
 
+/** 凭证列主标题：优先「上游供应商 · 账户/标签」，否则用 key 指纹或 source 展示 */
+const buildCredentialHeadline = (detail: UsageDetailWithEndpoint): string => {
+  const vendor = firstText(detail.auth_provider_snapshot, detail.provider);
+  const human = firstText(detail.account_snapshot, detail.auth_label_snapshot);
+  const apiKeyHash = firstText(detail.api_key_hash);
+  const hashShort = shortHash(apiKeyHash);
+  const sourceFallback = displaySource(firstText(detail.source));
+  const keyIdentity = human || hashShort || sourceFallback;
+  const parts: string[] = [];
+  if (vendor) parts.push(vendor);
+  if (keyIdentity) parts.push(keyIdentity);
+  const joined = parts.join(' · ');
+  return joined || EMPTY_LABEL;
+};
+
 const formatTimestamp = (timestampMs: number, fallback: string): string => {
   if (!Number.isFinite(timestampMs) || timestampMs <= 0) {
     return fallback || EMPTY_LABEL;
@@ -107,7 +122,7 @@ export const buildRequestMonitoringRows = (usagePayload: unknown): RequestMonito
       const authIndex = normalizeAuthIndex(detail.auth_index) ?? '';
       const apiKeyHash = firstText(detail.api_key_hash);
       const source = displaySource(firstText(detail.source));
-      const account = firstText(detail.account_snapshot, detail.auth_label_snapshot, source);
+      const account = buildCredentialHeadline(detail);
       const latencyMs =
         typeof detail.latency_ms === 'number' && Number.isFinite(detail.latency_ms)
           ? detail.latency_ms

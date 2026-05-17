@@ -77,6 +77,20 @@ const formatTokenParts = (row: RequestMonitoringRow): string => {
   return parts.join(' / ');
 };
 
+/** 凭证列第二行：apikey #<authIndex>-<hash>，单行不换行 */
+const formatCredentialKeyLine = (row: RequestMonitoringRow): string => {
+  const type = row.authType && row.authType !== '-' ? row.authType : '';
+  const idx = row.authIndex && row.authIndex !== '-' ? row.authIndex : '';
+  const hash = row.apiKeyHashShort && row.apiKeyHashShort !== '-' ? row.apiKeyHashShort : '';
+  let tail = '';
+  if (idx && hash) tail = `#${idx}-${hash}`;
+  else if (idx) tail = `#${idx}`;
+  else if (hash) tail = hash;
+  else tail = '-';
+  if (type) return `${type} ${tail}`;
+  return tail;
+};
+
 const buildSelectOptions = (label: string, values: readonly string[]) => [
   { value: '', label },
   ...values.map((value) => ({ value, label: value })),
@@ -617,21 +631,18 @@ export function RequestMonitoringPage() {
                       </div>
                       <div className={styles.secondaryText}>{row.endpoint}</div>
                     </td>
-                    <td>
+                    <td className={styles.credentialTd}>
                       <div className={styles.primaryText}>{row.account}</div>
-                      <div className={styles.credentialMeta}>
-                        <span>{row.authType}</span>
-                        <span>#{row.authIndex}</span>
-                        <span>{row.authFile}</span>
+                      <div className={styles.credentialKeyLine} title={formatCredentialKeyLine(row)}>
+                        {formatCredentialKeyLine(row)}
                       </div>
-                      <div className={styles.hashText}>{row.apiKeyHashShort}</div>
                     </td>
                     <td>
-                      <div className={styles.primaryText}>{formatCompactNumber(row.totalTokens)}</div>
-                      <div className={styles.secondaryText}>{formatTokenParts(row)}</div>
-                      <div className={styles.secondaryText}>
+                      <div className={styles.primaryText}>
+                        {formatCompactNumber(row.totalTokens)} /{' '}
                         {formatDurationMs(row.latencyMs, { invalidText: '-' })}
                       </div>
+                      <div className={styles.secondaryText}>{formatTokenParts(row)}</div>
                     </td>
                     <td>
                       <div className={styles.requestIdText}>{row.requestId || '-'}</div>
