@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -16,6 +16,7 @@ import { buildHeaderObject, hasHeader } from '@/utils/headers';
 import { buildApiKeyEntry, buildOpenAIChatCompletionsEndpoint } from '@/components/providers/utils';
 import type { OpenAIEditOutletContext } from './AiProvidersOpenAIEditLayout';
 import type { KeyTestStatus } from '@/stores/useOpenAIEditDraftStore';
+import { OpenAIBatchModelTestModal, type OpenAIBatchModelTestRowResult } from './OpenAIBatchModelTestModal';
 import styles from './AiProvidersPage.module.scss';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
 
@@ -95,7 +96,6 @@ function StatusIcon({ status }: { status: KeyTestStatus['status'] }) {
 
 export function AiProvidersOpenAIEditPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { showNotification } = useNotificationStore();
   const {
     hasIndexParam,
@@ -118,6 +118,7 @@ export function AiProvidersOpenAIEditPage() {
     availableModels,
     handleBack,
     handleSave,
+    requestOpenModelDiscovery,
   } = useOutletContext<OpenAIEditOutletContext>();
 
   const title = hasIndexParam
@@ -126,6 +127,11 @@ export function AiProvidersOpenAIEditPage() {
 
   const swipeRef = useEdgeSwipeBack({ onBack: handleBack });
   const [isTestingKeys, setIsTestingKeys] = useState(false);
+  const [batchTestModalOpen, setBatchTestModalOpen] = useState(false);
+  const [batchTestKeyIndex, setBatchTestKeyIndex] = useState<number | null>(null);
+  const [batchModelTestByKey, setBatchModelTestByKey] = useState<
+    Record<number, Record<string, OpenAIBatchModelTestRowResult>>
+  >({});
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -173,6 +179,7 @@ export function AiProvidersOpenAIEditPage() {
     resetDraftKeyTestStatuses(form.apiKeyEntries.length);
     setTestStatus('idle');
     setTestMessage('');
+    setBatchModelTestByKey({});
   }, [
     connectivityConfigSignature,
     form.apiKeyEntries.length,
@@ -180,6 +187,98 @@ export function AiProvidersOpenAIEditPage() {
     setTestStatus,
     setTestMessage,
   ]);
+
+  const apiKeysSignature = useMemo(
+    () => form.apiKeyEntries.map((e) => `${e.apiKey ?? ''}|${e.proxyUrl ?? ''}`).join(';'),
+    [form.apiKeyEntries]
+  );
+
+  useEffect(() => {
+    setBatchModelTestByKey({});
+  }, [apiKeysSignature]);
+
+  const handleBatchTestComplete = useCallback(
+    ({
+      keyIndex: ki,
+      results,
+    }: {
+      keyIndex: number;
+      results: Record<string, OpenAIBatchModelTestRowResult>;
+    }) => {
+      setBatchModelTestByKey((prev) => ({
+        ...prev,
+        [ki]: { ...(prev[ki] ?? {}), ...results },
+      }));
+      showNotification(
+        t('ai_providers.openai_batch_model_test_done', { count: Object.keys(results).length }),
+        'success'
+      );
+    },
+    [showNotification, t]
+  );
+
+  const openBatchModelTest = useCallback(
+    (keyIdx: number) => {
+      if (!form.baseUrl.trim()) {
+        showNotification(t('ai_providers.openai_models_fetch_invalid_url'), 'error');
+        return;
+      }
+      if (!form.apiKeyEntries[keyIdx]?.apiKey?.trim()) {
+        showNotification(t('notification.openai_test_key_required'), 'error');
+        return;
+      }
+      setBatchTestKeyIndex(keyIdx);
+      setBatchTestModalOpen(true);
+    },
+    [form.apiKeyEntries, form.baseUrl, showNotification, t]
+  );
+
+  const renderBatchModelRowStatus = useCallback(
+    (rowModelName: string) => {
+      const n = rowModelName.trim();
+      if (!n) return null;
+      const lines: string[] = [];
+      let any = false;
+      let allOk = true;
+      let firstFailCode: number | undefined;
+      for (let ki = 0; ki < form.apiKeyEntries.length; ki += 1) {
+        const r = batchModelTestByKey[ki]?.[n];
+        if (!r) continue;
+        any = true;
+        if (!r.success) {
+          allOk = false;
+          if (r.statusCode != null && firstFailCode === undefined) {
+            firstFailCode = r.statusCode;
+          }
+        }
+        lines.push(
+          t('ai_providers.openai_batch_model_tooltip_line', {
+            keyIndex: ki + 1,
+            status: r.success ? t('ai_providers.openai_batch_status_ok') : t('ai_providers.openai_batch_status_fail'),
+            code: r.statusCode != null ? ` HTTP ${r.statusCode}` : '',
+            message: r.message ? ` ${r.message}` : '',
+          })
+        );
+      }
+      if (!any) return null;
+      const tagText = allOk
+        ? t('ai_providers.openai_batch_model_tag_ok')
+        : firstFailCode != null
+          ? `${t('ai_providers.openai_batch_model_tag_fail')} ${firstFailCode}`
+          : t('ai_providers.openai_batch_model_tag_fail');
+      return (
+        <div className={styles.modelBatchStatusRow}>
+          <span
+            className={`${styles.modelBatchTag} ${allOk ? styles.modelBatchTagOk : styles.modelBatchTagErr}`}
+            title={lines.join('\n')}
+          >
+            {tagText}
+          </span>
+        </div>
+      );
+    },
+    [batchModelTestByKey, form.apiKeyEntries.length, t]
+  );
 
   // Test a single key by index
   const runSingleKeyTest = useCallback(
@@ -364,7 +463,7 @@ export function AiProvidersOpenAIEditPage() {
       showNotification(t('ai_providers.openai_models_fetch_invalid_url'), 'error');
       return;
     }
-    navigate('models');
+    requestOpenModelDiscovery();
   };
 
   const renderKeyEntries = (entries: ApiKeyEntry[]) => {
@@ -470,6 +569,16 @@ export function AiProvidersOpenAIEditPage() {
                   <Button
                     variant="secondary"
                     size="sm"
+                    onClick={() => openBatchModelTest(index)}
+                    disabled={
+                      saving || disableControls || isTestingKeys || !entry.apiKey?.trim() || !form.baseUrl.trim()
+                    }
+                  >
+                    {t('ai_providers.openai_batch_model_test_btn')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => void testSingleKey(index)}
                     disabled={saving || disableControls || isTestingKeys || !canTestKey}
                     loading={keyStatus === 'loading'}
@@ -477,10 +586,11 @@ export function AiProvidersOpenAIEditPage() {
                     {t('ai_providers.openai_test_single_action')}
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
                     onClick={() => removeEntry(index)}
                     disabled={saving || disableControls || isTestingKeys || list.length <= 1}
+                    className={styles.keyTableDeleteButton}
                   >
                     {t('common.delete')}
                   </Button>
@@ -527,47 +637,50 @@ export function AiProvidersOpenAIEditPage() {
       isLoading={loading}
       loadingLabel={t('common.loading')}
     >
+      <>
       <Card>
         {invalidIndexParam || invalidIndex ? (
           <div className={styles.sectionHint}>{t('common.invalid_provider_index')}</div>
         ) : (
           <div className={styles.openaiEditForm}>
-            <Input
-              label={t('ai_providers.openai_add_modal_name_label')}
-              value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              disabled={saving || disableControls || isTestingKeys}
-            />
-            <Input
-              label={t('ai_providers.priority_label')}
-              hint={t('ai_providers.priority_hint')}
-              type="number"
-              step={1}
-              value={form.priority ?? ''}
-              onChange={(e) => {
-                const raw = e.target.value;
-                const parsed = raw.trim() === '' ? undefined : Number(raw);
-                setForm((prev) => ({
-                  ...prev,
-                  priority: parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
-                }));
-              }}
-              disabled={saving || disableControls || isTestingKeys}
-            />
-            <Input
-              label={t('ai_providers.prefix_label')}
-              placeholder={t('ai_providers.prefix_placeholder')}
-              value={form.prefix ?? ''}
-              onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
-              hint={t('ai_providers.prefix_hint')}
-              disabled={saving || disableControls || isTestingKeys}
-            />
-            <Input
-              label={t('ai_providers.openai_add_modal_url_label')}
-              value={form.baseUrl}
-              onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
-              disabled={saving || disableControls || isTestingKeys}
-            />
+            <div className={styles.providerEditTopGrid}>
+              <Input
+                label={t('ai_providers.openai_add_modal_name_label')}
+                value={form.name}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                disabled={saving || disableControls || isTestingKeys}
+              />
+              <Input
+                label={t('ai_providers.priority_label')}
+                hint={t('ai_providers.priority_hint')}
+                type="number"
+                step={1}
+                value={form.priority ?? ''}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const parsed = raw.trim() === '' ? undefined : Number(raw);
+                  setForm((prev) => ({
+                    ...prev,
+                    priority: parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
+                  }));
+                }}
+                disabled={saving || disableControls || isTestingKeys}
+              />
+              <Input
+                label={t('ai_providers.prefix_label')}
+                placeholder={t('ai_providers.prefix_placeholder')}
+                value={form.prefix ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
+                hint={t('ai_providers.prefix_hint')}
+                disabled={saving || disableControls || isTestingKeys}
+              />
+              <Input
+                label={t('ai_providers.openai_add_modal_url_label')}
+                value={form.baseUrl}
+                onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
+                disabled={saving || disableControls || isTestingKeys}
+              />
+            </div>
 
             <HeaderInputList
               entries={form.headers}
@@ -609,6 +722,36 @@ export function AiProvidersOpenAIEditPage() {
                   >
                     {t('ai_providers.openai_models_fetch_button')}
                   </Button>
+                  <div className={styles.modelToolbarTestCluster}>
+                    <Select
+                      value={testModel}
+                      options={modelSelectOptions}
+                      onChange={(value) => {
+                        setTestModel(value);
+                        setTestStatus('idle');
+                        setTestMessage('');
+                      }}
+                      placeholder={
+                        availableModels.length
+                          ? t('ai_providers.openai_test_select_placeholder')
+                          : t('ai_providers.openai_test_select_empty')
+                      }
+                      className={styles.openaiTestSelect}
+                      ariaLabel={t('ai_providers.openai_test_title')}
+                      disabled={saving || disableControls || isTestingKeys || testStatus === 'loading' || availableModels.length === 0}
+                    />
+                    <Button
+                      variant={testStatus === 'error' ? 'danger' : 'secondary'}
+                      size="sm"
+                      onClick={() => void testAllKeys()}
+                      loading={testStatus === 'loading'}
+                      disabled={saving || disableControls || isTestingKeys || testStatus === 'loading' || !hasConfiguredModels || !hasTestableKeys}
+                      title={t('ai_providers.openai_test_all_hint')}
+                      className={styles.modelTestAllButton}
+                    >
+                      {t('ai_providers.openai_test_all_action')}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -629,45 +772,9 @@ export function AiProvidersOpenAIEditPage() {
                 removeButtonClassName={styles.modelRowRemoveButton}
                 removeButtonTitle={t('common.delete')}
                 removeButtonAriaLabel={t('common.delete')}
+                renderAfterRow={(_idx, entry) => renderBatchModelRowStatus(entry.name)}
               />
 
-              {/* 测试区域 */}
-              <div className={styles.modelTestPanel}>
-                <div className={styles.modelTestMeta}>
-                  <label className={styles.modelTestLabel}>{t('ai_providers.openai_test_title')}</label>
-                  <span className={styles.modelTestHint}>{t('ai_providers.openai_test_hint')}</span>
-                </div>
-                <div className={styles.modelTestControls}>
-                  <Select
-                    value={testModel}
-                    options={modelSelectOptions}
-                    onChange={(value) => {
-                      setTestModel(value);
-                      setTestStatus('idle');
-                      setTestMessage('');
-                    }}
-                    placeholder={
-                      availableModels.length
-                        ? t('ai_providers.openai_test_select_placeholder')
-                        : t('ai_providers.openai_test_select_empty')
-                    }
-                    className={styles.openaiTestSelect}
-                    ariaLabel={t('ai_providers.openai_test_title')}
-                    disabled={saving || disableControls || isTestingKeys || testStatus === 'loading' || availableModels.length === 0}
-                  />
-                  <Button
-                    variant={testStatus === 'error' ? 'danger' : 'secondary'}
-                    size="sm"
-                    onClick={() => void testAllKeys()}
-                    loading={testStatus === 'loading'}
-                    disabled={saving || disableControls || isTestingKeys || testStatus === 'loading' || !hasConfiguredModels || !hasTestableKeys}
-                    title={t('ai_providers.openai_test_all_hint')}
-                    className={styles.modelTestAllButton}
-                  >
-                    {t('ai_providers.openai_test_all_action')}
-                  </Button>
-                </div>
-              </div>
               {testMessage && (
                 <div
                   className={`status-badge ${
@@ -693,6 +800,20 @@ export function AiProvidersOpenAIEditPage() {
           </div>
         )}
       </Card>
+      <OpenAIBatchModelTestModal
+        open={batchTestModalOpen}
+        onClose={() => {
+          setBatchTestModalOpen(false);
+          setBatchTestKeyIndex(null);
+        }}
+        keyIndex={batchTestKeyIndex}
+        loading={loading}
+        saving={saving}
+        disableControls={disableControls}
+        form={form}
+        onBatchComplete={handleBatchTestComplete}
+      />
+      </>
     </SecondaryScreenShell>
   );
 }

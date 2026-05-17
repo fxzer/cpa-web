@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
   useAuthStore,
@@ -10,7 +9,7 @@ import {
   useConfigStore,
 } from '@/stores';
 import { apiKeysApi } from '@/services/api/apiKeys';
-import { classifyModels } from '@/utils/models';
+import { classifyModels, partitionModelsBySlash } from '@/utils/models';
 import iconGemini from '@/assets/icons/gemini.svg';
 import iconClaude from '@/assets/icons/claude.svg';
 import iconOpenaiLight from '@/assets/icons/openai-light.svg';
@@ -45,7 +44,6 @@ export function ModelsPage() {
 
   const models = useModelsStore((state) => state.models);
   const modelsLoading = useModelsStore((state) => state.loading);
-  const modelsError = useModelsStore((state) => state.error);
   const fetchModelsFromStore = useModelsStore((state) => state.fetchModels);
 
   const [modelStatus, setModelStatus] = useState<{
@@ -161,8 +159,15 @@ export function ModelsPage() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.titleRow}>
-        <h1 className={styles.pageTitle}>{t('system_info.models_title')}</h1>
+      <div className={styles.pageTitleRow}>
+        <div className={styles.titleMain}>
+          <h1 className={styles.pageTitle}>{t('nav.models')}</h1>
+          {modelStatus?.type === 'success' && (
+            <span className={`status-badge success ${styles.titleRowStatus}`}>
+              {modelStatus.message}
+            </span>
+          )}
+        </div>
         <Button
           className={styles.titleRowAction}
           variant="secondary"
@@ -174,33 +179,31 @@ export function ModelsPage() {
         </Button>
       </div>
       <div className={styles.content}>
-        <Card>
-          <p className={styles.sectionDescription}>{t('system_info.models_desc')}</p>
-          {modelStatus && (
-            <div className={`status-badge ${modelStatus.type}`}>{modelStatus.message}</div>
-          )}
-          {modelsError && <div className="error-box">{modelsError}</div>}
-          {modelsLoading ? (
-            <div className="hint">{t('common.loading')}</div>
-          ) : models.length === 0 ? (
-            <div className="hint">{t('system_info.models_empty')}</div>
-          ) : (
-            <div className="item-list">
-              {groupedModels.map((group) => {
-                const iconSrc = getIconForCategory(group.id);
-                return (
-                  <div key={group.id} className="item-row">
-                    <div className="item-meta">
-                      <div className={styles.groupTitle}>
-                        {iconSrc && <img src={iconSrc} alt="" className={styles.groupIcon} />}
-                        <span className="item-title">{group.label}</span>
-                      </div>
-                      <div className="item-subtitle">
-                        {t('system_info.models_count', { count: group.items.length })}
-                      </div>
+        {modelStatus && modelStatus.type !== 'success' && !modelsLoading && (
+          <div className={`status-badge ${modelStatus.type}`}>{modelStatus.message}</div>
+        )}
+        {modelsLoading ? (
+          <div className="hint">{t('common.loading')}</div>
+        ) : models.length > 0 ? (
+          <div className={styles.providerList}>
+            {groupedModels.map((group) => {
+              const iconSrc = getIconForCategory(group.id);
+              return (
+                <section key={group.id} className={styles.providerSection}>
+                  <div className={styles.providerHeader}>
+                    <div className={styles.groupTitle}>
+                      {iconSrc && <img src={iconSrc} alt="" className={styles.groupIcon} />}
+                      <span className={styles.providerName}>{group.label}</span>
                     </div>
-                    <div className={styles.modelTags}>
-                      {group.items.map((model) => (
+                    <div className={styles.providerCount}>
+                      {t('system_info.models_count', { count: group.items.length })}
+                    </div>
+                  </div>
+                  <div className={styles.modelTags}>
+                    {(() => {
+                      const { standalone, prefixed } = partitionModelsBySlash(group.items);
+                      const showGroupLabels = standalone.length > 0 && prefixed.length > 0;
+                      const renderTag = (model: (typeof group.items)[0]) => (
                         <span
                           key={`${model.name}-${model.alias ?? 'default'}`}
                           className={styles.modelTag}
@@ -209,14 +212,38 @@ export function ModelsPage() {
                           <span className={styles.modelName}>{model.name}</span>
                           {model.alias && <span className={styles.modelAlias}>{model.alias}</span>}
                         </span>
-                      ))}
-                    </div>
+                      );
+                      return (
+                        <>
+                          {standalone.length > 0 ? (
+                            <div className={styles.modelTagsGroup}>
+                              {showGroupLabels ? (
+                                <div className={styles.modelTagsSubLabel}>
+                                  {t('system_info.models_group_standalone')}
+                                </div>
+                              ) : null}
+                              <div className={styles.modelTagsRow}>{standalone.map(renderTag)}</div>
+                            </div>
+                          ) : null}
+                          {prefixed.length > 0 ? (
+                            <div className={styles.modelTagsGroup}>
+                              {showGroupLabels ? (
+                                <div className={styles.modelTagsSubLabel}>
+                                  {t('system_info.models_group_prefixed')}
+                                </div>
+                              ) : null}
+                              <div className={styles.modelTagsRow}>{prefixed.map(renderTag)}</div>
+                            </div>
+                          ) : null}
+                        </>
+                      );
+                    })()}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
+                </section>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -16,13 +16,13 @@
   color: var(--text-primary);
 
   &.btn-primary {
-    background-color: var(--primary-color);
+    background-color: var(--success-color);
     color: var(--primary-contrast, #fff);
-    border-color: var(--primary-color);
+    border-color: var(--success-color);
 
     &:hover {
-      background-color: var(--primary-hover);
-      border-color: var(--primary-hover);
+      background-color: color.adjust($success-color, $lightness: -5%);
+      border-color: color.adjust($success-color, $lightness: -5%);
     }
   }
 
@@ -153,7 +153,7 @@ textarea {
   gap: 6px;
   padding: 4px 10px;
   border-radius: $radius-full;
-  font-size: 13px;
+  font-size: 16px;
   border: 1px solid var(--border-color);
   margin-bottom: $spacing-md;
 
@@ -680,6 +680,13 @@ textarea {
     display: flex;
     gap: $spacing-sm;
   }
+}
+
+.provider-card-action-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
 }
 
 .error-box {

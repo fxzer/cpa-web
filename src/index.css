@@ -49,9 +49,10 @@ button {
 button:hover {
   border-color: #646cff;
 }
+/* 与侧栏/组件内 :focus-visible 样式配合；避免浏览器默认 focus 环与自定义 UI 叠在一起 */
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  outline: none;
 }
 
 @media (prefers-color-scheme: light) {

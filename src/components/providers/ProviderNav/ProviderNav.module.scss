@@ -74,7 +74,7 @@
   flex: 0 0 auto;
 
   &:hover {
-    background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+    background: color-mix(in srgb, var(--success-color) 10%, transparent);
     transform: scale(1.08);
   }
 

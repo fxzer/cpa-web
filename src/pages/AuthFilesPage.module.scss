@@ -218,7 +218,7 @@
   border-radius: 6px;
   background: color-mix(in srgb, var(--filter-color) 12%, transparent);
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   flex: 0 0 auto;
@@ -270,7 +270,7 @@
   min-width: 0;
 
   label {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-tertiary);
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -486,7 +486,7 @@
   gap: $spacing-sm;
   padding-top: $spacing-sm;
   margin-top: 2px;
-  border-top: 1px dashed color-mix(in srgb, var(--border-color) 82%, transparent);
+  border-top: 1px dashed color-mix(in srgb, var(--border-color) 88%, transparent);
 }
 
 .quotaRow {
@@ -767,7 +767,7 @@
   .healthStatusMessage {
     padding: 6px 8px;
     border-radius: 8px;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .quotaSection {
@@ -880,7 +880,7 @@
   align-items: center;
   padding: 3px 8px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1;
   border: 1px solid transparent;
@@ -920,7 +920,7 @@
 
 .stateBadgeVirtual {
   color: var(--text-secondary);
-  background: color-mix(in srgb, var(--bg-tertiary) 82%, transparent);
+  background: color-mix(in srgb, var(--bg-tertiary) 88%, transparent);
   border: 1px dashed color-mix(in srgb, var(--border-primary) 90%, transparent);
 }
 
@@ -954,7 +954,7 @@
 }
 
 .cardMetaCompact .metaValue {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .metaItem {
@@ -968,7 +968,7 @@
 }
 
 .metaLabel {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-tertiary);
   line-height: 1.2;
@@ -1027,7 +1027,7 @@
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--warning-text);
   background-color: color-mix(in srgb, var(--warning-bg) 60%, transparent);
   border: 1px solid color-mix(in srgb, var(--warning-border) 60%, transparent);
@@ -1086,7 +1086,7 @@
 }
 
 .statLabel {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1;
 }
@@ -1139,7 +1139,7 @@
 .statusPanelCompact .statusRate {
   margin-left: auto;
   padding: 5px 7px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .statusPanelLabel {
@@ -1213,7 +1213,7 @@
   border: 1px solid var(--border-secondary, #e5e7eb);
   border-radius: 10px;
   padding: 8px 10px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
   white-space: nowrap;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
@@ -1427,6 +1427,9 @@
 }
 
 .modelsActionButton:global(.btn.btn-sm) {
+  height: 32px;
+  min-height: 32px;
+  box-sizing: border-box;
   background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-secondary));
   border-color: color-mix(in srgb, var(--primary-color) 20%, var(--border-color));
 }
@@ -1476,7 +1479,7 @@
 }
 
 .statusToggleLabel {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-tertiary);
 }
@@ -1902,7 +1905,7 @@
 }
 
 .modelType {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-tertiary);
   background-color: var(--bg-tertiary);
   padding: 2px 8px;

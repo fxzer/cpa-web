@@ -84,6 +84,22 @@ export function normalizeModelList(payload: unknown, { dedupe = false } = {}): M
   });
 }
 
+/** 按模型 id（name）是否含 `/` 分区：无前缀的简短名（如 pro、mini）与带路由前缀的（如 openrouter/pro）；各区内 localeCompare 排序 */
+export function partitionModelsBySlash<T extends { name: string }>(
+  models: T[]
+): { standalone: T[]; prefixed: T[] } {
+  const cmp = (a: T, b: T) =>
+    (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
+  const standalone = models.filter((m) => !(m.name || '').includes('/')).sort(cmp);
+  const prefixed = models.filter((m) => (m.name || '').includes('/')).sort(cmp);
+  return { standalone, prefixed };
+}
+
+export function sortModelsForDisplayBySlash<T extends { name: string }>(models: T[]): T[] {
+  const { standalone, prefixed } = partitionModelsBySlash(models);
+  return [...standalone, ...prefixed];
+}
+
 export interface ModelGroup {
   id: string;
   label: string;

@@ -22,39 +22,50 @@
 
 .tabBar {
   display: flex;
-  gap: $spacing-xs;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
   margin-bottom: $spacing-lg;
-  border-bottom: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @include mobile {
+    width: 100%;
+  }
 }
 
 .tabItem {
   @include button-reset;
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
   color: var(--text-secondary);
-  background: transparent;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     color 0.15s ease,
+    background-color 0.15s ease,
     border-color 0.15s ease;
 
-  &:hover {
-    color: var(--text-primary);
-  }
+  @include pill-tab-interaction;
 
-  &:focus,
-  &:focus-visible {
-    outline: none;
-    box-shadow: none;
+  @include mobile {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    padding-inline: 10px;
   }
-}
-
-.tabActive {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
 }
 
 .content {
@@ -67,6 +78,36 @@
   @include mobile {
     gap: $spacing-md;
     min-height: auto;
+  }
+}
+
+.errorLogsCard {
+  :global(.card-header .title) {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+  }
+}
+
+.errorLogsHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
+
+  :global(.hint) {
+    flex: 1 1 12rem;
+    min-width: 0;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  > :last-child {
+    flex-shrink: 0;
   }
 }
 
@@ -98,37 +139,118 @@
   }
 }
 
-.filters {
+.logsSplitLayout {
   display: flex;
-  align-items: center;
-  gap: $spacing-md;
-  flex-wrap: wrap;
-  margin-bottom: $spacing-md;
-
-  :global(.form-group) {
-    margin: 0;
-  }
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
 
   @include mobile {
+    flex-direction: column;
+    gap: 0;
+    min-height: auto;
+  }
+}
+
+.logsFilterSidebar {
+  flex: 0 0 300px;
+  width: 300px;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-right: $spacing-lg;
+  margin-right: $spacing-lg;
+  border-right: 1px solid var(--border-color);
+
+  @include mobile {
+    flex: 0 0 auto;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    margin-right: 0;
+    margin-bottom: $spacing-md;
+    padding-bottom: $spacing-md;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+}
+
+.logsFilterSidebar .searchWrapper {
+  width: 100%;
+  max-width: none;
+  flex: none;
+  min-width: 0;
+}
+
+.logsTableColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.logsTableToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-md;
+  row-gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+  flex-shrink: 0;
+
+  @include mobile {
+    flex-direction: column;
+    align-items: stretch;
     gap: $spacing-sm;
     margin-bottom: $spacing-sm;
   }
 }
 
-.searchWrapper {
-  flex: 1;
-  min-width: 220px;
-  max-width: 420px;
-}
-
 .filterPanelHeader {
   display: flex;
   align-items: center;
-  flex: 1 1 100%;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  width: 100%;
+}
+
+.filterPanelHeaderLeft {
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .filterPanelToggle {
   white-space: nowrap;
+}
+
+.filterClearButton:global(.btn.btn-ghost) {
+  margin-left: auto;
+  color: #f04438;
+  background: rgba(240, 68, 56, 0.08);
+  border-color: rgba(240, 68, 56, 0.18);
+
+  &:hover:not(:disabled) {
+    color: #d92d20;
+    background: rgba(240, 68, 56, 0.14);
+    border-color: rgba(240, 68, 56, 0.28);
+  }
+
+  &:disabled {
+    color: rgba(240, 68, 56, 0.42);
+    background: rgba(240, 68, 56, 0.05);
+    border-color: rgba(240, 68, 56, 0.1);
+  }
 }
 
 .filterPanelButtonContent {
@@ -152,7 +274,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1 1 100%;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  align-self: stretch;
   padding: 8px 10px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -161,17 +286,19 @@
 
 .filterChipGroup {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
 }
 
 .filterChipLabel {
   font-size: 12px;
   color: var(--text-secondary);
   font-weight: 700;
-  line-height: 28px;
-  min-width: 68px;
+  line-height: 1.3;
+  min-width: 0;
 }
 
 .filterChipList {
@@ -179,7 +306,9 @@
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  flex: 1;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .filterChip {
@@ -195,14 +324,22 @@
   font-size: 12px;
   line-height: 1.3;
   cursor: pointer;
-  max-width: 280px;
+  min-width: 0;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   transition:
     border-color 0.15s ease,
     color 0.15s ease,
-    background-color 0.15s ease;
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    outline-offset: 0;
+  }
 
   &:hover:not(:disabled) {
     color: var(--text-primary);
@@ -216,9 +353,247 @@
 }
 
 .filterChipActive {
-  color: var(--primary-color);
-  border-color: rgba($primary-color, 0.45);
-  background: rgba($primary-color, 0.14);
+  color: var(--primary-contrast, #fff);
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+  box-shadow: 0 4px 10px rgba($primary-color, 0.18);
+}
+
+.filterChipActive:hover:not(:disabled) {
+  color: var(--primary-contrast, #fff);
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+}
+
+.methodFilterChip,
+.statusFilterChip {
+  font-weight: 800;
+}
+
+.methodGet {
+  color: #17b26a;
+  background: rgba(23, 178, 106, 0.1);
+  border-color: rgba(23, 178, 106, 0.28);
+
+  &.filterChip:hover:not(:disabled):not(.filterChipActive) {
+    color: #079455;
+    background: rgba(23, 178, 106, 0.16);
+    border-color: rgba(23, 178, 106, 0.48);
+  }
+
+  &.filterChipActive {
+    color: #fff;
+    background: #079455;
+    border-color: #079455;
+    box-shadow: 0 4px 10px rgba(7, 148, 85, 0.22);
+  }
+
+  &.filterChipActive:hover:not(:disabled) {
+    color: #fff;
+    background: #067647;
+    border-color: #067647;
+  }
+}
+
+.methodPost {
+  color: #ef6820;
+  background: rgba(239, 104, 32, 0.1);
+  border-color: rgba(239, 104, 32, 0.3);
+
+  &.filterChip:hover:not(:disabled):not(.filterChipActive) {
+    color: #e04f16;
+    background: rgba(239, 104, 32, 0.16);
+    border-color: rgba(239, 104, 32, 0.5);
+  }
+
+  &.filterChipActive {
+    color: #fff;
+    background: #e04f16;
+    border-color: #e04f16;
+    box-shadow: 0 4px 10px rgba(224, 79, 22, 0.24);
+  }
+
+  &.filterChipActive:hover:not(:disabled) {
+    color: #fff;
+    background: #b93815;
+    border-color: #b93815;
+  }
+}
+
+.methodPut {
+  color: #2e90fa;
+  background: rgba(46, 144, 250, 0.1);
+  border-color: rgba(46, 144, 250, 0.3);
+
+  &.filterChip:hover:not(:disabled):not(.filterChipActive) {
+    color: #1570ef;
+    background: rgba(46, 144, 250, 0.16);
+    border-color: rgba(46, 144, 250, 0.5);
+  }
+
+  &.filterChipActive {
+    color: #fff;
+    background: #1570ef;
+    border-color: #1570ef;
+    box-shadow: 0 4px 10px rgba(21, 112, 239, 0.24);
+  }
+
+  &.filterChipActive:hover:not(:disabled) {
+    color: #fff;
+    background: #175cd3;
+    border-color: #175cd3;
+  }
+}
+
+.methodPatch {
+  color: #7a5af8;
+  background: rgba(122, 90, 248, 0.1);
+  border-color: rgba(122, 90, 248, 0.3);
+
+  &.filterChip:hover:not(:disabled):not(.filterChipActive) {
+    color: #6938ef;
+    background: rgba(122, 90, 248, 0.16);
+    border-color: rgba(122, 90, 248, 0.5);
+  }
+
+  &.filterChipActive {
+    color: #fff;
+    background: #6938ef;
+    border-color: #6938ef;
+    box-shadow: 0 4px 10px rgba(105, 56, 239, 0.24);
+  }
+
+  &.filterChipActive:hover:not(:disabled) {
+    color: #fff;
+    background: #5925dc;
+    border-color: #5925dc;
+  }
+}
+
+.methodDelete {
+  color: #f04438;
+  background: rgba(240, 68, 56, 0.1);
+  border-color: rgba(240, 68, 56, 0.3);
+
+  &.filterChip:hover:not(:disabled):not(.filterChipActive) {
+    color: #d92d20;
+    background: rgba(240, 68, 56, 0.16);
+    border-color: rgba(240, 68, 56, 0.5);
+  }
+
+  &.filterChipActive {
+    color: #fff;
+    background: #d92d20;
+    border-color: #d92d20;
+    box-shadow: 0 4px 10px rgba(217, 45, 32, 0.24);
+  }
+
+  &.filterChipActive:hover:not(:disabled) {
+    color: #fff;
+    background: #b42318;
+    border-color: #b42318;
+  }
+}
+
+.methodOptions,
+.methodHead {
+  color: #667085;
+  background: rgba(102, 112, 133, 0.1);
+  border-color: rgba(102, 112, 133, 0.28);
+
+  &.filterChip:hover:not(:disabled):not(.filterChipActive) {
+    color: #475467;
+    background: rgba(102, 112, 133, 0.16);
+    border-color: rgba(102, 112, 133, 0.44);
+  }
+
+  &.filterChipActive {
+    color: #fff;
+    background: #475467;
+    border-color: #475467;
+    box-shadow: 0 4px 10px rgba(71, 84, 103, 0.22);
+  }
+
+  &.filterChipActive:hover:not(:disabled) {
+    color: #fff;
+    background: #344054;
+    border-color: #344054;
+  }
+}
+
+.statusRedirect {
+  color: #2e90fa;
+  background: rgba(46, 144, 250, 0.1);
+  border-color: rgba(46, 144, 250, 0.3);
+
+  &.filterChip:hover:not(:disabled):not(.filterChipActive) {
+    color: #1570ef;
+    background: rgba(46, 144, 250, 0.16);
+    border-color: rgba(46, 144, 250, 0.5);
+  }
+
+  &.filterChipActive {
+    color: #fff;
+    background: #1570ef;
+    border-color: #1570ef;
+    box-shadow: 0 4px 10px rgba(21, 112, 239, 0.24);
+  }
+
+  &.filterChipActive:hover:not(:disabled) {
+    color: #fff;
+    background: #175cd3;
+    border-color: #175cd3;
+  }
+}
+
+.statusClientError {
+  color: #ef6820;
+  background: rgba(239, 104, 32, 0.1);
+  border-color: rgba(239, 104, 32, 0.3);
+
+  &.filterChip:hover:not(:disabled):not(.filterChipActive) {
+    color: #e04f16;
+    background: rgba(239, 104, 32, 0.16);
+    border-color: rgba(239, 104, 32, 0.5);
+  }
+
+  &.filterChipActive {
+    color: #fff;
+    background: #e04f16;
+    border-color: #e04f16;
+    box-shadow: 0 4px 10px rgba(224, 79, 22, 0.24);
+  }
+
+  &.filterChipActive:hover:not(:disabled) {
+    color: #fff;
+    background: #b93815;
+    border-color: #b93815;
+  }
+}
+
+.statusServerError {
+  color: #f04438;
+  background: rgba(240, 68, 56, 0.1);
+  border-color: rgba(240, 68, 56, 0.3);
+
+  &.filterChip:hover:not(:disabled):not(.filterChipActive) {
+    color: #d92d20;
+    background: rgba(240, 68, 56, 0.16);
+    border-color: rgba(240, 68, 56, 0.5);
+  }
+
+  &.filterChipActive {
+    color: #fff;
+    background: #d92d20;
+    border-color: #d92d20;
+    box-shadow: 0 4px 10px rgba(217, 45, 32, 0.24);
+  }
+
+  &.filterChipActive:hover:not(:disabled) {
+    color: #fff;
+    background: #b42318;
+    border-color: #b42318;
+  }
 }
 
 .filterChipHint {
@@ -229,26 +604,25 @@
 @include mobile {
   .filterPanelHeader {
     width: 100%;
+    align-items: stretch;
+    flex-direction: column;
   }
 
+  .filterPanelHeaderLeft,
   .filterPanelToggle {
     width: 100%;
+  }
+
+  .filterClearButton {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
   }
 
   .filterPanelButtonContent {
     width: 100%;
     justify-content: space-between;
     flex-wrap: wrap;
-  }
-
-  .filterChipGroup {
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .filterChipLabel {
-    min-width: 0;
-    line-height: 1.2;
   }
 }
 
@@ -432,7 +806,7 @@
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-color);
   border-left: 3px solid transparent;
-  cursor: copy;
+  cursor: default;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
@@ -524,7 +898,7 @@
 .requestIdBadge {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
     'Courier New', monospace;
-  font-size: 11px;
+  font-size: 12px;
   color: #0891b2;
   background: rgba(8, 145, 178, 0.1);
   border-color: rgba(8, 145, 178, 0.25);
@@ -535,27 +909,46 @@
 }
 
 .statusSuccess {
-  color: var(--success-badge-text);
-  background: var(--success-badge-bg);
-  border-color: var(--success-badge-border);
+  color: #17b26a;
+  background: rgba(23, 178, 106, 0.1);
+  border-color: rgba(23, 178, 106, 0.3);
+
+  &.filterChip:hover:not(:disabled):not(.filterChipActive) {
+    color: #079455;
+    background: rgba(23, 178, 106, 0.16);
+    border-color: rgba(23, 178, 106, 0.5);
+  }
+
+  &.filterChipActive {
+    color: #fff;
+    background: #079455;
+    border-color: #079455;
+    box-shadow: 0 4px 10px rgba(7, 148, 85, 0.22);
+  }
+
+  &.filterChipActive:hover:not(:disabled) {
+    color: #fff;
+    background: #067647;
+    border-color: #067647;
+  }
 }
 
 .statusInfo {
-  color: var(--info-color);
-  background: rgba($primary-color, 0.12);
-  border-color: rgba($primary-color, 0.25);
+  color: #2e90fa;
+  background: rgba(46, 144, 250, 0.1);
+  border-color: rgba(46, 144, 250, 0.3);
 }
 
 .statusWarn {
-  color: var(--warning-text);
-  background: var(--warning-bg);
-  border-color: var(--warning-border);
+  color: #ef6820;
+  background: rgba(239, 104, 32, 0.1);
+  border-color: rgba(239, 104, 32, 0.3);
 }
 
 .statusError {
-  color: var(--failure-badge-text);
-  background: var(--failure-badge-bg);
-  border-color: var(--failure-badge-border);
+  color: #f04438;
+  background: rgba(240, 68, 56, 0.1);
+  border-color: rgba(240, 68, 56, 0.3);
 }
 
 .levelInfo {
@@ -638,14 +1031,9 @@
   }
 
   @media (min-width: 769px) {
-    .filters {
+    .logsFilterSidebar {
       flex: 0 0 auto;
-      gap: $spacing-sm;
-      margin-bottom: $spacing-sm;
       max-height: 260px;
-      overflow: auto;
-      padding-right: 4px;
-      overscroll-behavior: contain;
     }
 
     .logPanel {
@@ -687,13 +1075,13 @@
     gap: $spacing-sm;
   }
 
-  .filters {
+  .logsTableToolbar {
     margin-bottom: $spacing-sm;
     gap: $spacing-sm;
   }
 
   @media (min-width: 769px) {
-    .filters {
+    .logsFilterSidebar {
       max-height: 180px;
     }
 
@@ -709,7 +1097,7 @@
 
   .logRow {
     padding: 6px 8px;
-    font-size: 11px;
+    font-size: 12px;
     grid-template-columns: 130px 1fr;
     gap: $spacing-xs;
   }

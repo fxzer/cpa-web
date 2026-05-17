@@ -32,7 +32,9 @@ import {
   HTTP_METHODS,
   STATUS_GROUPS,
   resolveStatusGroup,
+  type HttpMethod,
   type LogState,
+  type StatusGroup,
 } from './hooks/logTypes';
 import { parseLogLine } from './hooks/logParsing';
 import { useLogFilters } from './hooks/useLogFilters';
@@ -50,6 +52,34 @@ const INITIAL_DISPLAY_LINES = 100;
 const MAX_BUFFER_LINES = 10000;
 const LONG_PRESS_MS = 650;
 const LONG_PRESS_MOVE_THRESHOLD = 10;
+
+const getMethodClassName = (method?: HttpMethod) => {
+  if (!method) return '';
+  const methodClassMap: Partial<Record<HttpMethod, string>> = {
+    GET: styles.methodGet,
+    POST: styles.methodPost,
+    PUT: styles.methodPut,
+    PATCH: styles.methodPatch,
+    DELETE: styles.methodDelete,
+    OPTIONS: styles.methodOptions,
+    HEAD: styles.methodHead,
+  };
+  return methodClassMap[method] || '';
+};
+
+const getStatusGroupClassName = (statusGroup?: StatusGroup) => {
+  if (!statusGroup) return '';
+  const statusClassMap: Partial<Record<StatusGroup, string>> = {
+    '2xx': styles.statusSuccess,
+    '3xx': styles.statusRedirect,
+    '4xx': styles.statusClientError,
+    '5xx': styles.statusServerError,
+  };
+  return statusClassMap[statusGroup] || '';
+};
+
+const getStatusCodeClassName = (statusCode?: number) =>
+  getStatusGroupClassName(resolveStatusGroup(statusCode));
 
 const getErrorMessage = (err: unknown): string => {
   if (err instanceof Error) return err.message;
@@ -476,222 +506,242 @@ export function LogsPage() {
           <Card className={styles.logCard}>
             {error && <div className="error-box">{error}</div>}
 
-            <div className={styles.filters}>
-              <div className={styles.searchWrapper}>
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('logs.search_placeholder')}
-                  className={styles.searchInput}
-                  rightElement={
-                    searchQuery ? (
-                      <button
-                        type="button"
-                        className={styles.searchClear}
-                        onClick={() => setSearchQuery('')}
-                        title="Clear"
-                        aria-label="Clear"
-                      >
-                        <IconX size={16} />
-                      </button>
-                    ) : (
-                      <IconSearch size={16} className={styles.searchIcon} />
-                    )
-                  }
-                />
-              </div>
-
-              <div className={styles.filterPanelHeader}>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className={styles.filterPanelToggle}
-                  onClick={() => setStructuredFiltersExpanded((prev) => !prev)}
-                  aria-expanded={structuredFiltersExpanded}
-                  aria-controls={structuredFiltersPanelId}
-                  title={
-                    structuredFiltersExpanded
-                      ? t('logs.filter_panel_collapse')
-                      : t('logs.filter_panel_expand')
-                  }
-                >
-                  <span className={styles.filterPanelButtonContent}>
-                    <IconSlidersHorizontal size={16} />
-                    <span>{t('logs.filter_panel_title')}</span>
-                    {structuredFilterCount > 0 && (
-                      <span className={styles.filterPanelCount}>
-                        {t('logs.filter_panel_active_count', { count: structuredFilterCount })}
-                      </span>
-                    )}
-                    {structuredFiltersExpanded ? (
-                      <IconChevronUp size={16} />
-                    ) : (
-                      <IconChevronDown size={16} />
-                    )}
-                  </span>
-                </Button>
-              </div>
-
-              {structuredFiltersExpanded && (
-                <div id={structuredFiltersPanelId} className={styles.structuredFilters}>
-                  <div className={styles.filterChipGroup}>
-                    <span className={styles.filterChipLabel}>{t('logs.filter_method')}</span>
-                    <div className={styles.filterChipList}>
-                      {HTTP_METHODS.map((method) => {
-                        const active = filters.methodFilters.includes(method);
-                        const count = filters.methodCounts[method] ?? 0;
-                        return (
-                          <button
-                            key={method}
-                            type="button"
-                            className={`${styles.filterChip} ${active ? styles.filterChipActive : ''}`}
-                            onClick={() => filters.toggleMethodFilter(method)}
-                            disabled={count === 0 && !active}
-                            aria-pressed={active}
-                          >
-                            {method} ({count})
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className={styles.filterChipGroup}>
-                    <span className={styles.filterChipLabel}>{t('logs.filter_status')}</span>
-                    <div className={styles.filterChipList}>
-                      {STATUS_GROUPS.map((statusGroup) => {
-                        const active = filters.statusFilters.includes(statusGroup);
-                        const count = filters.statusCounts[statusGroup] ?? 0;
-                        return (
-                          <button
-                            key={statusGroup}
-                            type="button"
-                            className={`${styles.filterChip} ${active ? styles.filterChipActive : ''}`}
-                            onClick={() => filters.toggleStatusFilter(statusGroup)}
-                            disabled={count === 0 && !active}
-                            aria-pressed={active}
-                          >
-                            {t(`logs.filter_status_${statusGroup}`)} ({count})
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className={styles.filterChipGroup}>
-                    <span className={styles.filterChipLabel}>{t('logs.filter_path')}</span>
-                    <div className={styles.filterChipList}>
-                      {filters.pathOptions.length === 0 ? (
-                        <span className={styles.filterChipHint}>{t('logs.filter_path_empty')}</span>
+            <div className={styles.logsSplitLayout}>
+              <aside className={styles.logsFilterSidebar} aria-label={t('logs.filter_panel_title')}>
+                <div className={styles.searchWrapper}>
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t('logs.search_placeholder')}
+                    className={styles.searchInput}
+                    rightElement={
+                      searchQuery ? (
+                        <button
+                          type="button"
+                          className={styles.searchClear}
+                          onClick={() => setSearchQuery('')}
+                          title="Clear"
+                          aria-label="Clear"
+                        >
+                          <IconX size={16} />
+                        </button>
                       ) : (
-                        filters.pathOptions.map(({ path, count }) => {
-                          const active = filters.pathFilters.includes(path);
-                          return (
-                            <button
-                              key={path}
-                              type="button"
-                              className={`${styles.filterChip} ${active ? styles.filterChipActive : ''}`}
-                              onClick={() => filters.togglePathFilter(path)}
-                              aria-pressed={active}
-                              title={path}
-                            >
-                              {path} ({count})
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
+                        <IconSearch size={16} className={styles.searchIcon} />
+                      )
+                    }
+                  />
+                </div>
 
+                <div className={styles.filterPanelHeader}>
+                  <div className={styles.filterPanelHeaderLeft}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className={styles.filterPanelToggle}
+                      onClick={() => setStructuredFiltersExpanded((prev) => !prev)}
+                      aria-expanded={structuredFiltersExpanded}
+                      aria-controls={structuredFiltersPanelId}
+                      title={
+                        structuredFiltersExpanded
+                          ? t('logs.filter_panel_collapse')
+                          : t('logs.filter_panel_expand')
+                      }
+                    >
+                      <span className={styles.filterPanelButtonContent}>
+                        <IconSlidersHorizontal size={16} />
+                        <span>{t('logs.filter_panel_title')}</span>
+                        {structuredFilterCount > 0 && (
+                          <span className={styles.filterPanelCount}>
+                            {t('logs.filter_panel_active_count', { count: structuredFilterCount })}
+                          </span>
+                        )}
+                        {structuredFiltersExpanded ? (
+                          <IconChevronUp size={16} />
+                        ) : (
+                          <IconChevronDown size={16} />
+                        )}
+                      </span>
+                    </Button>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={filters.clearStructuredFilters}
                     disabled={!filters.hasStructuredFilters}
+                    className={styles.filterClearButton}
                   >
                     {t('logs.clear_filters')}
                   </Button>
                 </div>
-              )}
 
-              <ToggleSwitch
-                checked={hideManagementLogs}
-                onChange={setHideManagementLogs}
-                label={
-                  <span className={styles.switchLabel}>
-                    <IconEyeOff size={16} />
-                    {t('logs.hide_management_logs', { prefix: MANAGEMENT_API_PREFIX })}
-                  </span>
-                }
-              />
+                {structuredFiltersExpanded && (
+                  <div id={structuredFiltersPanelId} className={styles.structuredFilters}>
+                    <div className={styles.filterChipGroup}>
+                      <span className={styles.filterChipLabel}>{t('logs.filter_method')}</span>
+                      <div className={styles.filterChipList}>
+                        {HTTP_METHODS.map((method) => {
+                          const active = filters.methodFilters.includes(method);
+                          const count = filters.methodCounts[method] ?? 0;
+                          return (
+                            <button
+                              key={method}
+                              type="button"
+                              className={[
+                                styles.filterChip,
+                                styles.methodFilterChip,
+                                getMethodClassName(method),
+                                active ? styles.filterChipActive : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              onClick={() => filters.toggleMethodFilter(method)}
+                              disabled={count === 0 && !active}
+                              aria-pressed={active}
+                            >
+                              {method} ({count})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
 
-              <ToggleSwitch
-                checked={showRawLogs}
-                onChange={setShowRawLogs}
-                label={
-                  <span
-                    className={styles.switchLabel}
-                    title={t('logs.show_raw_logs_hint', {
-                      defaultValue: 'Show original log text for easier multi-line copy',
-                    })}
-                  >
-                    <IconCode size={16} />
-                    {t('logs.show_raw_logs', { defaultValue: 'Show raw logs' })}
-                  </span>
-                }
-              />
+                    <div className={styles.filterChipGroup}>
+                      <span className={styles.filterChipLabel}>{t('logs.filter_status')}</span>
+                      <div className={styles.filterChipList}>
+                        {STATUS_GROUPS.map((statusGroup) => {
+                          const active = filters.statusFilters.includes(statusGroup);
+                          const count = filters.statusCounts[statusGroup] ?? 0;
+                          return (
+                            <button
+                              key={statusGroup}
+                              type="button"
+                              className={[
+                                styles.filterChip,
+                                styles.statusFilterChip,
+                                getStatusGroupClassName(statusGroup),
+                                active ? styles.filterChipActive : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              onClick={() => filters.toggleStatusFilter(statusGroup)}
+                              disabled={count === 0 && !active}
+                              aria-pressed={active}
+                            >
+                              {t(`logs.filter_status_${statusGroup}`)} ({count})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
 
-              <div className={styles.toolbar}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => loadLogs(false)}
-                  disabled={disableControls || loading}
-                  className={styles.actionButton}
-                >
-                  <span className={styles.buttonContent}>
-                    <IconRefreshCw size={16} />
-                    {t('logs.refresh_button')}
-                  </span>
-                </Button>
-                <ToggleSwitch
-                  checked={autoRefresh}
-                  onChange={(value) => setAutoRefresh(value)}
-                  disabled={disableControls}
-                  label={
-                    <span className={styles.switchLabel}>
-                      <IconTimer size={16} />
-                      {t('logs.auto_refresh')}
-                    </span>
-                  }
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={downloadLogs}
-                  disabled={logState.buffer.length === 0}
-                  className={styles.actionButton}
-                >
-                  <span className={styles.buttonContent}>
-                    <IconDownload size={16} />
-                    {t('logs.download_button')}
-                  </span>
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={clearLogs}
-                  disabled={disableControls}
-                  className={styles.actionButton}
-                >
-                  <span className={styles.buttonContent}>
-                    <IconTrash2 size={16} />
-                    {t('logs.clear_button')}
-                  </span>
-                </Button>
-              </div>
-            </div>
+                    <div className={styles.filterChipGroup}>
+                      <span className={styles.filterChipLabel}>{t('logs.filter_path')}</span>
+                      <div className={styles.filterChipList}>
+                        {filters.pathOptions.length === 0 ? (
+                          <span className={styles.filterChipHint}>{t('logs.filter_path_empty')}</span>
+                        ) : (
+                          filters.pathOptions.map(({ path, count }) => {
+                            const active = filters.pathFilters.includes(path);
+                            return (
+                              <button
+                                key={path}
+                                type="button"
+                                className={`${styles.filterChip} ${active ? styles.filterChipActive : ''}`}
+                                onClick={() => filters.togglePathFilter(path)}
+                                aria-pressed={active}
+                                title={`${path} (${count})`}
+                              >
+                                {`${path} (${count})`}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </aside>
+
+              <div className={styles.logsTableColumn}>
+                <div className={styles.logsTableToolbar}>
+                  <ToggleSwitch
+                    checked={hideManagementLogs}
+                    onChange={setHideManagementLogs}
+                    label={
+                      <span className={styles.switchLabel}>
+                        <IconEyeOff size={16} />
+                        {t('logs.hide_management_logs', { prefix: MANAGEMENT_API_PREFIX })}
+                      </span>
+                    }
+                  />
+
+                  <ToggleSwitch
+                    checked={showRawLogs}
+                    onChange={setShowRawLogs}
+                    label={
+                      <span
+                        className={styles.switchLabel}
+                        title={t('logs.show_raw_logs_hint', {
+                          defaultValue: 'Show original log text for easier multi-line copy',
+                        })}
+                      >
+                        <IconCode size={16} />
+                        {t('logs.show_raw_logs', { defaultValue: 'Show raw logs' })}
+                      </span>
+                    }
+                  />
+
+                  <div className={styles.toolbar}>
+                    <ToggleSwitch
+                      checked={autoRefresh}
+                      onChange={(value) => setAutoRefresh(value)}
+                      disabled={disableControls}
+                      label={
+                        <span className={styles.switchLabel}>
+                          <IconTimer size={16} />
+                          {t('logs.auto_refresh')}
+                        </span>
+                      }
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => loadLogs(false)}
+                      disabled={disableControls || loading}
+                      className={styles.actionButton}
+                    >
+                      <span className={styles.buttonContent}>
+                        <IconRefreshCw size={16} />
+                        {t('logs.refresh_button')}
+                      </span>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={downloadLogs}
+                      disabled={logState.buffer.length === 0}
+                      className={styles.actionButton}
+                    >
+                      <span className={styles.buttonContent}>
+                        <IconDownload size={16} />
+                        {t('logs.download_button')}
+                      </span>
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={clearLogs}
+                      disabled={disableControls}
+                      className={styles.actionButton}
+                    >
+                      <span className={styles.buttonContent}>
+                        <IconTrash2 size={16} />
+                        {t('logs.clear_button')}
+                      </span>
+                    </Button>
+                  </div>
+                </div>
 
             {loading ? (
               <div className="hint">{t('logs.loading')}</div>
@@ -787,13 +837,7 @@ export function LogsPage() {
                                 className={[
                                   styles.badge,
                                   styles.statusBadge,
-                                  line.statusCode >= 200 && line.statusCode < 300
-                                    ? styles.statusSuccess
-                                    : line.statusCode >= 300 && line.statusCode < 400
-                                      ? styles.statusInfo
-                                      : line.statusCode >= 400 && line.statusCode < 500
-                                        ? styles.statusWarn
-                                        : styles.statusError,
+                                  getStatusCodeClassName(line.statusCode),
                                 ].join(' ')}
                               >
                                 {line.statusCode}
@@ -804,7 +848,15 @@ export function LogsPage() {
                             {line.ip && <span className={styles.pill}>{line.ip}</span>}
 
                             {line.method && (
-                              <span className={[styles.badge, styles.methodBadge].join(' ')}>
+                              <span
+                                className={[
+                                  styles.badge,
+                                  styles.methodBadge,
+                                  getMethodClassName(line.method),
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
+                              >
                                 {line.method}
                               </span>
                             )}
@@ -831,26 +883,30 @@ export function LogsPage() {
             ) : (
               <EmptyState title={t('logs.empty_title')} description={t('logs.empty_desc')} />
             )}
+              </div>
+            </div>
           </Card>
         )}
 
         {activeTab === 'errors' && (
           <Card
-            extra={
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={loadErrorLogs}
-                loading={loadingErrors}
-                disabled={disableControls}
-              >
-                {t('common.refresh')}
-              </Button>
+            className={styles.errorLogsCard}
+            title={
+              <div className={styles.errorLogsHeaderRow}>
+                <span className="hint">{t('logs.error_logs_description')}</span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={loadErrorLogs}
+                  loading={loadingErrors}
+                  disabled={disableControls}
+                >
+                  {t('common.refresh')}
+                </Button>
+              </div>
             }
           >
             <div className="stack">
-              <div className="hint">{t('logs.error_logs_description')}</div>
-
               {requestLogEnabled && (
                 <div>
                   <div className="status-badge warning">{t('logs.error_logs_request_log_enabled')}</div>

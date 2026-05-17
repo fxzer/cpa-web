@@ -1,9 +1,13 @@
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import iconAmp from '@/assets/icons/amp.svg';
 import type { AmpcodeConfig } from '@/types';
 import { maskApiKey } from '@/utils/format';
 import styles from '@/pages/AiProvidersPage.module.scss';
+import { ProviderModelsPreview } from '../ProviderModelsPreview';
+import { CopyableUrlValue } from '../CopyableUrlValue';
+import { ProviderSectionCardTitle } from '../ProviderSectionCardTitle';
 import { useTranslation } from 'react-i18next';
 
 interface AmpcodeSectionProps {
@@ -24,14 +28,24 @@ export function AmpcodeSection({
   const { t } = useTranslation();
   const showLoadingPlaceholder = loading && !config;
 
+  const ampcodeEntryCount = useMemo(() => {
+    if (!config) return 0;
+    const url = String(config.upstreamUrl ?? '').trim();
+    const key = String(config.upstreamApiKey ?? '').trim();
+    const extraKeys = (config.upstreamApiKeys ?? []).some((k) => String(k ?? '').trim().length > 0);
+    const hasMappings = (config.modelMappings?.length ?? 0) > 0;
+    return url || key || extraKeys || hasMappings ? 1 : 0;
+  }, [config]);
+
   return (
     <>
       <Card
         title={
-          <span className={styles.cardTitle}>
-            <img src={iconAmp} alt="" className={styles.cardTitleIcon} />
-            {t('ai_providers.ampcode_title')}
-          </span>
+          <ProviderSectionCardTitle
+            icon={<img src={iconAmp} alt="" className={styles.cardTitleIcon} />}
+            title={t('ai_providers.ampcode_title')}
+            count={ampcodeEntryCount}
+          />
         }
         extra={
           <Button
@@ -49,7 +63,11 @@ export function AmpcodeSection({
           <>
             <div className={styles.fieldRow}>
               <span className={styles.fieldLabel}>{t('ai_providers.ampcode_upstream_url_label')}:</span>
-              <span className={styles.fieldValue}>{config?.upstreamUrl || t('common.not_set')}</span>
+              {config?.upstreamUrl ? (
+                <CopyableUrlValue value={config.upstreamUrl} />
+              ) : (
+                <span className={styles.fieldValue}>{t('common.not_set')}</span>
+              )}
             </div>
             <div className={styles.fieldRow}>
               <span className={styles.fieldLabel}>
@@ -76,19 +94,10 @@ export function AmpcodeSection({
               <span className={styles.fieldValue}>{config?.upstreamApiKeys?.length || 0}</span>
             </div>
             {config?.modelMappings?.length ? (
-              <div className={styles.modelTagList}>
-                {config.modelMappings.slice(0, 5).map((mapping) => (
-                  <span key={`${mapping.from}→${mapping.to}`} className={styles.modelTag}>
-                    <span className={styles.modelName}>{mapping.from}</span>
-                    <span className={styles.modelAlias}>{mapping.to}</span>
-                  </span>
-                ))}
-                {config.modelMappings.length > 5 && (
-                  <span className={styles.modelTag}>
-                    <span className={styles.modelName}>+{config.modelMappings.length - 5}</span>
-                  </span>
-                )}
-              </div>
+              <ProviderModelsPreview
+                models={config.modelMappings.map((m) => ({ name: m.from, alias: m.to }))}
+                modalTitle={t('ai_providers.ampcode_title')}
+              />
             ) : null}
           </>
         )}

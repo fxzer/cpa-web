@@ -58,6 +58,12 @@ export const configApi = {
   updateRequestLog: (enabled: boolean) => apiClient.put('/request-log', { value: enabled }),
 
   /**
+   * 使用统计开关
+   */
+  updateUsageStatisticsEnabled: (enabled: boolean) =>
+    apiClient.put('/usage-statistics-enabled', { value: enabled }),
+
+  /**
    * 写日志到文件开关
    */
   updateLoggingToFile: (enabled: boolean) => apiClient.put('/logging-to-file', { value: enabled }),

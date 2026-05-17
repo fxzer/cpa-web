@@ -194,6 +194,11 @@ export function MonitoringCenterPage() {
         <h1 className={styles.pageTitle}>{t('monitoring_center.title')}</h1>
         <div className={styles.headerActions}>
           <div className={styles.timeRangeButtons}>
+            {lastRefreshedAt && (
+              <span className={styles.lastRefreshed}>
+                {t('usage_stats.last_updated')}: {lastRefreshedAt.toLocaleTimeString()}
+              </span>
+            )}
             {USAGE_TIME_RANGE_OPTIONS.map((option) => (
               <Button
                 key={option.value}
@@ -213,11 +218,6 @@ export function MonitoringCenterPage() {
           >
             {loading ? t('common.loading') : t('usage_stats.refresh')}
           </Button>
-          {lastRefreshedAt && (
-            <span className={styles.lastRefreshed}>
-              {t('usage_stats.last_updated')}: {lastRefreshedAt.toLocaleTimeString()}
-            </span>
-          )}
         </div>
       </div>
 

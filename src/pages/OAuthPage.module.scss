@@ -19,13 +19,65 @@
   font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 $spacing-xl 0;
+  margin: 0;
+  padding-bottom: 24px;
 }
 
 .content {
   display: flex;
   flex-direction: column;
-  gap: $spacing-xl;
+  gap: $spacing-lg;
+}
+
+.tabBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @include mobile {
+    width: 100%;
+  }
+}
+
+.tabItem {
+  @include button-reset;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+
+  @include pill-tab-interaction;
+
+  @include mobile {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+}
+
+.tabPanel {
+  min-width: 0;
 }
 
 .cardContent {

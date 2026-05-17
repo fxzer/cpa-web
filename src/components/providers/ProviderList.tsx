@@ -62,22 +62,24 @@ export function ProviderList<T>({
           >
             <div className={metaClassName ?? 'item-meta'}>{renderContent(item, index)}</div>
             <div className={actionsClassName ?? 'item-actions'}>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onEdit(item, index)}
-                disabled={actionsDisabled}
-              >
-                {t('common.edit')}
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => onDelete(item, index)}
-                disabled={actionsDisabled}
-              >
-                {deleteLabel || t('common.delete')}
-              </Button>
+              <div className="provider-card-action-buttons">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onEdit(item, index)}
+                  disabled={actionsDisabled}
+                >
+                  {t('common.edit')}
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => onDelete(item, index)}
+                  disabled={actionsDisabled}
+                >
+                  {deleteLabel || t('common.delete')}
+                </Button>
+              </div>
               {renderExtraActions ? renderExtraActions(item, index) : null}
             </div>
           </div>

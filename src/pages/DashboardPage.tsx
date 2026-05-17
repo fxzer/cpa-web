@@ -7,8 +7,9 @@ import {
   IconFileText,
   IconSatellite
 } from '@/components/ui/icons';
-import { useAuthStore, useConfigStore, useModelsStore } from '@/stores';
+import { useAuthStore, useConfigStore, useModelsStore, useNotificationStore } from '@/stores';
 import { apiKeysApi, providersApi, authFilesApi } from '@/services/api';
+import { copyToClipboard } from '@/utils/clipboard';
 import styles from './DashboardPage.module.scss';
 
 interface QuickStat {
@@ -44,6 +45,7 @@ export function DashboardPage() {
   const serverBuildDate = useAuthStore((state) => state.serverBuildDate);
   const apiBase = useAuthStore((state) => state.apiBase);
   const config = useConfigStore((state) => state.config);
+  const { showNotification } = useNotificationStore();
 
   const models = useModelsStore((state) => state.models);
   const modelsLoading = useModelsStore((state) => state.loading);
@@ -65,6 +67,16 @@ export function DashboardPage() {
   });
 
   const [loading, setLoading] = useState(true);
+
+  const handleCopyApiBase = useCallback(async () => {
+    const base = apiBase?.trim();
+    if (!base) return;
+    const ok = await copyToClipboard(base);
+    showNotification(
+      t(ok ? 'notification.link_copied' : 'notification.copy_failed'),
+      ok ? 'success' : 'error'
+    );
+  }, [apiBase, showNotification, t]);
 
   // Time-of-day state for dynamic greeting
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(getTimeOfDay);
@@ -297,29 +309,44 @@ export function DashboardPage() {
         <div className={styles.heroMeta}>
           <div className={styles.dateTimeBlock}>
             <span className={styles.time}>{formattedTime}</span>
+            <span className={styles.dateTimeSep} aria-hidden="true">
+              ·
+            </span>
             <span className={styles.date}>{formattedDate}</span>
           </div>
-          <div className={styles.connectionPill}>
-            <span
-              className={`${styles.statusDot} ${
-                connectionStatus === 'connected'
-                  ? styles.connected
-                  : connectionStatus === 'connecting'
-                    ? styles.connecting
-                    : styles.disconnected
-              }`}
-            />
-            <span className={styles.pillText}>
-              {serverVersion
-                ? `v${serverVersion.trim().replace(/^[vV]+/, '')}`
-                : t(
-                    connectionStatus === 'connected'
-                      ? 'common.connected'
-                      : connectionStatus === 'connecting'
-                        ? 'common.connecting'
-                        : 'common.disconnected'
-                  )}
-            </span>
+          <div className={styles.connectionRow}>
+            {connectionStatus === 'connected' && Boolean(apiBase?.trim()) && (
+              <button
+                type="button"
+                className={styles.apiBasePill}
+                onClick={() => void handleCopyApiBase()}
+                title={`${apiBase} · ${t('common.copy')}`}
+              >
+                {apiBase}
+              </button>
+            )}
+            <div className={styles.connectionPill}>
+              <span
+                className={`${styles.statusDot} ${
+                  connectionStatus === 'connected'
+                    ? styles.connected
+                    : connectionStatus === 'connecting'
+                      ? styles.connecting
+                      : styles.disconnected
+                }`}
+              />
+              <span className={styles.pillText}>
+                {serverVersion
+                  ? `v${serverVersion.trim().replace(/^[vV]+/, '')}`
+                  : t(
+                      connectionStatus === 'connected'
+                        ? 'common.connected'
+                        : connectionStatus === 'connecting'
+                          ? 'common.connecting'
+                          : 'common.disconnected'
+                    )}
+              </span>
+            </div>
           </div>
           {serverBuildDate && (
             <span className={styles.buildDate}>

@@ -11,7 +11,8 @@ import {
   useNotificationStore,
 } from '@/stores';
 import { configApi, versionApi } from '@/services/api';
-import { STORAGE_KEY_AUTH } from '@/utils/constants';
+import { PANEL_WEBUI_GITHUB_URL, STORAGE_KEY_AUTH } from '@/utils/constants';
+import { copyToClipboard } from '@/utils/clipboard';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
 import styles from './SystemPage.module.scss';
 
@@ -68,6 +69,16 @@ export function SystemPage() {
   const buildTime = auth.serverBuildDate
     ? new Date(auth.serverBuildDate).toLocaleString(i18n.language)
     : t('system_info.version_unknown');
+
+  const handleCopyApiBase = useCallback(async () => {
+    const base = auth.apiBase?.trim();
+    if (!base) return;
+    const ok = await copyToClipboard(base);
+    showNotification(
+      t(ok ? 'notification.link_copied' : 'notification.copy_failed'),
+      ok ? 'success' : 'error'
+    );
+  }, [auth.apiBase, showNotification, t]);
 
   const handleClearLoginStorage = () => {
     showConfirmation({
@@ -199,7 +210,6 @@ export function SystemPage() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.pageTitle}>{t('system_info.title')}</h1>
       <div className={styles.content}>
         <Card className={styles.aboutCard}>
           <div className={styles.aboutHeader}>
@@ -246,7 +256,18 @@ export function SystemPage() {
             <div className={styles.infoTile}>
               <div className={styles.tileLabel}>{t('connection.status')}</div>
               <div className={styles.tileValue}>{t(`common.${auth.connectionStatus}_status`)}</div>
-              <div className={styles.tileSub}>{auth.apiBase || '-'}</div>
+              {auth.apiBase?.trim() ? (
+                <button
+                  type="button"
+                  className={styles.tileSubButton}
+                  onClick={() => void handleCopyApiBase()}
+                  title={`${auth.apiBase} · ${t('common.copy')}`}
+                >
+                  {auth.apiBase}
+                </button>
+              ) : (
+                <div className={styles.tileSub}>-</div>
+              )}
             </div>
           </div>
         </Card>
@@ -273,7 +294,7 @@ export function SystemPage() {
             </a>
 
             <a
-              href="https://github.com/router-for-me/Cli-Proxy-API-Management-Center"
+              href={PANEL_WEBUI_GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
               className={styles.linkCard}
@@ -310,12 +331,17 @@ export function SystemPage() {
           </div>
         </Card>
 
-        <Card title={t('system_info.clear_login_title')}>
-          <p className={styles.sectionDescription}>{t('system_info.clear_login_desc')}</p>
-          <div className={styles.clearLoginActions}>
-            <Button variant="danger" onClick={handleClearLoginStorage}>
-              {t('system_info.clear_login_button')}
-            </Button>
+        <Card>
+          <div className={styles.clearLoginRow}>
+            <div className={styles.clearLoginCopy}>
+              <div className={styles.clearLoginTitle}>{t('system_info.clear_login_title')}</div>
+              <p className={styles.clearLoginDescription}>{t('system_info.clear_login_desc')}</p>
+            </div>
+            <div className={styles.clearLoginActions}>
+              <Button variant="danger" onClick={handleClearLoginStorage}>
+                {t('system_info.clear_login_button')}
+              </Button>
+            </div>
           </div>
         </Card>
       </div>

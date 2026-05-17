@@ -18,20 +18,77 @@ $openai-toolbar-control-height: 36px;
   height: 24px;
 }
 
+.cardTitleCountBadge {
+  font-size: 12px;
+  padding: 4px 10px;
+  line-height: 1.2;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
 .pageTitle {
   font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 $spacing-xl 0;
+  margin: 0;
+  padding-bottom: 24px;
 }
 
 .content {
   display: flex;
   flex-direction: column;
-  gap: $spacing-xl;
-  padding-bottom: calc(
-    var(--provider-nav-height, 60px) + 12px + env(safe-area-inset-bottom) + #{$spacing-md}
-  );
+  gap: $spacing-lg;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+}
+
+.tabBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @include mobile {
+    width: 100%;
+  }
+}
+
+.tabItem {
+  @include button-reset;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+
+  @include pill-tab-interaction;
+
+  @include mobile {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    padding-inline: 10px;
+  }
+}
+
+.tabPanel {
+  min-width: 0;
 }
 
 .section {
@@ -87,14 +144,70 @@ $openai-toolbar-control-height: 36px;
 
 .openaiProviderActions {
   display: flex;
-  gap: $spacing-sm;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-md;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  width: 100%;
+
+  > :last-child {
+    flex-shrink: 0;
+  }
+
+  :global(.btn.btn-sm) {
+    height: 32px;
+    min-height: 32px;
+    box-sizing: border-box;
+  }
 }
 
-.openaiProviderTitle {
+// ProviderList 行内「编辑」「删除」与开关两端对齐
+.providerCardActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  width: 100%;
+
+  > :last-child {
+    flex-shrink: 0;
+  }
+
+  :global(.btn.btn-sm) {
+    height: 32px;
+    min-height: 32px;
+    box-sizing: border-box;
+  }
+}
+
+// 卡片顶栏：标题 + 成功/失败 tag 同一行垂直居中
+.providerCardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+  flex-wrap: wrap;
+  row-gap: 8px;
+
+  .cardStats {
+    margin-top: 0;
+    padding-top: 0;
+    flex: 0 0 auto;
+    align-items: center;
+  }
+}
+
+.openaiProviderTitle,
+.providerCardTitle {
+  font-size: 18px;
   font-weight: 700;
+  line-height: 1.25;
   color: var(--text-primary);
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 // 排序控件
@@ -168,26 +281,6 @@ $openai-toolbar-control-height: 36px;
   :global(.btn) {
     white-space: nowrap;
   }
-}
-
-.openaiToolbarAnchorHidden {
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.openaiFloatingToolbar {
-  position: fixed;
-  z-index: 20;
-  background: var(--bg-primary);
-  box-shadow: none;
-  overflow: visible;
-  padding: 0;
-}
-
-.openaiFloatingToolbar :global(.card-header) {
-  margin-bottom: 0;
-  padding: $spacing-sm $spacing-lg;
-  border-radius: 0;
 }
 
 // 模型多选下拉框
@@ -475,6 +568,24 @@ $openai-toolbar-control-height: 36px;
   font-family: 'Monaco', 'Menlo', 'Consolas', 'Ubuntu Mono', monospace;
 }
 
+.fieldValueCopyable {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-decoration-color: color-mix(in srgb, var(--primary-color) 40%, var(--border-color));
+  text-underline-offset: 3px;
+
+  &:hover {
+    color: var(--primary-color);
+    text-decoration-color: var(--primary-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
 // 自定义请求头徽章
 .headerBadgeList {
   display: flex;
@@ -572,6 +683,62 @@ $openai-toolbar-control-height: 36px;
   }
 }
 
+.modelPreviewMore {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.3;
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 8%, var(--bg-secondary));
+  border: 1px solid color-mix(in srgb, var(--primary-color) 25%, var(--border-color));
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--primary-color) 14%, var(--bg-secondary));
+    border-color: var(--primary-color);
+  }
+}
+
+.providerModelsModalGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  max-height: min(58vh, 480px);
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.providerModelsModalCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 12px;
+
+  .modelName {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .modelAlias {
+    font-size: 12px;
+  }
+}
+
 // 排除模型标签（警告色）
 .excludedModelTag {
   background: var(--warning-bg, #fef3c7);
@@ -640,7 +807,7 @@ $openai-toolbar-control-height: 36px;
   border-radius: 50%;
   background: var(--primary-color);
   color: white;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -657,7 +824,7 @@ $openai-toolbar-control-height: 36px;
 
 .apiKeyEntryProxy {
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
@@ -789,6 +956,51 @@ $openai-toolbar-control-height: 36px;
   line-height: 1.4;
 }
 
+.openaiModelDiscoveryModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  margin-top: 0;
+}
+
+.openaiModelsDiscoveryTopGrid {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  @media (min-width: #{$breakpoint-tablet + 1px}) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    column-gap: $spacing-lg;
+  }
+}
+
+.modelDiscoveryList.openaiModelDiscoveryGrid {
+  flex-direction: unset;
+  display: grid;
+  gap: $spacing-sm;
+  max-height: min(52vh, 520px);
+  margin-top: 0;
+  grid-template-columns: 1fr;
+
+  @include tablet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include desktop {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .modelDiscoveryRow {
+    min-width: 0;
+  }
+
+  .modelDiscoveryName {
+    word-break: break-word;
+  }
+}
+
 .openaiTestButtonSuccess {
   background-color: var(--success-badge-bg, #d1fae5);
   border-color: var(--success-badge-border, #6ee7b7);
@@ -854,7 +1066,7 @@ $openai-toolbar-control-height: 36px;
   border: 1px solid var(--border-secondary, #e5e7eb);
   border-radius: 6px;
   padding: 6px 10px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
   white-space: nowrap;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
@@ -995,6 +1207,27 @@ $openai-toolbar-control-height: 36px;
   }
 }
 
+// 提供商编辑页：大屏双列排布基础字段，减少纵向滚动
+.providerEditTopGrid {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  @media (min-width: #{$breakpoint-tablet + 1px}) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: $spacing-lg;
+    row-gap: $spacing-md;
+    align-items: start;
+  }
+}
+
+.providerEditFullRow {
+  @media (min-width: #{$breakpoint-tablet + 1px}) {
+    grid-column: 1 / -1;
+  }
+}
+
 .sectionHint {
   margin: 0;
   font-size: 13px;
@@ -1084,8 +1317,57 @@ $openai-toolbar-control-height: 36px;
   }
 }
 
-.modelInputList {
+.modelToolbarTestCluster {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: $spacing-xs;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  justify-content: flex-end;
+
+  .openaiTestSelect {
+    flex: 0 0 240px;
+    width: 240px;
+    min-width: 240px;
+    max-width: 240px;
+    box-sizing: border-box;
+
+    @include mobile {
+      flex: 1 1 240px;
+      width: 100%;
+      max-width: 240px;
+      min-width: 0;
+    }
+  }
+
+  .modelTestAllButton {
+    flex-shrink: 0;
+  }
+}
+
+// 与 ModelInputList 的全局类 header-input-list 同节点，提高优先级以覆盖 flex 列布局
+.modelInputList:global(.header-input-list) {
+  gap: $spacing-xs;
+
+  @media (min-width: #{$breakpoint-tablet + 1px}) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: $spacing-md;
+    row-gap: $spacing-xs;
+    align-items: start;
+
+    > .modelInputRow {
+      min-width: 0;
+    }
+
+    // ModelInputList 内置「添加」行按钮占满整行
+    > :global(.btn.align-start) {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+  }
 }
 
 .modelInputRow {
@@ -1119,6 +1401,39 @@ $openai-toolbar-control-height: 36px;
 
 .modelRowRemoveButton {
   justify-self: center;
+}
+
+.modelBatchStatusRow {
+  width: 100%;
+  padding: 2px 0 6px;
+  margin-top: -2px;
+}
+
+.modelBatchTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: $radius-full;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  border: 1px solid transparent;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelBatchTagOk {
+  color: var(--success-badge-text, #065f46);
+  background: var(--success-badge-bg, #d1fae5);
+  border-color: var(--success-badge-border, rgba(16, 185, 129, 0.35));
+}
+
+.modelBatchTagErr {
+  color: var(--failure-badge-text);
+  background: var(--failure-badge-bg);
+  border-color: var(--failure-badge-border, rgba(198, 87, 70, 0.35));
 }
 
 .modelTestPanel {
@@ -1231,9 +1546,9 @@ $openai-toolbar-control-height: 36px;
 // 表头
 .keyTableHeader {
   display: grid;
-  grid-template-columns: 46px 56px minmax(220px, 1.4fr) minmax(200px, 1.1fr) 180px;
+  grid-template-columns: 46px 56px minmax(200px, 1.25fr) minmax(180px, 0.95fr) minmax(300px, 1.2fr);
   gap: $spacing-sm;
-  min-width: 760px;
+  min-width: 900px;
   padding: 10px $spacing-md;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
@@ -1250,9 +1565,9 @@ $openai-toolbar-control-height: 36px;
 // 数据行
 .keyTableRow {
   display: grid;
-  grid-template-columns: 46px 56px minmax(220px, 1.4fr) minmax(200px, 1.1fr) 180px;
+  grid-template-columns: 46px 56px minmax(200px, 1.25fr) minmax(180px, 0.95fr) minmax(300px, 1.2fr);
   gap: $spacing-sm;
-  min-width: 760px;
+  min-width: 900px;
   padding: 10px $spacing-md;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -1302,6 +1617,27 @@ $openai-toolbar-control-height: 36px;
   gap: $spacing-xs;
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+// API 密钥表：删除为描边 + danger 色文字（保留边框，区别于实心 danger）
+.keyTableDeleteButton:global(.btn.btn-secondary) {
+  color: var(--danger-color, var(--error-color, #c65746));
+  border-color: var(--failure-badge-border, rgba(198, 87, 70, 0.35));
+  background-color: var(--bg-tertiary);
+
+  &:hover:not(:disabled) {
+    color: var(--danger-color, var(--error-color));
+    border-color: var(--danger-color, var(--error-color));
+    background-color: var(--bg-error-light, rgba(198, 87, 70, 0.1));
+  }
+}
+
+[data-theme='dark'] .keyTableDeleteButton:global(.btn.btn-secondary) {
+  color: var(--danger-color, var(--error-color));
+
+  &:hover:not(:disabled) {
+    color: var(--danger-color, var(--error-color));
+  }
 }
 
 .keyTableInput {

@@ -8,7 +8,6 @@ import {
   GeminiSection,
   OpenAISection,
   VertexSection,
-  ProviderNav,
   useProviderRecentRequests,
 } from '@/components/providers';
 import {
@@ -21,6 +20,26 @@ import { ampcodeApi, providersApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore, useThemeStore } from '@/stores';
 import type { GeminiKeyConfig, OpenAIProviderConfig, ProviderKeyConfig } from '@/types';
 import styles from './AiProvidersPage.module.scss';
+
+type AiProviderTabId = 'openai' | 'gemini' | 'codex' | 'claude' | 'vertex' | 'ampcode';
+
+const AI_PROVIDER_TAB_ORDER: AiProviderTabId[] = [
+  'openai',
+  'gemini',
+  'codex',
+  'claude',
+  'vertex',
+  'ampcode',
+];
+
+const AI_PROVIDER_TAB_LABEL_KEY: Record<AiProviderTabId, string> = {
+  openai: 'ai_providers.openai_title',
+  gemini: 'ai_providers.gemini_title',
+  codex: 'ai_providers.codex_title',
+  claude: 'ai_providers.claude_title',
+  vertex: 'ai_providers.vertex_title',
+  ampcode: 'ai_providers.ampcode_title',
+};
 
 export function AiProvidersPage() {
   const { t } = useTranslation();
@@ -56,6 +75,7 @@ export function AiProvidersPage() {
   );
 
   const [configSwitchingKey, setConfigSwitchingKey] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<AiProviderTabId>('openai');
 
   const disableControls = connectionStatus !== 'connected';
   const isSwitching = Boolean(configSwitchingKey);
@@ -411,89 +431,116 @@ export function AiProvidersPage() {
       <div className={styles.content}>
         {error && <div className="error-box">{error}</div>}
 
-        <div id="provider-gemini">
-          <GeminiSection
-            configs={geminiKeys}
-            usageByProvider={usageByProvider}
-            loading={loading}
-            disableControls={disableControls}
-            isSwitching={isSwitching}
-            onAdd={() => openEditor('/ai-providers/gemini/new')}
-            onEdit={(index) => openEditor(`/ai-providers/gemini/${index}`)}
-            onDelete={deleteGemini}
-            onToggle={(index, enabled) => void setConfigEnabled('gemini', index, enabled)}
-          />
+        <div className={styles.tabBar} role="tablist" aria-label={t('ai_providers.title')}>
+          {AI_PROVIDER_TAB_ORDER.map((tabId) => (
+            <button
+              key={tabId}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tabId}
+              className={`${styles.tabItem} ${activeTab === tabId ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab(tabId)}
+            >
+              {t(AI_PROVIDER_TAB_LABEL_KEY[tabId])}
+            </button>
+          ))}
         </div>
 
-        <div id="provider-codex">
-          <CodexSection
-            configs={codexConfigs}
-            usageByProvider={usageByProvider}
-            loading={loading}
-            disableControls={disableControls}
-            isSwitching={isSwitching}
-            onAdd={() => openEditor('/ai-providers/codex/new')}
-            onEdit={(index) => openEditor(`/ai-providers/codex/${index}`)}
-            onDelete={(index) => void deleteProviderEntry('codex', index)}
-            onToggle={(index, enabled) => void setConfigEnabled('codex', index, enabled)}
-          />
-        </div>
+        <div className={styles.tabPanel} role="tabpanel">
+          {activeTab === 'gemini' && (
+            <div id="provider-gemini">
+              <GeminiSection
+                configs={geminiKeys}
+                usageByProvider={usageByProvider}
+                loading={loading}
+                disableControls={disableControls}
+                isSwitching={isSwitching}
+                onAdd={() => openEditor('/ai-providers/gemini/new')}
+                onEdit={(index) => openEditor(`/ai-providers/gemini/${index}`)}
+                onDelete={deleteGemini}
+                onToggle={(index, enabled) => void setConfigEnabled('gemini', index, enabled)}
+              />
+            </div>
+          )}
 
-        <div id="provider-claude">
-          <ClaudeSection
-            configs={claudeConfigs}
-            usageByProvider={usageByProvider}
-            loading={loading}
-            disableControls={disableControls}
-            isSwitching={isSwitching}
-            onAdd={() => openEditor('/ai-providers/claude/new')}
-            onEdit={(index) => openEditor(`/ai-providers/claude/${index}`)}
-            onDelete={(index) => void deleteProviderEntry('claude', index)}
-            onToggle={(index, enabled) => void setConfigEnabled('claude', index, enabled)}
-          />
-        </div>
+          {activeTab === 'codex' && (
+            <div id="provider-codex">
+              <CodexSection
+                configs={codexConfigs}
+                usageByProvider={usageByProvider}
+                loading={loading}
+                disableControls={disableControls}
+                isSwitching={isSwitching}
+                onAdd={() => openEditor('/ai-providers/codex/new')}
+                onEdit={(index) => openEditor(`/ai-providers/codex/${index}`)}
+                onDelete={(index) => void deleteProviderEntry('codex', index)}
+                onToggle={(index, enabled) => void setConfigEnabled('codex', index, enabled)}
+              />
+            </div>
+          )}
 
-        <div id="provider-vertex">
-          <VertexSection
-            configs={vertexConfigs}
-            usageByProvider={usageByProvider}
-            loading={loading}
-            disableControls={disableControls}
-            isSwitching={isSwitching}
-            onAdd={() => openEditor('/ai-providers/vertex/new')}
-            onEdit={(index) => openEditor(`/ai-providers/vertex/${index}`)}
-            onDelete={deleteVertex}
-            onToggle={(index, enabled) => void setConfigEnabled('vertex', index, enabled)}
-          />
-        </div>
+          {activeTab === 'claude' && (
+            <div id="provider-claude">
+              <ClaudeSection
+                configs={claudeConfigs}
+                usageByProvider={usageByProvider}
+                loading={loading}
+                disableControls={disableControls}
+                isSwitching={isSwitching}
+                onAdd={() => openEditor('/ai-providers/claude/new')}
+                onEdit={(index) => openEditor(`/ai-providers/claude/${index}`)}
+                onDelete={(index) => void deleteProviderEntry('claude', index)}
+                onToggle={(index, enabled) => void setConfigEnabled('claude', index, enabled)}
+              />
+            </div>
+          )}
 
-        <div id="provider-ampcode">
-          <AmpcodeSection
-            config={config?.ampcode}
-            loading={loading}
-            disableControls={disableControls}
-            isSwitching={isSwitching}
-            onEdit={() => openEditor('/ai-providers/ampcode')}
-          />
-        </div>
+          {activeTab === 'vertex' && (
+            <div id="provider-vertex">
+              <VertexSection
+                configs={vertexConfigs}
+                usageByProvider={usageByProvider}
+                loading={loading}
+                disableControls={disableControls}
+                isSwitching={isSwitching}
+                onAdd={() => openEditor('/ai-providers/vertex/new')}
+                onEdit={(index) => openEditor(`/ai-providers/vertex/${index}`)}
+                onDelete={deleteVertex}
+                onToggle={(index, enabled) => void setConfigEnabled('vertex', index, enabled)}
+              />
+            </div>
+          )}
 
-        <div id="provider-openai">
-          <OpenAISection
-            configs={openaiProviders}
-            usageByProvider={usageByProvider}
-            loading={loading}
-            disableControls={disableControls}
-            isSwitching={isSwitching}
-            resolvedTheme={resolvedTheme}
-            onAdd={() => openEditor('/ai-providers/openai/new')}
-            onEdit={(index) => openEditor(`/ai-providers/openai/${index}`)}
-            onDelete={deleteOpenai}
-            onToggle={(index, enabled) => void setOpenAIProviderEnabled(index, enabled)}
-          />
+          {activeTab === 'ampcode' && (
+            <div id="provider-ampcode">
+              <AmpcodeSection
+                config={config?.ampcode}
+                loading={loading}
+                disableControls={disableControls}
+                isSwitching={isSwitching}
+                onEdit={() => openEditor('/ai-providers/ampcode')}
+              />
+            </div>
+          )}
+
+          {activeTab === 'openai' && (
+            <div id="provider-openai">
+              <OpenAISection
+                configs={openaiProviders}
+                usageByProvider={usageByProvider}
+                loading={loading}
+                disableControls={disableControls}
+                isSwitching={isSwitching}
+                resolvedTheme={resolvedTheme}
+                onAdd={() => openEditor('/ai-providers/openai/new')}
+                onEdit={(index) => openEditor(`/ai-providers/openai/${index}`)}
+                onDelete={deleteOpenai}
+                onToggle={(index, enabled) => void setOpenAIProviderEnabled(index, enabled)}
+              />
+            </div>
+          )}
         </div>
       </div>
-
-      <ProviderNav />
     </div>
   );
 }

@@ -71,6 +71,7 @@ const PROVIDERS: { id: OAuthProvider; titleKey: string; hintKey: string; urlLabe
 ];
 
 const CALLBACK_SUPPORTED: OAuthProvider[] = ['codex', 'anthropic', 'antigravity', 'gemini-cli'];
+type OAuthPageTab = OAuthProvider | 'vertex';
 const SUCCESS_RESET_DELAY_MS = 5000;
 const getProviderI18nPrefix = (provider: OAuthProvider) => provider.replace('-', '_');
 const getAuthKey = (provider: OAuthProvider, suffix: string) =>
@@ -94,6 +95,7 @@ export function OAuthPage() {
   const pollingTimers = useRef<Partial<Record<OAuthProvider, number>>>({});
   const successResetTimers = useRef<Partial<Record<OAuthProvider, number>>>({});
   const vertexFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [activeTab, setActiveTab] = useState<OAuthPageTab>('codex');
 
   const clearTimers = useCallback(() => {
     Object.values(pollingTimers.current).forEach((timer) => {
@@ -360,7 +362,33 @@ export function OAuthPage() {
       <h1 className={styles.pageTitle}>{t('nav.oauth', { defaultValue: 'OAuth' })}</h1>
 
       <div className={styles.content}>
-        {PROVIDERS.map((provider) => {
+        <div className={styles.tabBar} role="tablist" aria-label={t('nav.oauth', { defaultValue: 'OAuth' })}>
+          {PROVIDERS.map((provider) => (
+            <button
+              key={provider.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === provider.id}
+              className={`${styles.tabItem} ${activeTab === provider.id ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab(provider.id)}
+            >
+              {t(provider.titleKey)}
+            </button>
+          ))}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'vertex'}
+            className={`${styles.tabItem} ${activeTab === 'vertex' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('vertex')}
+          >
+            {t('vertex_import.title')}
+          </button>
+        </div>
+
+        <div className={styles.tabPanel} role="tabpanel">
+          {activeTab !== 'vertex' &&
+            PROVIDERS.filter((p) => p.id === activeTab).map((provider) => {
           const state = states[provider.id] || {};
           const canSubmitCallback = CALLBACK_SUPPORTED.includes(provider.id) && Boolean(state.url);
           const loginButtonLabel =
@@ -488,9 +516,9 @@ export function OAuthPage() {
               </Card>
             </div>
           );
-        })}
+            })}
 
-        {/* Vertex JSON 登录 */}
+          {activeTab === 'vertex' && (
         <Card
           title={
             <span className={styles.cardTitle}>
@@ -579,6 +607,8 @@ export function OAuthPage() {
             )}
           </div>
         </Card>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -7,7 +7,6 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-xl;
-  margin: 0 40px;
   position: relative;
 }
 
@@ -188,16 +187,19 @@
 
 .dateTimeBlock {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 
   @media (max-width: $breakpoint-mobile) {
-    align-items: flex-start;
+    justify-content: flex-start;
   }
 }
 
-.time {
+.time,
+.date {
   font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
@@ -205,12 +207,27 @@
   line-height: 1.2;
 }
 
-.date {
-  font-size: 12px;
-  color: var(--text-secondary);
+.dateTimeSep {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  line-height: 1;
+  user-select: none;
 }
 
 // ─── Connection Pill ────────────────────────────────────
+
+.connectionRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+
+  @media (max-width: $breakpoint-mobile) {
+    justify-content: flex-start;
+  }
+}
 
 .connectionPill {
   display: inline-flex;
@@ -253,8 +270,39 @@
   color: var(--text-primary);
 }
 
+.apiBasePill {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  max-width: min(100%, 320px);
+  padding: 5px 12px;
+  border-radius: $radius-full;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-secondary);
+  backdrop-filter: var(--glass-backdrop-filter);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--primary-color) 35%, var(--glass-border));
+    background: color-mix(in srgb, var(--bg-primary) 55%, transparent);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 28%, transparent);
+  }
+}
+
 .buildDate {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-tertiary);
   text-align: right;
 
@@ -309,9 +357,6 @@
   --glass-blur: 12px;
   backdrop-filter: var(--glass-backdrop-filter);
   -webkit-backdrop-filter: var(--glass-backdrop-filter);
-  box-shadow:
-    0 18px 42px rgb(0 0 0 / 0.12),
-    inset 0 1px 0 rgb(255 255 255 / 0.03);
   text-decoration: none;
   transition:
     border-color $transition-fast,
@@ -320,10 +365,7 @@
   animation: cardEnter 0.4s ease-out both;
 
   &:hover {
-    border-color: color-mix(in srgb, var(--border-hover) 82%, transparent);
-    box-shadow:
-      0 22px 48px rgb(0 0 0 / 0.16),
-      inset 0 1px 0 rgb(255 255 255 / 0.04);
+    border-color: color-mix(in srgb, var(--border-hover) 88%, transparent);
     transform: translateY(-2px);
   }
 }
@@ -397,7 +439,7 @@
 }
 
 .bentoSublabel {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
   opacity: 0.7;
   margin-top: 2px;
@@ -435,7 +477,7 @@
   transition: border-color $transition-fast;
 
   &:hover {
-    border-color: color-mix(in srgb, var(--border-hover) 82%, transparent);
+    border-color: color-mix(in srgb, var(--border-hover) 88%, transparent);
   }
 }
 
@@ -477,7 +519,7 @@
   padding: 2px 8px;
   border-radius: $radius-full;
   border: 1px solid var(--border-color);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
   max-width: 100%;

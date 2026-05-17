@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Button } from './Button';
 import { IconX } from './icons';
 import type { ModelEntry } from './modelInputListUtils';
@@ -18,6 +18,8 @@ interface ModelInputListProps {
   removeButtonClassName?: string;
   removeButtonTitle?: string;
   removeButtonAriaLabel?: string;
+  /** 渲染在每行输入区域下方（如批量连通状态） */
+  renderAfterRow?: (index: number, entry: ModelEntry) => ReactNode;
 }
 
 export function ModelInputList({
@@ -35,6 +37,7 @@ export function ModelInputList({
   removeButtonClassName = '',
   removeButtonTitle = 'Remove',
   removeButtonAriaLabel = 'Remove',
+  renderAfterRow,
 }: ModelInputListProps) {
   const currentEntries = entries.length ? entries : [{ name: '', alias: '' }];
   const containerClassName = ['header-input-list', className].filter(Boolean).join(' ');
@@ -91,6 +94,7 @@ export function ModelInputList({
               <IconX size={14} />
             </Button>
           </div>
+          {renderAfterRow?.(index, entry)}
         </Fragment>
       ))}
       {!hideAddButton && addLabel && (

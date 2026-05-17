@@ -9,6 +9,9 @@ import { maskApiKey } from '@/utils/format';
 import { statusBarDataFromRecentRequests } from '@/utils/recentRequests';
 import styles from '@/pages/AiProvidersPage.module.scss';
 import { ProviderList } from '../ProviderList';
+import { ProviderModelsPreview } from '../ProviderModelsPreview';
+import { CopyableUrlValue } from '../CopyableUrlValue';
+import { ProviderSectionCardTitle } from '../ProviderSectionCardTitle';
 import { ProviderStatusBar } from '../ProviderStatusBar';
 import {
   getProviderConfigKey,
@@ -66,10 +69,11 @@ export function VertexSection({
     <>
       <Card
         title={
-          <span className={styles.cardTitle}>
-            <img src={iconVertex} alt="" className={styles.cardTitleIcon} />
-            {t('ai_providers.vertex_title')}
-          </span>
+          <ProviderSectionCardTitle
+            icon={<img src={iconVertex} alt="" className={styles.cardTitleIcon} />}
+            title={t('ai_providers.vertex_title')}
+            count={configs.length}
+          />
         }
         extra={
           <Button size="sm" onClick={onAdd} disabled={actionsDisabled}>
@@ -95,6 +99,7 @@ export function VertexSection({
               onChange={(value) => void onToggle(index, value)}
             />
           )}
+          actionsClassName={styles.providerCardActions}
           renderContent={(item, index) => {
             const stats = getProviderTotalStats(
               usageByProvider,
@@ -111,8 +116,18 @@ export function VertexSection({
 
             return (
               <Fragment>
-                <div className="item-title">
-                  {t('ai_providers.vertex_item_title')} #{index + 1}
+                <div className={styles.providerCardHeaderRow}>
+                  <div className={`item-title ${styles.providerCardTitle}`}>
+                    {t('ai_providers.vertex_item_title')} #{index + 1}
+                  </div>
+                  <div className={styles.cardStats}>
+                    <span className={`${styles.statPill} ${styles.statSuccess}`}>
+                      {t('stats.success')}: {stats.success}
+                    </span>
+                    <span className={`${styles.statPill} ${styles.statFailure}`}>
+                      {t('stats.failure')}: {stats.failure}
+                    </span>
+                  </div>
                 </div>
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>{t('common.api_key')}:</span>
@@ -127,7 +142,7 @@ export function VertexSection({
                 {item.baseUrl && (
                   <div className={styles.fieldRow}>
                     <span className={styles.fieldLabel}>{t('common.base_url')}:</span>
-                    <span className={styles.fieldValue}>{item.baseUrl}</span>
+                    <CopyableUrlValue value={item.baseUrl} />
                   </div>
                 )}
                 {item.proxyUrl && (
@@ -151,19 +166,11 @@ export function VertexSection({
                   </div>
                 )}
                 {item.models?.length ? (
-                  <div className={styles.modelTagList}>
-                    <span className={styles.modelCountLabel}>
-                      {t('ai_providers.vertex_models_count')}: {item.models.length}
-                    </span>
-                    {item.models.map((model) => (
-                      <span key={`${model.name}-${model.alias || 'default'}`} className={styles.modelTag}>
-                        <span className={styles.modelName}>{model.name}</span>
-                        {model.alias && (
-                          <span className={styles.modelAlias}>{model.alias}</span>
-                        )}
-                      </span>
-                    ))}
-                  </div>
+                  <ProviderModelsPreview
+                    models={item.models}
+                    countLabel={`${t('ai_providers.vertex_models_count')}: ${item.models.length}`}
+                    modalTitle={`${t('ai_providers.vertex_item_title')} #${index + 1}`}
+                  />
                 ) : null}
                 {excludedModels.length ? (
                   <div className={styles.excludedModelsSection}>
@@ -179,14 +186,6 @@ export function VertexSection({
                     </div>
                   </div>
                 ) : null}
-                <div className={styles.cardStats}>
-                  <span className={`${styles.statPill} ${styles.statSuccess}`}>
-                    {t('stats.success')}: {stats.success}
-                  </span>
-                  <span className={`${styles.statPill} ${styles.statFailure}`}>
-                    {t('stats.failure')}: {stats.failure}
-                  </span>
-                </div>
                 <ProviderStatusBar statusData={statusData} />
               </Fragment>
             );

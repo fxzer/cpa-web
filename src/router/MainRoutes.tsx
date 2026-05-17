@@ -9,7 +9,7 @@ import { AiProvidersCodexEditPage } from '@/pages/AiProvidersCodexEditPage';
 import { AiProvidersGeminiEditPage } from '@/pages/AiProvidersGeminiEditPage';
 import { AiProvidersOpenAIEditLayout } from '@/pages/AiProvidersOpenAIEditLayout';
 import { AiProvidersOpenAIEditPage } from '@/pages/AiProvidersOpenAIEditPage';
-import { AiProvidersOpenAIModelsPage } from '@/pages/AiProvidersOpenAIModelsPage';
+import { OpenAIModelDiscoveryLegacyRedirect } from '@/pages/OpenAIModelDiscoveryLegacyRedirect';
 import { AiProvidersVertexEditPage } from '@/pages/AiProvidersVertexEditPage';
 import { AuthFilesPage } from '@/pages/AuthFilesPage';
 import { AuthFilesOAuthExcludedEditPage } from '@/pages/AuthFilesOAuthExcludedEditPage';
@@ -21,12 +21,14 @@ import { LogsPage } from '@/pages/LogsPage';
 import { ModelsPage } from '@/pages/ModelsPage';
 import { SystemPage } from '@/pages/SystemPage';
 import { MonitoringCenterPage } from '@/pages/MonitoringCenterPage';
+import { RequestMonitoringPage } from '@/pages/RequestMonitoringPage';
 import { CredentialCenterPage } from '@/pages/CredentialCenterPage';
 
 const mainRoutes = [
   { path: '/', element: <DashboardPage /> },
   { path: '/dashboard', element: <DashboardPage /> },
   { path: '/monitor', element: <MonitoringCenterPage /> },
+  { path: '/request-monitoring', element: <RequestMonitoringPage /> },
   { path: '/credential-center', element: <CredentialCenterPage /> },
   { path: '/settings', element: <Navigate to="/config" replace /> },
   { path: '/api-keys', element: <Navigate to="/config" replace /> },
@@ -57,7 +59,7 @@ const mainRoutes = [
     element: <AiProvidersOpenAIEditLayout />,
     children: [
       { index: true, element: <AiProvidersOpenAIEditPage /> },
-      { path: 'models', element: <AiProvidersOpenAIModelsPage /> },
+      { path: 'models', element: <OpenAIModelDiscoveryLegacyRedirect /> },
     ],
   },
   {
@@ -65,7 +67,7 @@ const mainRoutes = [
     element: <AiProvidersOpenAIEditLayout />,
     children: [
       { index: true, element: <AiProvidersOpenAIEditPage /> },
-      { path: 'models', element: <AiProvidersOpenAIModelsPage /> },
+      { path: 'models', element: <OpenAIModelDiscoveryLegacyRedirect /> },
     ],
   },
   { path: '/ai-providers/ampcode', element: <AiProvidersAmpcodeEditPage /> },

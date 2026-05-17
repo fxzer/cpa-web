@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -20,8 +19,10 @@ import type { OpenAIProviderConfig } from '@/types';
 import { maskApiKey } from '@/utils/format';
 import { statusBarDataFromRecentRequests } from '@/utils/recentRequests';
 import styles from '@/pages/AiProvidersPage.module.scss';
+import { ProviderModelsPreview } from '../ProviderModelsPreview';
+import { CopyableUrlValue } from '../CopyableUrlValue';
+import { ProviderSectionCardTitle } from '../ProviderSectionCardTitle';
 import { ProviderStatusBar } from '../ProviderStatusBar';
-import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer';
 import {
   getOpenAIProviderRecentWindowStats,
   getOpenAIProviderRecentStatusData,
@@ -33,13 +34,6 @@ import {
 
 type SortOption = 'name' | 'priority' | 'recent-success';
 type SortDirection = 'asc' | 'desc';
-
-interface FloatingToolbarStyle {
-  left: number;
-  top: number;
-  width: number;
-  visible: boolean;
-}
 
 const EMPTY_STATUS_BAR = statusBarDataFromRecentRequests([]);
 
@@ -82,8 +76,6 @@ export function OpenAISection({
   onToggle,
 }: OpenAISectionProps) {
   const { t } = useTranslation();
-  const pageTransitionLayer = usePageTransitionLayer();
-  const isTransitionAnimating = pageTransitionLayer?.isAnimating ?? false;
   const actionsDisabled = disableControls || loading || isSwitching;
   const toggleDisabled = disableControls || loading || isSwitching;
   const [sortOption, setSortOption] = useState<SortOption>('priority');
@@ -91,78 +83,7 @@ export function OpenAISection({
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownLayout, setDropdownLayout] = useState({ openAbove: false, maxHeight: 300 });
-  const [floatingToolbarStyle, setFloatingToolbarStyle] = useState<FloatingToolbarStyle>({
-    left: 0,
-    top: 0,
-    width: 0,
-    visible: false,
-  });
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const topToolbarAnchorRef = useRef<HTMLDivElement>(null);
   const topDropdownRef = useRef<HTMLDivElement>(null);
-  const floatingDropdownRef = useRef<HTMLDivElement>(null);
-
-  const shouldRenderFloatingToolbar = !isTransitionAnimating && floatingToolbarStyle.visible;
-
-  useEffect(() => {
-    if (isTransitionAnimating) {
-      return;
-    }
-
-    const updateFloatingToolbar = () => {
-      const section = sectionRef.current;
-      const anchor = topToolbarAnchorRef.current;
-
-      if (!section || !anchor) {
-        return;
-      }
-
-      const sectionRect = section.getBoundingClientRect();
-      const anchorRect = anchor.getBoundingClientRect();
-      const rootStyles = getComputedStyle(document.documentElement);
-      const fixedTop = Number.parseFloat(rootStyles.getPropertyValue('--header-height')) || 64;
-      const toolbarHeight = anchorRect.height;
-      const isMobile = window.innerWidth <= 768;
-      const shouldShow =
-        !isMobile && anchorRect.top <= fixedTop && sectionRect.bottom > fixedTop + toolbarHeight;
-
-      setFloatingToolbarStyle((prev) => {
-        const next = {
-          left: sectionRect.left,
-          top: fixedTop,
-          width: sectionRect.width,
-          visible: shouldShow,
-        };
-
-        if (
-          prev.left === next.left &&
-          prev.top === next.top &&
-          prev.width === next.width &&
-          prev.visible === next.visible
-        ) {
-          return prev;
-        }
-
-        return next;
-      });
-    };
-
-    updateFloatingToolbar();
-    window.addEventListener('resize', updateFloatingToolbar);
-    window.addEventListener('scroll', updateFloatingToolbar, true);
-
-    return () => {
-      window.removeEventListener('resize', updateFloatingToolbar);
-      window.removeEventListener('scroll', updateFloatingToolbar, true);
-    };
-  }, [
-    configs.length,
-    isDropdownOpen,
-    isTransitionAnimating,
-    selectedModels,
-    sortDirection,
-    sortOption,
-  ]);
 
   useEffect(() => {
     if (!isDropdownOpen) {
@@ -172,9 +93,8 @@ export function OpenAISection({
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       const clickedTop = topDropdownRef.current?.contains(target);
-      const clickedFloating = floatingDropdownRef.current?.contains(target);
 
-      if (!clickedTop && !clickedFloating) {
+      if (!clickedTop) {
         setIsDropdownOpen(false);
       }
     };
@@ -188,9 +108,7 @@ export function OpenAISection({
     }
 
     const updateDropdownLayout = () => {
-      const wrapper = floatingToolbarStyle.visible
-        ? floatingDropdownRef.current
-        : topDropdownRef.current;
+      const wrapper = topDropdownRef.current;
 
       if (!wrapper) {
         return;
@@ -227,7 +145,7 @@ export function OpenAISection({
       window.removeEventListener('resize', updateDropdownLayout);
       window.removeEventListener('scroll', updateDropdownLayout, true);
     };
-  }, [floatingToolbarStyle.visible, isDropdownOpen]);
+  }, [isDropdownOpen]);
 
   const allModelNames = useMemo(() => {
     const modelSet = new Set<string>();
@@ -391,18 +309,14 @@ export function OpenAISection({
     </div>
   );
 
-  const renderToolbar = (isFloating = false) => {
-    const isActiveToolbar = isFloating === shouldRenderFloatingToolbar;
+  const renderToolbar = () => {
     const dropdownClassName = dropdownLayout.openAbove
       ? `${styles.modelDropdownList} ${styles.modelDropdownListAbove}`
       : styles.modelDropdownList;
 
     return (
       <div className={styles.cardHeaderActions}>
-        <div
-          className={styles.modelMultiSelectWrapper}
-          ref={isFloating ? floatingDropdownRef : topDropdownRef}
-        >
+        <div className={styles.modelMultiSelectWrapper} ref={topDropdownRef}>
           <div
             className={[
               styles.modelFilterControl,
@@ -420,7 +334,7 @@ export function OpenAISection({
               title={modelFilterTitle}
               aria-label={modelFilterTitle}
               aria-haspopup="true"
-              aria-expanded={isActiveToolbar && isDropdownOpen}
+              aria-expanded={isDropdownOpen}
             >
               <span className={styles.modelFilterIcon} aria-hidden="true">
                 <IconSlidersHorizontal size={14} />
@@ -447,7 +361,7 @@ export function OpenAISection({
             )}
           </div>
 
-          {isActiveToolbar && isDropdownOpen && (
+          {isDropdownOpen && (
             <div
               className={dropdownClassName}
               style={{ maxHeight: `${dropdownLayout.maxHeight}px` }}
@@ -514,14 +428,17 @@ export function OpenAISection({
   };
 
   const renderStaticTitle = () => (
-    <span className={styles.cardTitle}>
-      <img
-        src={resolvedTheme === 'dark' ? iconOpenaiDark : iconOpenaiLight}
-        alt=""
-        className={styles.cardTitleIcon}
-      />
-      {t('ai_providers.openai_title')}
-    </span>
+    <ProviderSectionCardTitle
+      icon={
+        <img
+          src={resolvedTheme === 'dark' ? iconOpenaiDark : iconOpenaiLight}
+          alt=""
+          className={styles.cardTitleIcon}
+        />
+      }
+      title={t('ai_providers.openai_title')}
+      count={configs.length}
+    />
   );
 
   const renderProviderCard = ({ config: provider, originalIndex }: IndexedOpenAIProvider) => {
@@ -539,7 +456,17 @@ export function OpenAISection({
         style={actionsDisabled ? { opacity: 0.6 } : undefined}
       >
         <div className={styles.openaiProviderMeta}>
-          <div className={styles.openaiProviderTitle}>{provider.name}</div>
+          <div className={styles.providerCardHeaderRow}>
+            <div className={styles.openaiProviderTitle}>{provider.name}</div>
+            <div className={styles.cardStats}>
+              <span className={`${styles.statPill} ${styles.statSuccess}`}>
+                {t('stats.success')}: {stats.success}
+              </span>
+              <span className={`${styles.statPill} ${styles.statFailure}`}>
+                {t('stats.failure')}: {stats.failure}
+              </span>
+            </div>
+          </div>
           {provider.priority !== undefined && (
             <div className={styles.fieldRow}>
               <span className={styles.fieldLabel}>{t('common.priority')}:</span>
@@ -554,7 +481,7 @@ export function OpenAISection({
           )}
           <div className={styles.fieldRow}>
             <span className={styles.fieldLabel}>{t('common.base_url')}:</span>
-            <span className={styles.fieldValue}>{provider.baseUrl}</span>
+            <CopyableUrlValue value={provider.baseUrl} />
           </div>
           {providerDisabled && (
             <div className="status-badge warning" style={{ marginTop: 8, marginBottom: 0 }}>
@@ -616,16 +543,10 @@ export function OpenAISection({
             <span className={styles.fieldValue}>{provider.models?.length || 0}</span>
           </div>
           {provider.models?.length ? (
-            <div className={styles.modelTagList}>
-              {provider.models.map((model) => (
-                <span key={model.name} className={styles.modelTag}>
-                  <span className={styles.modelName}>{model.name}</span>
-                  {model.alias && model.alias !== model.name && (
-                    <span className={styles.modelAlias}>{model.alias}</span>
-                  )}
-                </span>
-              ))}
-            </div>
+            <ProviderModelsPreview
+              models={provider.models}
+              modalTitle={provider.name || provider.baseUrl || t('ai_providers.openai_item_title')}
+            />
           ) : null}
           {provider.testModel && (
             <div className={styles.fieldRow}>
@@ -633,33 +554,27 @@ export function OpenAISection({
               <span className={styles.fieldValue}>{provider.testModel}</span>
             </div>
           )}
-          <div className={styles.cardStats}>
-            <span className={`${styles.statPill} ${styles.statSuccess}`}>
-              {t('stats.success')}: {stats.success}
-            </span>
-            <span className={`${styles.statPill} ${styles.statFailure}`}>
-              {t('stats.failure')}: {stats.failure}
-            </span>
-          </div>
           <ProviderStatusBar statusData={statusData} />
         </div>
         <div className={styles.openaiProviderActions}>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => onEdit(originalIndex)}
-            disabled={actionsDisabled}
-          >
-            {t('common.edit')}
-          </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => onDelete(originalIndex)}
-            disabled={actionsDisabled}
-          >
-            {t('common.delete')}
-          </Button>
+          <div className="provider-card-action-buttons">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onEdit(originalIndex)}
+              disabled={actionsDisabled}
+            >
+              {t('common.edit')}
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => onDelete(originalIndex)}
+              disabled={actionsDisabled}
+            >
+              {t('common.delete')}
+            </Button>
+          </div>
           <ToggleSwitch
             label={t('ai_providers.config_toggle_label')}
             checked={!providerDisabled}
@@ -672,64 +587,32 @@ export function OpenAISection({
   };
 
   return (
-    <>
-      <div ref={sectionRef}>
-        <Card
-          title={renderStaticTitle()}
-          extra={
-            <div
-              ref={topToolbarAnchorRef}
-              className={shouldRenderFloatingToolbar ? styles.openaiToolbarAnchorHidden : undefined}
+    <Card title={renderStaticTitle()} extra={renderToolbar()}>
+      {loading && sortedConfigs.length === 0 ? (
+        <div className="hint">{t('common.loading')}</div>
+      ) : configs.length > 0 && sortedConfigs.length === 0 ? (
+        <EmptyState
+          title={t('ai_providers.openai_filtered_empty_title')}
+          description={t('ai_providers.openai_filtered_empty_desc')}
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={clearAllModels}
+              disabled={actionsDisabled}
             >
-              {renderToolbar(false)}
-            </div>
+              {t('ai_providers.model_search_clear')}
+            </Button>
           }
-        >
-          {loading && sortedConfigs.length === 0 ? (
-            <div className="hint">{t('common.loading')}</div>
-          ) : configs.length > 0 && sortedConfigs.length === 0 ? (
-            <EmptyState
-              title={t('ai_providers.openai_filtered_empty_title')}
-              description={t('ai_providers.openai_filtered_empty_desc')}
-              action={
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={clearAllModels}
-                  disabled={actionsDisabled}
-                >
-                  {t('ai_providers.model_search_clear')}
-                </Button>
-              }
-            />
-          ) : sortedConfigs.length === 0 ? (
-            <EmptyState
-              title={t('ai_providers.openai_empty_title')}
-              description={t('ai_providers.openai_empty_desc')}
-            />
-          ) : (
-            <div className={styles.openaiProviderList}>{sortedConfigs.map(renderProviderCard)}</div>
-          )}
-        </Card>
-      </div>
-      {typeof document !== 'undefined' && shouldRenderFloatingToolbar
-        ? createPortal(
-            <div
-              className={`card ${styles.openaiFloatingToolbar}`}
-              style={{
-                left: `${floatingToolbarStyle.left}px`,
-                top: `${floatingToolbarStyle.top}px`,
-                width: `${floatingToolbarStyle.width}px`,
-              }}
-            >
-              <div className="card-header">
-                <div className="title">{renderStaticTitle()}</div>
-                {renderToolbar(true)}
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
-    </>
+        />
+      ) : sortedConfigs.length === 0 ? (
+        <EmptyState
+          title={t('ai_providers.openai_empty_title')}
+          description={t('ai_providers.openai_empty_desc')}
+        />
+      ) : (
+        <div className={styles.openaiProviderList}>{sortedConfigs.map(renderProviderCard)}</div>
+      )}
+    </Card>
   );
 }

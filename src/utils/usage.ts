@@ -62,9 +62,18 @@ export interface ModelPrice {
 
 export interface UsageDetail {
   id?: string;
+  request_id?: string;
   timestamp: string;
+  provider?: string;
   source: string;
   auth_index: string | number | null;
+  auth_type?: string;
+  api_key_hash?: string;
+  account_snapshot?: string;
+  auth_label_snapshot?: string;
+  auth_file_snapshot?: string;
+  auth_provider_snapshot?: string;
+  auth_snapshot_at_ms?: number;
   latency_ms?: number;
   first_byte_latency_ms?: number;
   generation_ms?: number;
@@ -233,6 +242,30 @@ const toNonNegativeNumber = (value: unknown): number | null => {
   return parsed;
 };
 
+const readOptionalStringField = (
+  record: Record<string, unknown>,
+  ...keys: string[]
+): string | undefined => {
+  for (const key of keys) {
+    const value = record[key];
+    if (value === null || value === undefined) continue;
+    const text = typeof value === 'string' ? value.trim() : String(value).trim();
+    if (text) return text;
+  }
+  return undefined;
+};
+
+const readOptionalNumberField = (
+  record: Record<string, unknown>,
+  ...keys: string[]
+): number | undefined => {
+  for (const key of keys) {
+    const value = toNonNegativeNumber(record[key]);
+    if (value !== null) return value;
+  }
+  return undefined;
+};
+
 const normalizeUsageTokens = (value: unknown): UsageDetail['tokens'] => {
   const tokens = isRecord(value) ? value : {};
   const inputTokens = toNonNegativeNumber(tokens.input_tokens) ?? 0;
@@ -278,18 +311,56 @@ const normalizeUsageRecordDetail = (
       : detail.source === null || detail.source === undefined
         ? ''
         : String(detail.source);
+  const normalizedSource = normalizeUsageSourceId(source);
   const thinkingEffort =
     typeof detail.thinking_effort === 'string' && detail.thinking_effort.trim()
       ? detail.thinking_effort.trim()
       : undefined;
+  const requestId = readOptionalStringField(detail, 'request_id', 'requestId');
+  const provider = readOptionalStringField(detail, 'provider');
+  const authType = readOptionalStringField(detail, 'auth_type', 'authType');
+  const rawApiKey = readOptionalStringField(detail, 'api_key', 'apiKey');
+  const apiKeyHash =
+    readOptionalStringField(detail, 'api_key_hash', 'apiKeyHash') ||
+    (normalizedSource.startsWith(USAGE_SOURCE_PREFIX_KEY)
+      ? normalizedSource.slice(USAGE_SOURCE_PREFIX_KEY.length)
+      : rawApiKey
+        ? fnv1a64Hex(rawApiKey)
+        : undefined);
+  const accountSnapshot = readOptionalStringField(detail, 'account_snapshot', 'accountSnapshot');
+  const authLabelSnapshot = readOptionalStringField(
+    detail,
+    'auth_label_snapshot',
+    'authLabelSnapshot'
+  );
+  const authFileSnapshot = readOptionalStringField(detail, 'auth_file_snapshot', 'authFileSnapshot');
+  const authProviderSnapshot = readOptionalStringField(
+    detail,
+    'auth_provider_snapshot',
+    'authProviderSnapshot'
+  );
+  const authSnapshotAtMs = readOptionalNumberField(
+    detail,
+    'auth_snapshot_at_ms',
+    'authSnapshotAtMs'
+  );
 
   const endpointMatch = endpoint.match(USAGE_ENDPOINT_METHOD_REGEX);
 
   return {
     ...(id ? { id } : {}),
+    ...(requestId ? { request_id: requestId } : {}),
     timestamp,
-    source,
+    ...(provider ? { provider } : {}),
+    source: normalizedSource,
     auth_index: (detail.auth_index ?? detail.authIndex ?? detail.AuthIndex ?? null) as UsageDetail['auth_index'],
+    ...(authType ? { auth_type: authType } : {}),
+    ...(apiKeyHash ? { api_key_hash: apiKeyHash } : {}),
+    ...(accountSnapshot ? { account_snapshot: accountSnapshot } : {}),
+    ...(authLabelSnapshot ? { auth_label_snapshot: authLabelSnapshot } : {}),
+    ...(authFileSnapshot ? { auth_file_snapshot: authFileSnapshot } : {}),
+    ...(authProviderSnapshot ? { auth_provider_snapshot: authProviderSnapshot } : {}),
+    ...(authSnapshotAtMs !== undefined ? { auth_snapshot_at_ms: authSnapshotAtMs } : {}),
     ...(latencyMs !== null ? { latency_ms: latencyMs } : {}),
     ...(firstByteLatencyMs !== null ? { first_byte_latency_ms: firstByteLatencyMs } : {}),
     ...(generationMs !== null ? { generation_ms: generationMs } : {}),
@@ -303,6 +374,37 @@ const normalizeUsageRecordDetail = (
     __endpointPath: endpointMatch?.[2],
     __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
   };
+};
+
+const decodeUsageRequestPayload = (value: unknown): Record<string, unknown> | null => {
+  if (isRecord(value)) return value;
+  if (typeof value !== 'string' || !value.trim()) return null;
+
+  try {
+    const binary = atob(value.trim());
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const decoded = new TextDecoder().decode(bytes);
+    const parsed: unknown = JSON.parse(decoded);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const collectEncodedUsageRequestDetails = (usageData: unknown): UsageDetailWithEndpoint[] => {
+  const usageRecord = isRecord(usageData) ? usageData : null;
+  const requests = Array.isArray(usageRecord?.requests) ? usageRecord.requests : [];
+  if (!requests.length) return [];
+
+  return requests
+    .map((item) => {
+      const record = decodeUsageRequestPayload(item);
+      if (!record) return null;
+      const endpoint = readOptionalStringField(record, 'endpoint') || 'unknown';
+      const modelName = readOptionalStringField(record, 'model', 'alias') || 'unknown';
+      return normalizeUsageRecordDetail(record, modelName, endpoint);
+    })
+    .filter((detail): detail is UsageDetailWithEndpoint => Boolean(detail));
 };
 
 const collectBackendUsageDetails = (usageData: Record<string, unknown>): UsageDetailWithEndpoint[] => {
@@ -409,7 +511,10 @@ export function normalizeUsageData(usageData: unknown): UsageStatsSnapshot | Rec
     return usageRecord;
   }
 
-  return buildUsageSnapshotFromDetails(collectBackendUsageDetails(usageRecord));
+  return buildUsageSnapshotFromDetails([
+    ...collectEncodedUsageRequestDetails(usageRecord),
+    ...collectBackendUsageDetails(usageRecord),
+  ]);
 }
 
 export function extractGenerationMs(detail: unknown): number | null {
@@ -832,8 +937,9 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
   }
 
   const apis = getApisRecord(usageData);
-  if (!apis) return [];
-  const details: UsageDetail[] = [];
+  const encodedDetails = collectEncodedUsageRequestDetails(usageData);
+  if (!apis) return encodedDetails;
+  const details: UsageDetail[] = [...encodedDetails];
   const sourceCache = new Map<string, string>();
 
   const normalizeSource = (value: unknown): string => {
@@ -875,14 +981,52 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
           typeof detailRaw.thinking_effort === 'string' && detailRaw.thinking_effort.trim()
             ? detailRaw.thinking_effort.trim()
             : undefined;
+        const requestId = readOptionalStringField(detailRaw, 'request_id', 'requestId');
+        const provider = readOptionalStringField(detailRaw, 'provider');
+        const authType = readOptionalStringField(detailRaw, 'auth_type', 'authType');
+        const apiKeyHash = readOptionalStringField(detailRaw, 'api_key_hash', 'apiKeyHash');
+        const accountSnapshot = readOptionalStringField(
+          detailRaw,
+          'account_snapshot',
+          'accountSnapshot'
+        );
+        const authLabelSnapshot = readOptionalStringField(
+          detailRaw,
+          'auth_label_snapshot',
+          'authLabelSnapshot'
+        );
+        const authFileSnapshot = readOptionalStringField(
+          detailRaw,
+          'auth_file_snapshot',
+          'authFileSnapshot'
+        );
+        const authProviderSnapshot = readOptionalStringField(
+          detailRaw,
+          'auth_provider_snapshot',
+          'authProviderSnapshot'
+        );
+        const authSnapshotAtMs = readOptionalNumberField(
+          detailRaw,
+          'auth_snapshot_at_ms',
+          'authSnapshotAtMs'
+        );
         details.push({
           ...(id ? { id } : {}),
+          ...(requestId ? { request_id: requestId } : {}),
           timestamp,
+          ...(provider ? { provider } : {}),
           source: normalizeSource(detailRaw.source),
           auth_index: (detailRaw?.auth_index ??
             detailRaw?.authIndex ??
             detailRaw?.AuthIndex ??
             null) as UsageDetail['auth_index'],
+          ...(authType ? { auth_type: authType } : {}),
+          ...(apiKeyHash ? { api_key_hash: apiKeyHash } : {}),
+          ...(accountSnapshot ? { account_snapshot: accountSnapshot } : {}),
+          ...(authLabelSnapshot ? { auth_label_snapshot: authLabelSnapshot } : {}),
+          ...(authFileSnapshot ? { auth_file_snapshot: authFileSnapshot } : {}),
+          ...(authProviderSnapshot ? { auth_provider_snapshot: authProviderSnapshot } : {}),
+          ...(authSnapshotAtMs !== undefined ? { auth_snapshot_at_ms: authSnapshotAtMs } : {}),
           latency_ms: latencyMs ?? undefined,
           first_byte_latency_ms: firstByteLatencyMs ?? undefined,
           generation_ms: generationMs ?? undefined,
@@ -914,9 +1058,15 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
   }
 
   const apis = getApisRecord(usageData);
-  if (!apis) return [];
+  const encodedDetails = collectEncodedUsageRequestDetails(usageData);
+  if (!apis) {
+    if (cacheKey) {
+      usageDetailsWithEndpointCache.set(cacheKey, encodedDetails);
+    }
+    return encodedDetails;
+  }
 
-  const details: UsageDetailWithEndpoint[] = [];
+  const details: UsageDetailWithEndpoint[] = [...encodedDetails];
   const sourceCache = new Map<string, string>();
 
   const normalizeSource = (value: unknown): string => {
@@ -962,14 +1112,52 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
           typeof detailRaw.thinking_effort === 'string' && detailRaw.thinking_effort.trim()
             ? detailRaw.thinking_effort.trim()
             : undefined;
+        const requestId = readOptionalStringField(detailRaw, 'request_id', 'requestId');
+        const provider = readOptionalStringField(detailRaw, 'provider');
+        const authType = readOptionalStringField(detailRaw, 'auth_type', 'authType');
+        const apiKeyHash = readOptionalStringField(detailRaw, 'api_key_hash', 'apiKeyHash');
+        const accountSnapshot = readOptionalStringField(
+          detailRaw,
+          'account_snapshot',
+          'accountSnapshot'
+        );
+        const authLabelSnapshot = readOptionalStringField(
+          detailRaw,
+          'auth_label_snapshot',
+          'authLabelSnapshot'
+        );
+        const authFileSnapshot = readOptionalStringField(
+          detailRaw,
+          'auth_file_snapshot',
+          'authFileSnapshot'
+        );
+        const authProviderSnapshot = readOptionalStringField(
+          detailRaw,
+          'auth_provider_snapshot',
+          'authProviderSnapshot'
+        );
+        const authSnapshotAtMs = readOptionalNumberField(
+          detailRaw,
+          'auth_snapshot_at_ms',
+          'authSnapshotAtMs'
+        );
         details.push({
           ...(id ? { id } : {}),
+          ...(requestId ? { request_id: requestId } : {}),
           timestamp,
+          ...(provider ? { provider } : {}),
           source: normalizeSource(detailRaw.source),
           auth_index: (detailRaw?.auth_index ??
             detailRaw?.authIndex ??
             detailRaw?.AuthIndex ??
             null) as UsageDetail['auth_index'],
+          ...(authType ? { auth_type: authType } : {}),
+          ...(apiKeyHash ? { api_key_hash: apiKeyHash } : {}),
+          ...(accountSnapshot ? { account_snapshot: accountSnapshot } : {}),
+          ...(authLabelSnapshot ? { auth_label_snapshot: authLabelSnapshot } : {}),
+          ...(authFileSnapshot ? { auth_file_snapshot: authFileSnapshot } : {}),
+          ...(authProviderSnapshot ? { auth_provider_snapshot: authProviderSnapshot } : {}),
+          ...(authSnapshotAtMs !== undefined ? { auth_snapshot_at_ms: authSnapshotAtMs } : {}),
           latency_ms: latencyMs ?? undefined,
           first_byte_latency_ms: firstByteLatencyMs ?? undefined,
           generation_ms: generationMs ?? undefined,

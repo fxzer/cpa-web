@@ -3,8 +3,7 @@
  *
  * Why this exists:
  * - The app uses `PageTransition` with iOS-style stacked routes for `/ai-providers/*`.
- * - Entering `/ai-providers/openai/.../models` creates a new route layer, so component-local state
- *   inside the OpenAI edit layout is not shared between the edit screen and the model picker screen.
+ * - The OpenAI「从 /models 选择模型」流程改为弹窗，但草稿仍需在布局与编辑页之间共享。
  * - This store makes the OpenAI edit draft shared across route layers keyed by provider index/new.
  */
 

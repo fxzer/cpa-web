@@ -13,10 +13,20 @@ import {
   CLAUDE_CONFIG,
   CODEX_CONFIG,
   GEMINI_CLI_CONFIG,
-  KIMI_CONFIG
+  KIMI_CONFIG,
 } from '@/components/quota';
 import type { AuthFileItem } from '@/types';
 import styles from './QuotaPage.module.scss';
+
+const QUOTA_TAB_CONFIGS = [
+  CODEX_CONFIG,
+  CLAUDE_CONFIG,
+  ANTIGRAVITY_CONFIG,
+  GEMINI_CLI_CONFIG,
+  KIMI_CONFIG,
+] as const;
+
+type QuotaTabType = (typeof QUOTA_TAB_CONFIGS)[number]['type'];
 
 export function QuotaPage() {
   const { t } = useTranslation();
@@ -25,6 +35,7 @@ export function QuotaPage() {
   const [files, setFiles] = useState<AuthFileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<QuotaTabType>('codex');
 
   const disableControls = connectionStatus !== 'connected';
 
@@ -71,36 +82,38 @@ export function QuotaPage() {
 
       {error && <div className={styles.errorBox}>{error}</div>}
 
-      <QuotaSection
-        config={CLAUDE_CONFIG}
-        files={files}
-        loading={loading}
-        disabled={disableControls}
-      />
-      <QuotaSection
-        config={ANTIGRAVITY_CONFIG}
-        files={files}
-        loading={loading}
-        disabled={disableControls}
-      />
-      <QuotaSection
-        config={CODEX_CONFIG}
-        files={files}
-        loading={loading}
-        disabled={disableControls}
-      />
-      <QuotaSection
-        config={GEMINI_CLI_CONFIG}
-        files={files}
-        loading={loading}
-        disabled={disableControls}
-      />
-      <QuotaSection
-        config={KIMI_CONFIG}
-        files={files}
-        loading={loading}
-        disabled={disableControls}
-      />
+      <div className={styles.tabBar} role="tablist" aria-label={t('quota_management.title')}>
+        {QUOTA_TAB_CONFIGS.map((cfg) => (
+          <button
+            key={cfg.type}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === cfg.type}
+            className={`${styles.tabItem} ${activeTab === cfg.type ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab(cfg.type)}
+          >
+            {t(`${cfg.i18nPrefix}.title`)}
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.tabPanel} role="tabpanel">
+        {activeTab === 'codex' && (
+          <QuotaSection config={CODEX_CONFIG} files={files} loading={loading} disabled={disableControls} />
+        )}
+        {activeTab === 'claude' && (
+          <QuotaSection config={CLAUDE_CONFIG} files={files} loading={loading} disabled={disableControls} />
+        )}
+        {activeTab === 'antigravity' && (
+          <QuotaSection config={ANTIGRAVITY_CONFIG} files={files} loading={loading} disabled={disableControls} />
+        )}
+        {activeTab === 'gemini-cli' && (
+          <QuotaSection config={GEMINI_CLI_CONFIG} files={files} loading={loading} disabled={disableControls} />
+        )}
+        {activeTab === 'kimi' && (
+          <QuotaSection config={KIMI_CONFIG} files={files} loading={loading} disabled={disableControls} />
+        )}
+      </div>
     </div>
   );
 }

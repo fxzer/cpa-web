@@ -4,10 +4,12 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  min-width: 0;
 }
 
 .wrapFullWidth {
   width: 100%;
+  min-width: 0;
 }
 
 .trigger {
@@ -16,6 +18,7 @@
   justify-content: space-between;
   gap: 8px;
   width: 100%;
+  min-width: 0;
   height: 40px;
   padding: 0 12px;
   border: 1px solid var(--border-color);
@@ -46,6 +49,8 @@
 }
 
 .triggerText {
+  flex: 1 1 0;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

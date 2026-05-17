@@ -68,7 +68,7 @@ export function MonitorStatCards({
     {
       key: 'requests',
       label: t('usage_stats.total_requests'),
-      icon: <IconSatellite size={16} />,
+      icon: <IconSatellite size={20} />,
       accent: '#8b8680',
       accentSoft: 'rgba(139, 134, 128, 0.18)',
       accentBorder: 'rgba(139, 134, 128, 0.35)',
@@ -78,7 +78,7 @@ export function MonitorStatCards({
     {
       key: 'tokens',
       label: t('usage_stats.total_tokens'),
-      icon: <IconDiamond size={16} />,
+      icon: <IconDiamond size={20} />,
       accent: '#8b5cf6',
       accentSoft: 'rgba(139, 92, 246, 0.18)',
       accentBorder: 'rgba(139, 92, 246, 0.35)',
@@ -88,7 +88,7 @@ export function MonitorStatCards({
     {
       key: 'rpm',
       label: timeRange === 'all' ? t('usage_stats.rpm_30m') : 'RPM',
-      icon: <IconTimer size={16} />,
+      icon: <IconTimer size={20} />,
       accent: '#22c55e',
       accentSoft: 'rgba(34, 197, 94, 0.18)',
       accentBorder: 'rgba(34, 197, 94, 0.32)',
@@ -98,7 +98,7 @@ export function MonitorStatCards({
     {
       key: 'tpm',
       label: timeRange === 'all' ? t('usage_stats.tpm_30m') : 'TPM',
-      icon: <IconTrendingUp size={16} />,
+      icon: <IconTrendingUp size={20} />,
       accent: '#f97316',
       accentSoft: 'rgba(249, 115, 22, 0.18)',
       accentBorder: 'rgba(249, 115, 22, 0.32)',
@@ -108,7 +108,7 @@ export function MonitorStatCards({
     {
       key: 'cost',
       label: t('usage_stats.total_cost'),
-      icon: <IconDollarSign size={16} />,
+      icon: <IconDollarSign size={20} />,
       accent: '#f59e0b',
       accentSoft: 'rgba(245, 158, 11, 0.18)',
       accentBorder: 'rgba(245, 158, 11, 0.32)',

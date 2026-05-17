@@ -26,7 +26,7 @@
 }
 
 .lastRefreshed {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-tertiary);
   white-space: nowrap;
 }
@@ -349,7 +349,7 @@
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition:
@@ -434,7 +434,7 @@
 }
 
 .apiBadge {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
@@ -727,7 +727,7 @@
 .priceModel {
   font-weight: 600;
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: 12px;
   word-break: break-all;
 }
 
@@ -782,7 +782,7 @@
 }
 
 .syncFieldHint {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-tertiary);
   margin-bottom: 2px;
 }
@@ -1031,7 +1031,7 @@
 }
 
 .requestEventsCountdown {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
 }
@@ -1166,7 +1166,7 @@
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
-  font-size: 11px;
+  font-size: 12px;
   max-width: 180px;
   word-break: break-all;
 }
@@ -1189,7 +1189,7 @@
   align-items: center;
   padding: 2px 8px;
   border-radius: $radius-full;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1286,7 +1286,7 @@
   min-width: 48px;
   padding: 2px 8px;
   border-radius: $radius-full;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1389,7 +1389,7 @@
 }
 
 .healthWindow {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-tertiary);
 }
 
@@ -1471,7 +1471,7 @@
   border: 1px solid var(--floating-border, #e5e7eb);
   border-radius: 6px;
   padding: 6px 10px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
   white-space: nowrap;
   box-shadow: var(--floating-shadow, 0 10px 24px rgba(0, 0, 0, 0.16));

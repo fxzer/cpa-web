@@ -18,6 +18,7 @@ import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/u
 import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
 import type { VertexFormState } from '@/components/providers';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
+import styles from './AiProvidersPage.module.scss';
 
 type LocationState = { fromAiProviders?: boolean } | null;
 
@@ -336,36 +337,39 @@ export function AiProvidersVertexEditPage() {
           <div className="hint">{t('common.invalid_provider_index')}</div>
         ) : (
           <>
-            <Input
-              label={t('ai_providers.vertex_add_modal_key_label')}
-              placeholder={t('ai_providers.vertex_add_modal_key_placeholder')}
-              value={form.apiKey}
-              onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
-              disabled={disableControls || saving}
-            />
-            <Input
-              label={t('ai_providers.prefix_label')}
-              placeholder={t('ai_providers.prefix_placeholder')}
-              value={form.prefix ?? ''}
-              onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
-              hint={t('ai_providers.prefix_hint')}
-              disabled={disableControls || saving}
-            />
-            <Input
-              label={t('ai_providers.vertex_add_modal_url_label')}
-              placeholder={t('ai_providers.vertex_add_modal_url_placeholder')}
-              value={form.baseUrl ?? ''}
-              onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
-              disabled={disableControls || saving}
-            />
-            <Input
-              label={t('ai_providers.vertex_add_modal_proxy_label')}
-              placeholder={t('ai_providers.vertex_add_modal_proxy_placeholder')}
-              value={form.proxyUrl ?? ''}
-              onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
-              disabled={disableControls || saving}
-            />
-            <HeaderInputList
+            <div className={styles.openaiEditForm}>
+              <div className={styles.providerEditTopGrid}>
+                <Input
+                  label={t('ai_providers.vertex_add_modal_key_label')}
+                  placeholder={t('ai_providers.vertex_add_modal_key_placeholder')}
+                  value={form.apiKey}
+                  onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
+                  disabled={disableControls || saving}
+                />
+                <Input
+                  label={t('ai_providers.prefix_label')}
+                  placeholder={t('ai_providers.prefix_placeholder')}
+                  value={form.prefix ?? ''}
+                  onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
+                  hint={t('ai_providers.prefix_hint')}
+                  disabled={disableControls || saving}
+                />
+                <Input
+                  label={t('ai_providers.vertex_add_modal_url_label')}
+                  placeholder={t('ai_providers.vertex_add_modal_url_placeholder')}
+                  value={form.baseUrl ?? ''}
+                  onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
+                  disabled={disableControls || saving}
+                />
+                <Input
+                  label={t('ai_providers.vertex_add_modal_proxy_label')}
+                  placeholder={t('ai_providers.vertex_add_modal_proxy_placeholder')}
+                  value={form.proxyUrl ?? ''}
+                  onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
+                  disabled={disableControls || saving}
+                />
+              </div>
+              <HeaderInputList
               entries={form.headers}
               onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}
               addLabel={t('common.custom_headers_add')}
@@ -386,6 +390,10 @@ export function AiProvidersVertexEditPage() {
                 removeButtonTitle={t('common.delete')}
                 removeButtonAriaLabel={t('common.delete')}
                 disabled={disableControls || saving}
+                className={styles.modelInputList}
+                rowClassName={styles.modelInputRow}
+                inputClassName={styles.modelInputField}
+                removeButtonClassName={styles.modelRowRemoveButton}
               />
             </div>
             <div className="form-group">
@@ -399,6 +407,7 @@ export function AiProvidersVertexEditPage() {
                 disabled={disableControls || saving}
               />
               <div className="hint">{t('ai_providers.excluded_models_hint')}</div>
+            </div>
             </div>
           </>
         )}

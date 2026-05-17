@@ -21,6 +21,7 @@ import {
 } from '@/components/providers/utils';
 import type { AmpcodeFormState } from '@/components/providers';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
+import styles from './AiProvidersPage.module.scss';
 
 type LocationState = { fromAiProviders?: boolean } | null;
 
@@ -378,23 +379,26 @@ export function AiProvidersAmpcodeEditPage() {
     >
       <Card>
         {error && <div className="error-box">{error}</div>}
-        <Input
-          label={t('ai_providers.ampcode_upstream_url_label')}
-          placeholder={t('ai_providers.ampcode_upstream_url_placeholder')}
-          value={form.upstreamUrl}
-          onChange={(e) => setForm((prev) => ({ ...prev, upstreamUrl: e.target.value }))}
-          disabled={loading || saving || disableControls}
-          hint={t('ai_providers.ampcode_upstream_url_hint')}
-        />
-        <Input
-          label={t('ai_providers.ampcode_upstream_api_key_label')}
-          placeholder={t('ai_providers.ampcode_upstream_api_key_placeholder')}
-          type="password"
-          value={form.upstreamApiKey}
-          onChange={(e) => setForm((prev) => ({ ...prev, upstreamApiKey: e.target.value }))}
-          disabled={loading || saving || disableControls}
-          hint={t('ai_providers.ampcode_upstream_api_key_hint')}
-        />
+        <div className={styles.openaiEditForm}>
+          <div className={styles.providerEditTopGrid}>
+            <Input
+              label={t('ai_providers.ampcode_upstream_url_label')}
+              placeholder={t('ai_providers.ampcode_upstream_url_placeholder')}
+              value={form.upstreamUrl}
+              onChange={(e) => setForm((prev) => ({ ...prev, upstreamUrl: e.target.value }))}
+              disabled={loading || saving || disableControls}
+              hint={t('ai_providers.ampcode_upstream_url_hint')}
+            />
+            <Input
+              label={t('ai_providers.ampcode_upstream_api_key_label')}
+              placeholder={t('ai_providers.ampcode_upstream_api_key_placeholder')}
+              type="password"
+              value={form.upstreamApiKey}
+              onChange={(e) => setForm((prev) => ({ ...prev, upstreamApiKey: e.target.value }))}
+              disabled={loading || saving || disableControls}
+              hint={t('ai_providers.ampcode_upstream_api_key_hint')}
+            />
+          </div>
         <div className={layoutStyles.upstreamApiKeyRow}>
           <div className={layoutStyles.upstreamApiKeyHint}>
             {t('ai_providers.ampcode_upstream_api_key_current', {
@@ -529,8 +533,13 @@ export function AiProvidersAmpcodeEditPage() {
             removeButtonTitle={t('common.delete')}
             removeButtonAriaLabel={t('common.delete')}
             disabled={loading || saving || disableControls}
+            className={styles.modelInputList}
+            rowClassName={styles.modelInputRow}
+            inputClassName={styles.modelInputField}
+            removeButtonClassName={styles.modelRowRemoveButton}
           />
           <div className="hint">{t('ai_providers.ampcode_model_mappings_hint')}</div>
+        </div>
         </div>
       </Card>
     </SecondaryScreenShell>

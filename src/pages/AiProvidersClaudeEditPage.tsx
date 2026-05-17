@@ -303,48 +303,50 @@ export function AiProvidersClaudeEditPage() {
           <div className={styles.sectionHint}>{t('common.invalid_provider_index')}</div>
         ) : (
           <div className={styles.openaiEditForm}>
-            <Input
-              label={t('ai_providers.claude_add_modal_key_label')}
-              value={form.apiKey}
-              onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
-              disabled={saving || disableControls || isTesting}
-            />
-            <Input
-              label={t('ai_providers.priority_label')}
-              hint={t('ai_providers.priority_hint')}
-              type="number"
-              step={1}
-              value={form.priority ?? ''}
-              onChange={(e) => {
-                const raw = e.target.value;
-                const parsed = raw.trim() === '' ? undefined : Number(raw);
-                setForm((prev) => ({
-                  ...prev,
-                  priority: parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
-                }));
-              }}
-              disabled={saving || disableControls || isTesting}
-            />
-            <Input
-              label={t('ai_providers.prefix_label')}
-              placeholder={t('ai_providers.prefix_placeholder')}
-              value={form.prefix ?? ''}
-              onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
-              hint={t('ai_providers.prefix_hint')}
-              disabled={saving || disableControls || isTesting}
-            />
-            <Input
-              label={t('ai_providers.claude_add_modal_url_label')}
-              value={form.baseUrl ?? ''}
-              onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
-              disabled={saving || disableControls || isTesting}
-            />
-            <Input
-              label={t('ai_providers.claude_add_modal_proxy_label')}
-              value={form.proxyUrl ?? ''}
-              onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
-              disabled={saving || disableControls || isTesting}
-            />
+            <div className={styles.providerEditTopGrid}>
+              <Input
+                label={t('ai_providers.claude_add_modal_key_label')}
+                value={form.apiKey}
+                onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
+                disabled={saving || disableControls || isTesting}
+              />
+              <Input
+                label={t('ai_providers.priority_label')}
+                hint={t('ai_providers.priority_hint')}
+                type="number"
+                step={1}
+                value={form.priority ?? ''}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const parsed = raw.trim() === '' ? undefined : Number(raw);
+                  setForm((prev) => ({
+                    ...prev,
+                    priority: parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
+                  }));
+                }}
+                disabled={saving || disableControls || isTesting}
+              />
+              <Input
+                label={t('ai_providers.prefix_label')}
+                placeholder={t('ai_providers.prefix_placeholder')}
+                value={form.prefix ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
+                hint={t('ai_providers.prefix_hint')}
+                disabled={saving || disableControls || isTesting}
+              />
+              <Input
+                label={t('ai_providers.claude_add_modal_url_label')}
+                value={form.baseUrl ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
+                disabled={saving || disableControls || isTesting}
+              />
+              <Input
+                label={t('ai_providers.claude_add_modal_proxy_label')}
+                value={form.proxyUrl ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
+                disabled={saving || disableControls || isTesting}
+              />
+            </div>
             <HeaderInputList
               entries={form.headers}
               onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}

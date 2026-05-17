@@ -21,6 +21,9 @@ export const BUILD_DATE_HEADER_KEYS = ['x-cpa-build-date', 'x-server-build-date'
 export const STATUS_UPDATE_INTERVAL_MS = 1000;
 export const LOG_REFRESH_DELAY_MS = 500;
 
+/** 本管理端 WebUI 在 GitHub 上的仓库地址（系统页链接、可视化配置占位）。检查更新走服务端 /latest-version，需在服务端配置 remote-management.panel-github-repository 指向同一仓库才有意义。 */
+export const PANEL_WEBUI_GITHUB_URL = 'https://github.com/fxzer/cliproxyapi-management';
+
 // 日志相关
 export const MAX_LOG_LINES = 2000;
 export const LOG_FETCH_LIMIT = 2500;

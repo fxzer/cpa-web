@@ -539,51 +539,54 @@ export function AiProvidersGeminiEditPage() {
           <div className="hint">{t('common.invalid_provider_index')}</div>
         ) : (
           <>
-            <Input
-              label={t('ai_providers.gemini_add_modal_key_label')}
-              placeholder={t('ai_providers.gemini_add_modal_key_placeholder')}
-              value={form.apiKey}
-              onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
-              disabled={disableControls || saving}
-            />
-            <Input
-              label={t('ai_providers.priority_label')}
-              hint={t('ai_providers.priority_hint')}
-              type="number"
-              step={1}
-              value={form.priority ?? ''}
-              onChange={(e) => {
-                const raw = e.target.value;
-                const parsed = raw.trim() === '' ? undefined : Number(raw);
-                setForm((prev) => ({
-                  ...prev,
-                  priority: parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
-                }));
-              }}
-              disabled={disableControls || saving}
-            />
-            <Input
-              label={t('ai_providers.prefix_label')}
-              placeholder={t('ai_providers.prefix_placeholder')}
-              value={form.prefix ?? ''}
-              onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
-              hint={t('ai_providers.prefix_hint')}
-              disabled={disableControls || saving}
-            />
-            <Input
-              label={t('ai_providers.gemini_base_url_label')}
-              placeholder={t('ai_providers.gemini_base_url_placeholder')}
-              value={form.baseUrl ?? ''}
-              onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
-              disabled={disableControls || saving}
-            />
-            <Input
-              label={t('ai_providers.gemini_add_modal_proxy_label')}
-              placeholder={t('ai_providers.gemini_add_modal_proxy_placeholder')}
-              value={form.proxyUrl ?? ''}
-              onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
-              disabled={disableControls || saving}
-            />
+            <div className={styles.openaiEditForm}>
+            <div className={styles.providerEditTopGrid}>
+              <Input
+                label={t('ai_providers.gemini_add_modal_key_label')}
+                placeholder={t('ai_providers.gemini_add_modal_key_placeholder')}
+                value={form.apiKey}
+                onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
+                disabled={disableControls || saving}
+              />
+              <Input
+                label={t('ai_providers.priority_label')}
+                hint={t('ai_providers.priority_hint')}
+                type="number"
+                step={1}
+                value={form.priority ?? ''}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const parsed = raw.trim() === '' ? undefined : Number(raw);
+                  setForm((prev) => ({
+                    ...prev,
+                    priority: parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
+                  }));
+                }}
+                disabled={disableControls || saving}
+              />
+              <Input
+                label={t('ai_providers.prefix_label')}
+                placeholder={t('ai_providers.prefix_placeholder')}
+                value={form.prefix ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
+                hint={t('ai_providers.prefix_hint')}
+                disabled={disableControls || saving}
+              />
+              <Input
+                label={t('ai_providers.gemini_base_url_label')}
+                placeholder={t('ai_providers.gemini_base_url_placeholder')}
+                value={form.baseUrl ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
+                disabled={disableControls || saving}
+              />
+              <Input
+                label={t('ai_providers.gemini_add_modal_proxy_label')}
+                placeholder={t('ai_providers.gemini_add_modal_proxy_placeholder')}
+                value={form.proxyUrl ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
+                disabled={disableControls || saving}
+              />
+            </div>
             <HeaderInputList
               entries={form.headers}
               onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}
@@ -654,6 +657,7 @@ export function AiProvidersGeminiEditPage() {
               />
               <div className="hint">{t('ai_providers.excluded_models_hint')}</div>
             </div>
+          </div>
 
             <Modal
               open={modelDiscoveryOpen}

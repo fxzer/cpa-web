@@ -31,7 +31,7 @@
   --primary-active: #726d67;
   --primary-contrast: #ffffff;
 
-  --success-color: #10b981;
+  --success-color: #17b26a;
   --quota-medium-color: #e0aa14;
   --warning-color: #c65746; // 错误/警告色
   --error-color: #c65746;
@@ -63,8 +63,8 @@
   --glass-blur: 12px;
   --glass-backdrop-filter: blur(var(--glass-blur));
   --glass-filter: blur(var(--glass-blur));
-  --glass-bg: color-mix(in srgb, var(--bg-primary) 82%, transparent);
-  --glass-bg-secondary: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+  --glass-bg: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  --glass-bg-secondary: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
   --glass-border: color-mix(in srgb, var(--border-color) 60%, transparent);
 }
 
@@ -96,7 +96,7 @@
   --primary-active: #726d67;
   --primary-contrast: #ffffff;
 
-  --success-color: #10b981;
+  --success-color: #17b26a;
   --quota-medium-color: #e0aa14;
   --warning-color: #c65746;
   --error-color: #c65746;
@@ -154,7 +154,7 @@
   --primary-active: #a6a099;
   --primary-contrast: #ffffff;
 
-  --success-color: #10b981;
+  --success-color: #17b26a;
   --quota-medium-color: #ffd862;
   --warning-color: #c65746;
   --error-color: #c65746;

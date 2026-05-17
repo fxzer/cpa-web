@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/icons';
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { PANEL_WEBUI_GITHUB_URL } from '@/utils/constants';
 import type {
   PayloadFilterRule,
   PayloadParamValidationErrorCode,
@@ -521,18 +522,15 @@ export function VisualConfigEditor({
   return (
     <div className={styles.visualEditor}>
       <div className={styles.overview}>
-        <div className={styles.overviewHeader}>
-          <div className={styles.overviewMeta}>
-            <span className={styles.overviewPill}>
-              {t('config_management.visual.quick_jump', { defaultValue: '快速跳转' })}
-            </span>
-            {hasValidationIssues ? (
+        {hasValidationIssues ? (
+          <div className={styles.overviewHeader}>
+            <div className={styles.overviewMeta}>
               <span className={`${styles.overviewPill} ${styles.overviewPillWarning}`}>
                 {t('config_management.visual.validation.validation_blocked')}
               </span>
-            ) : null}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div className={styles.overviewFocusList}>
           {focusSections.map((section) => {
@@ -571,7 +569,6 @@ export function VisualConfigEditor({
             <div
               ref={mobileNavScrollerRef}
               className={styles.mobileSectionNavScroller}
-              aria-label={t('config_management.visual.quick_jump', { defaultValue: '快速跳转' })}
             >
               {sections.map((section, index) => (
                 <button
@@ -718,7 +715,7 @@ export function VisualConfigEditor({
                 />
                 <Input
                   label={t('config_management.visual.sections.remote.panel_repo')}
-                  placeholder="https://github.com/router-for-me/Cli-Proxy-API-Management-Center"
+                  placeholder={PANEL_WEBUI_GITHUB_URL}
                   value={values.rmPanelRepo}
                   onChange={(e) => onChange({ rmPanelRepo: e.target.value })}
                   disabled={disabled}

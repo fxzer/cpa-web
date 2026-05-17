@@ -39,6 +39,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'request-retry',
   'quota-exceeded',
   'request-log',
+  'usage-statistics-enabled',
   'logging-to-file',
   'logs-max-total-size-mb',
   'ws-auth',
@@ -67,6 +68,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.quotaExceeded;
     case 'request-log':
       return config.requestLog;
+    case 'usage-statistics-enabled':
+      return config.usageStatisticsEnabled;
     case 'logging-to-file':
       return config.loggingToFile;
     case 'logs-max-total-size-mb':
@@ -201,6 +204,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'request-log':
           nextConfig.requestLog = value as Config['requestLog'];
+          break;
+        case 'usage-statistics-enabled':
+          nextConfig.usageStatisticsEnabled = value as Config['usageStatisticsEnabled'];
           break;
         case 'logging-to-file':
           nextConfig.loggingToFile = value as Config['loggingToFile'];

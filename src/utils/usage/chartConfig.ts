@@ -3,18 +3,56 @@
  * Extracted from UsagePage.tsx for reusability
  */
 
-import type { ChartOptions } from 'chart.js';
+import type { Chart, ChartOptions } from 'chart.js';
+
+/**
+ * Sparkline Y 轴：数据全为 0 或整条为常数时，Chart.js 默认会把 Y 范围对称扩展，
+ * 折线会出现在画布垂直中间。固定 min=0 并在「塌缩」时给出 max，使零线落在底部。
+ */
+function sparklineYAxisMax(chart: Chart): number | undefined {
+  const raw = chart.data.datasets[0]?.data;
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return 1;
+  }
+  let maxVal = -Infinity;
+  let minVal = Infinity;
+  for (const v of raw) {
+    const n = typeof v === 'number' && Number.isFinite(v) ? v : 0;
+    maxVal = Math.max(maxVal, n);
+    minVal = Math.min(minVal, n);
+  }
+  if (!Number.isFinite(maxVal)) {
+    return 1;
+  }
+  if (maxVal <= 0 && minVal <= 0) {
+    return 1;
+  }
+  if (maxVal === minVal) {
+    const pad = Math.abs(maxVal) * 0.08;
+    return maxVal + Math.max(pad, 1e-9);
+  }
+  return undefined;
+}
 
 /**
  * Static sparkline chart options (no dependencies on theme/mobile)
  */
-export const sparklineOptions: ChartOptions<'line'> = {
+export const sparklineOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: { legend: { display: false }, tooltip: { enabled: false } },
-  scales: { x: { display: false }, y: { display: false } },
+  scales: {
+    x: { display: false },
+    y: {
+      display: false,
+      beginAtZero: true,
+      min: 0,
+      grace: 0,
+      max: (ctx: { chart: Chart }) => sparklineYAxisMax(ctx.chart)
+    }
+  },
   elements: { line: { tension: 0.45 }, point: { radius: 0 } }
-};
+} as unknown as ChartOptions<'line'>;
 
 export interface ChartConfigOptions {
   period: 'hour' | 'day';

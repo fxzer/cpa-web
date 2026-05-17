@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
@@ -13,6 +13,7 @@ import { areKeyValueEntriesEqual, areModelEntriesEqual } from '@/utils/compare';
 import { buildApiKeyEntry } from '@/components/providers/utils';
 import type { ModelEntry, OpenAIFormState } from '@/components/providers/types';
 import type { KeyTestStatus, OpenAIEditBaseline } from '@/stores/useOpenAIEditDraftStore';
+import { OpenAIModelDiscoveryModal } from './OpenAIModelDiscoveryModal';
 
 type LocationState = { fromAiProviders?: boolean } | null;
 
@@ -39,6 +40,7 @@ export type OpenAIEditOutletContext = {
   handleBack: () => void;
   handleSave: () => Promise<void>;
   mergeDiscoveredModels: (selectedModels: ModelInfo[]) => void;
+  requestOpenModelDiscovery: () => void;
 };
 
 const buildEmptyForm = (): OpenAIFormState => ({
@@ -158,6 +160,7 @@ export function AiProvidersOpenAIEditLayout() {
     () => !isCacheValid('openai-compatibility')
   );
   const [saving, setSaving] = useState(false);
+  const [modelDiscoveryOpen, setModelDiscoveryOpen] = useState(false);
 
   const draftKey = useMemo(() => {
     if (invalidIndexParam) return `openai:invalid:${params.index ?? 'unknown'}`;
@@ -388,6 +391,10 @@ export function AiProvidersOpenAIEditLayout() {
     [setForm, showNotification, t]
   );
 
+  const requestOpenModelDiscovery = useCallback(() => {
+    setModelDiscoveryOpen(true);
+  }, []);
+
   const resolvedLoading = !draft?.initialized;
   const baseline = draft?.baseline ?? null;
   const normalizedHeaders = useMemo(() => normalizeHeaderEntries(form.headers), [form.headers]);
@@ -532,31 +539,43 @@ export function AiProvidersOpenAIEditLayout() {
   ]);
 
   return (
-    <Outlet
-      context={{
-        hasIndexParam,
-        editIndex,
-        invalidIndexParam,
-        invalidIndex,
-        disableControls,
-        loading: resolvedLoading,
-        saving,
-        form,
-        setForm,
-        testModel,
-        setTestModel,
-        testStatus,
-        setTestStatus,
-        testMessage,
-        setTestMessage,
-        keyTestStatuses,
-        setDraftKeyTestStatus: handleSetDraftKeyTestStatus,
-        resetDraftKeyTestStatuses: handleResetDraftKeyTestStatuses,
-        availableModels,
-        handleBack,
-        handleSave,
-        mergeDiscoveredModels,
-      } satisfies OpenAIEditOutletContext}
-    />
+    <Fragment>
+      <Outlet
+        context={{
+          hasIndexParam,
+          editIndex,
+          invalidIndexParam,
+          invalidIndex,
+          disableControls,
+          loading: resolvedLoading,
+          saving,
+          form,
+          setForm,
+          testModel,
+          setTestModel,
+          testStatus,
+          setTestStatus,
+          testMessage,
+          setTestMessage,
+          keyTestStatuses,
+          setDraftKeyTestStatus: handleSetDraftKeyTestStatus,
+          resetDraftKeyTestStatuses: handleResetDraftKeyTestStatuses,
+          availableModels,
+          handleBack,
+          handleSave,
+          mergeDiscoveredModels,
+          requestOpenModelDiscovery,
+        } satisfies OpenAIEditOutletContext}
+      />
+      <OpenAIModelDiscoveryModal
+        open={modelDiscoveryOpen}
+        onClose={() => setModelDiscoveryOpen(false)}
+        loading={resolvedLoading}
+        saving={saving}
+        disableControls={disableControls}
+        form={form}
+        mergeDiscoveredModels={mergeDiscoveredModels}
+      />
+    </Fragment>
   );
 }

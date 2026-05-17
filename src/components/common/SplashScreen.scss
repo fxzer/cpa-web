@@ -55,7 +55,7 @@
 }
 
 .splash-title {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
   color: var(--text-primary);
   margin: 0;
@@ -63,7 +63,7 @@
 }
 
 .splash-subtitle {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
   color: var(--text-secondary);
   margin: 0;
@@ -82,7 +82,7 @@
 .splash-loader-bar {
   width: 100%;
   height: 100%;
-  background: var(--primary-color);
+  background: var(--success-color);
   border-radius: $radius-full;
   animation: splash-loading 1.2s ease-in-out infinite;
   transform-origin: left;

@@ -401,6 +401,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   }
 
   config.requestLog = normalizeBoolean(raw['request-log'] ?? raw.requestLog);
+  config.usageStatisticsEnabled = normalizeBoolean(
+    raw['usage-statistics-enabled'] ?? raw.usageStatisticsEnabled
+  );
   config.loggingToFile = normalizeBoolean(raw['logging-to-file'] ?? raw.loggingToFile);
   const logsMaxTotalSizeMb = raw['logs-max-total-size-mb'] ?? raw.logsMaxTotalSizeMb;
   if (typeof logsMaxTotalSizeMb === 'number' && Number.isFinite(logsMaxTotalSizeMb)) {

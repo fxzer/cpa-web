@@ -9,6 +9,8 @@ export * from './providers';
 export * from './authFiles';
 export * from './oauth';
 export * from './logs';
+export * from './usage';
+export * from './usageService';
 export * from './version';
 export * from './models';
 export * from './transformers';
