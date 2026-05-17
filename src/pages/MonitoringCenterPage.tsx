@@ -41,12 +41,11 @@ import {
   getModelStats,
   type UsageTimeRange
 } from '@/utils/usage';
+import { HOUR_WINDOW_BY_USAGE_TIME_RANGE, USAGE_TIME_RANGE_OPTIONS } from '@/utils/usageTimeRange';
 import {
-  DEFAULT_USAGE_TIME_RANGE,
-  HOUR_WINDOW_BY_USAGE_TIME_RANGE,
-  USAGE_TIME_RANGE_OPTIONS,
-  isUsageTimeRange
-} from '@/utils/usageTimeRange';
+  MONITOR_USAGE_TIME_RANGE_STORAGE_KEY,
+  loadMonitorUsageTimeRange
+} from '@/utils/monitorUsageTimeRange';
 import styles from './MonitoringCenterPage.module.scss';
 
 ChartJS.register(
@@ -64,27 +63,13 @@ ChartJS.register(
   Filler
 );
 
-const TIME_RANGE_STORAGE_KEY = 'cli-proxy-monitor-time-range-v1';
-
-const loadTimeRange = (): UsageTimeRange => {
-  try {
-    if (typeof localStorage === 'undefined') {
-      return DEFAULT_USAGE_TIME_RANGE;
-    }
-    const raw = localStorage.getItem(TIME_RANGE_STORAGE_KEY);
-    return isUsageTimeRange(raw) ? raw : DEFAULT_USAGE_TIME_RANGE;
-  } catch {
-    return DEFAULT_USAGE_TIME_RANGE;
-  }
-};
-
 export function MonitoringCenterPage() {
   const { t } = useTranslation();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const isDark = resolvedTheme === 'dark';
   const config = useConfigStore((state) => state.config);
-  const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadTimeRange);
+  const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadMonitorUsageTimeRange);
   const [usageStatsDimension, setUsageStatsDimension] = useState<'model' | 'apiKey'>('model');
 
   const {
@@ -123,7 +108,7 @@ export function MonitoringCenterPage() {
       if (typeof localStorage === 'undefined') {
         return;
       }
-      localStorage.setItem(TIME_RANGE_STORAGE_KEY, timeRange);
+      localStorage.setItem(MONITOR_USAGE_TIME_RANGE_STORAGE_KEY, timeRange);
     } catch {
       // Ignore storage errors.
     }

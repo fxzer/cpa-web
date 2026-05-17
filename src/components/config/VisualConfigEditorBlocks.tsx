@@ -275,8 +275,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
 
   return (
     <div className="form-group" style={{ marginBottom: 0 }}>
-      <div className={styles.blockHeaderRow}>
-        <label style={{ margin: 0 }}>{t('config_management.visual.api_keys.label')}</label>
+      <div className={styles.apiKeyToolbar}>
         <Button size="sm" onClick={openAddModal} disabled={disabled}>
           {t('config_management.visual.api_keys.add')}
         </Button>
@@ -285,17 +284,21 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       {apiKeys.length === 0 ? (
         <div className={styles.emptyState}>{t('config_management.visual.api_keys.empty')}</div>
       ) : (
-        <div className="item-list" style={{ marginTop: 4 }}>
+        <div
+          className={styles.apiKeyList}
+          role="list"
+          aria-label={t('config_management.visual.api_keys.label')}
+        >
           {apiKeys.map((key, index) => (
-            <div key={renderApiKeyIds[index] ?? `${key}-${index}`} className="item-row">
-              <div className="item-meta">
-                <div className="pill">#{index + 1}</div>
-                <div className="item-title">
-                  {t('config_management.visual.api_keys.input_label')}
-                </div>
-                <div className="item-subtitle">{maskApiKey(String(key || ''))}</div>
+            <div
+              key={renderApiKeyIds[index] ?? `${key}-${index}`}
+              className={styles.apiKeyRow}
+              role="listitem"
+            >
+              <div className={styles.apiKeyMask} title={maskApiKey(String(key || ''))}>
+                {maskApiKey(String(key || ''))}
               </div>
-              <div className="item-actions">
+              <div className={styles.apiKeyRowActions}>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -325,8 +328,6 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
           ))}
         </div>
       )}
-
-      <div className="hint">{t('config_management.visual.api_keys.hint')}</div>
 
       <Modal
         open={modalOpen}

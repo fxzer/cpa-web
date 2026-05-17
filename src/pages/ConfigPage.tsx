@@ -514,7 +514,6 @@ export function ConfigPage() {
 
       <div className={styles.workspaceShell}>
         <div className={styles.content}>
-          {error && <div className="error-box">{error}</div>}
           {!error && visualParseError && (
             <div className="error-box">
               {t('config_management.visual_mode_unavailable_detail', { message: visualParseError })}

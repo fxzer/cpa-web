@@ -1,15 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   IconKey,
   IconBot,
   IconFileText,
-  IconSatellite
+  IconSatellite,
+  IconDiamond
 } from '@/components/ui/icons';
 import { useAuthStore, useConfigStore, useModelsStore, useNotificationStore } from '@/stores';
+import { useUsageStatsStore, USAGE_STATS_STALE_TIME_MS } from '@/stores/useUsageStatsStore';
 import { apiKeysApi, providersApi, authFilesApi } from '@/services/api';
 import { copyToClipboard } from '@/utils/clipboard';
+import { filterUsageByTimeRange, formatCompactNumber } from '@/utils/usage';
+import {
+  MONITOR_USAGE_TIME_RANGE_STORAGE_KEY,
+  loadMonitorUsageTimeRange
+} from '@/utils/monitorUsageTimeRange';
 import styles from './DashboardPage.module.scss';
 
 interface QuickStat {
@@ -19,7 +26,7 @@ interface QuickStat {
   path: string;
   loading?: boolean;
   sublabel?: string;
-  iconAccent: 'key' | 'providers' | 'auth' | 'models';
+  iconAccent: 'key' | 'providers' | 'auth' | 'models' | 'usageTokens';
 }
 
 interface ProviderStats {
@@ -41,6 +48,7 @@ function getTimeOfDay(): TimeOfDay {
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const serverVersion = useAuthStore((state) => state.serverVersion);
   const serverBuildDate = useAuthStore((state) => state.serverBuildDate);
@@ -68,6 +76,11 @@ export function DashboardPage() {
   });
 
   const [loading, setLoading] = useState(true);
+
+  const usageFromStore = useUsageStatsStore((state) => state.usage);
+  const usageStatsLoading = useUsageStatsStore((state) => state.loading);
+  const loadUsageStatsAction = useUsageStatsStore((state) => state.loadUsageStats);
+  const [monitorTimeRange, setMonitorTimeRange] = useState(loadMonitorUsageTimeRange);
 
   const handleCopyApiBase = useCallback(async () => {
     const base = apiBase?.trim();
@@ -97,6 +110,34 @@ export function DashboardPage() {
     }, 60_000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (location.pathname === '/' || location.pathname === '/dashboard') {
+      setMonitorTimeRange(loadMonitorUsageTimeRange());
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === MONITOR_USAGE_TIME_RANGE_STORAGE_KEY || event.key === null) {
+        setMonitorTimeRange(loadMonitorUsageTimeRange());
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  useEffect(() => {
+    if (connectionStatus !== 'connected') {
+      return;
+    }
+    void loadUsageStatsAction({
+      force: true,
+      fullRange: true,
+      staleTimeMs: USAGE_STATS_STALE_TIME_MS,
+      timeRange: monitorTimeRange
+    }).catch(() => {});
+  }, [connectionStatus, monitorTimeRange, loadUsageStatsAction]);
 
   const normalizeApiKeyList = (input: unknown): string[] => {
     if (!Array.isArray(input)) return [];
@@ -215,6 +256,18 @@ export function DashboardPage() {
       (providerStats.openai ?? 0)
     : 0;
 
+  const filteredUsageForMonitor = useMemo(
+    () => (usageFromStore ? filterUsageByTimeRange(usageFromStore, monitorTimeRange) : null),
+    [usageFromStore, monitorTimeRange]
+  );
+
+  const usageTokensCardLoading =
+    connectionStatus === 'connected' && usageStatsLoading && !usageFromStore;
+  const usageTokensDisplay =
+    connectionStatus !== 'connected'
+      ? '-'
+      : formatCompactNumber(filteredUsageForMonitor?.total_tokens ?? 0);
+
   const quickStats: QuickStat[] = [
     {
       label: t('dashboard.management_keys'),
@@ -256,6 +309,14 @@ export function DashboardPage() {
       path: '/models',
       loading: modelsLoading,
       iconAccent: 'models'
+    },
+    {
+      label: t('dashboard.total_tokens'),
+      value: usageTokensDisplay,
+      icon: <IconDiamond size={24} />,
+      path: '/monitor',
+      loading: usageTokensCardLoading,
+      iconAccent: 'usageTokens'
     }
   ];
 
@@ -312,7 +373,8 @@ export function DashboardPage() {
     key: styles.bentoIconKey,
     providers: styles.bentoIconProviders,
     auth: styles.bentoIconAuth,
-    models: styles.bentoIconModels
+    models: styles.bentoIconModels,
+    usageTokens: styles.bentoIconUsageTokens
   };
 
   return (

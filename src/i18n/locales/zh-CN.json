@@ -146,7 +146,8 @@
     "caring_afternoon": "稳步推进中，继续加油。",
     "caring_evening": "今天辛苦了，收尾工作做好哦。",
     "caring_night": "夜深了，别忘了早些休息。",
-    "system_overview": "系统概览"
+    "system_overview": "系统概览",
+    "total_tokens": "总Token数"
   },
   "basic_settings": {
     "title": "基础设置",

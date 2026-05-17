@@ -1,12 +1,11 @@
 import {
-  useLayoutEffect,
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type ComponentType,
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
@@ -15,17 +14,6 @@ import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer'
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-import {
-  IconCode,
-  IconDiamond,
-  IconKey,
-  IconSatellite,
-  IconSettings,
-  IconShield,
-  IconTimer,
-  IconTrendingUp,
-  type IconProps,
-} from '@/components/ui/icons';
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { PANEL_WEBUI_GITHUB_URL } from '@/utils/constants';
@@ -60,7 +48,6 @@ type VisualSection = {
   id: VisualSectionId;
   title: string;
   description: string;
-  icon: ComponentType<IconProps>;
   errorCount: number;
 };
 
@@ -182,8 +169,8 @@ export function VisualConfigEditor({
   const pageTransitionLayer = usePageTransitionLayer();
   const isCurrentLayer = pageTransitionLayer ? pageTransitionLayer.isCurrentLayer : true;
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const isFloatingSidebar = useMediaQuery('(min-width: 1025px)');
-  const shouldRenderFloatingSidebar = !isMobile && isFloatingSidebar && isCurrentLayer;
+  const isWideDesktopNav = useMediaQuery('(min-width: 1025px)');
+  const shouldRenderFloatingSidebar = !isMobile && isWideDesktopNav && isCurrentLayer;
   const routingStrategyLabelId = useId();
   const routingStrategyHintId = `${routingStrategyLabelId}-hint`;
   const keepaliveInputId = useId();
@@ -260,56 +247,48 @@ export function VisualConfigEditor({
         id: 'server',
         title: t('config_management.visual.sections.server.title'),
         description: t('config_management.visual.sections.server.description'),
-        icon: IconSettings,
         errorCount: countErrors(['port']),
       },
       {
         id: 'tls',
         title: t('config_management.visual.sections.tls.title'),
         description: t('config_management.visual.sections.tls.description'),
-        icon: IconShield,
         errorCount: 0,
       },
       {
         id: 'remote',
         title: t('config_management.visual.sections.remote.title'),
         description: t('config_management.visual.sections.remote.description'),
-        icon: IconSatellite,
         errorCount: 0,
       },
       {
         id: 'auth',
         title: t('config_management.visual.sections.auth.title'),
         description: t('config_management.visual.sections.auth.description'),
-        icon: IconKey,
         errorCount: 0,
       },
       {
         id: 'system',
         title: t('config_management.visual.sections.system.title'),
         description: t('config_management.visual.sections.system.description'),
-        icon: IconDiamond,
         errorCount: countErrors(['logsMaxTotalSizeMb']),
       },
       {
         id: 'network',
         title: t('config_management.visual.sections.network.title'),
         description: t('config_management.visual.sections.network.description'),
-        icon: IconTrendingUp,
         errorCount: countErrors(['requestRetry', 'maxRetryCredentials', 'maxRetryInterval']),
       },
       {
         id: 'quota',
         title: t('config_management.visual.sections.quota.title'),
         description: t('config_management.visual.sections.quota.description'),
-        icon: IconTimer,
         errorCount: 0,
       },
       {
         id: 'streaming',
         title: t('config_management.visual.sections.streaming.title'),
         description: t('config_management.visual.sections.streaming.description'),
-        icon: IconSatellite,
         errorCount: countErrors([
           'streaming.keepaliveSeconds',
           'streaming.bootstrapRetries',
@@ -320,7 +299,6 @@ export function VisualConfigEditor({
         id: 'payload',
         title: t('config_management.visual.sections.payload.title'),
         description: t('config_management.visual.sections.payload.description'),
-        icon: IconCode,
         errorCount: hasPayloadValidationErrors ? 1 : 0,
       },
     ],
@@ -329,37 +307,6 @@ export function VisualConfigEditor({
 
   const hasValidationIssues =
     sections.some((section) => section.errorCount > 0) || hasPayloadValidationErrors;
-  const focusSections = useMemo(
-    () => sections.filter((section) => ['server', 'network', 'payload'].includes(section.id)),
-    [sections]
-  );
-
-  useEffect(() => {
-    if (!isCurrentLayer) return undefined;
-    if (typeof IntersectionObserver === 'undefined') return undefined;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visibleEntries = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((left, right) => right.intersectionRatio - left.intersectionRatio);
-
-        if (visibleEntries.length === 0) return;
-        setActiveSectionId(visibleEntries[0].target.id as VisualSectionId);
-      },
-      {
-        rootMargin: '-18% 0px -58% 0px',
-        threshold: [0.12, 0.3, 0.55],
-      }
-    );
-
-    for (const section of sections) {
-      const element = sectionRefs.current[section.id];
-      if (element) observer.observe(element);
-    }
-
-    return () => observer.disconnect();
-  }, [isCurrentLayer, sections]);
 
   useEffect(() => {
     if (!isCurrentLayer || !isMobile) return;
@@ -406,21 +353,15 @@ export function VisualConfigEditor({
       return undefined;
     }
 
-    /* ---- Cache header height – recomputed only on resize ---- */
-    const computeHeaderHeight = () => {
-      const header = document.querySelector('.main-header') as HTMLElement | null;
-      if (header) return header.getBoundingClientRect().height;
-
-      const raw = getComputedStyle(document.documentElement).getPropertyValue('--header-height');
+    const computeViewportPadding = () => {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue('--shell-gutter');
       const parsed = Number.parseFloat(raw);
-      return Number.isFinite(parsed) ? parsed : 64;
+      return Math.max(Number.isFinite(parsed) ? parsed : 24, 16);
     };
-    let headerHeight = computeHeaderHeight();
+    let viewportPadding = computeViewportPadding();
 
-    /* ---- Cache content scroller – resolved once ---- */
     const contentScroller = document.querySelector('.content') as HTMLElement | null;
 
-    /* ---- Cache floating height from previous frame ---- */
     let cachedFloatingHeight = floatingElement.getBoundingClientRect().height || 200;
 
     let frameId = 0;
@@ -430,8 +371,13 @@ export function VisualConfigEditor({
 
       const anchorRect = anchorElement.getBoundingClientRect();
       const workspaceRect = workspaceElement.getBoundingClientRect();
-      const stickyTop = headerHeight + 20;
-      const viewportPadding = 16;
+      const viewportHeight = window.innerHeight;
+      const availableHeight = Math.max(viewportHeight - viewportPadding * 2, 160);
+      floatingElement.style.maxHeight = `${availableHeight}px`;
+      cachedFloatingHeight =
+        floatingElement.getBoundingClientRect().height ||
+        Math.min(cachedFloatingHeight, availableHeight);
+      const stickyTop = Math.max((viewportHeight - cachedFloatingHeight) / 2, viewportPadding);
       const maxTop = workspaceRect.bottom - cachedFloatingHeight;
       const unclampedTop = Math.min(Math.max(anchorRect.top, stickyTop), maxTop);
       const top = Math.max(unclampedTop, viewportPadding);
@@ -440,8 +386,9 @@ export function VisualConfigEditor({
         Math.min(anchorRect.width, window.innerWidth - left - viewportPadding),
         220
       );
-      const maxHeight = Math.max(window.innerHeight - top - viewportPadding, 160);
-      const isVisible = workspaceRect.bottom > stickyTop + 24 && anchorRect.top < window.innerHeight;
+      const maxHeight = Math.max(viewportHeight - top - viewportPadding, 160);
+      const isVisible =
+        workspaceRect.bottom > stickyTop + viewportPadding && anchorRect.top < viewportHeight;
 
       floatingElement.style.transform = `translate3d(${left}px, ${top}px, 0)`;
       floatingElement.style.width = `${width}px`;
@@ -456,7 +403,7 @@ export function VisualConfigEditor({
     };
 
     const handleResize = () => {
-      headerHeight = computeHeaderHeight();
+      viewportPadding = computeViewportPadding();
       cachedFloatingHeight = floatingElement.getBoundingClientRect().height || cachedFloatingHeight;
       requestPositionUpdate();
     };
@@ -484,45 +431,36 @@ export function VisualConfigEditor({
 
   const navContent = (
     <div className={styles.navList}>
-      {sections.map((section, index) => {
-        const Icon = section.icon;
-
-        return (
-          <button
-            key={section.id}
-            type="button"
-            className={`${styles.navButton} ${
-              activeSectionId === section.id ? styles.navButtonActive : ''
-            }`}
-            onClick={() => handleSectionJump(section.id)}
-          >
-            <span className={styles.navIndex}>{String(index + 1).padStart(2, '0')}</span>
-            <span className={styles.navMain}>
-              <span className={styles.navHeadingRow}>
-                <span className={styles.navLabelWrap}>
-                  <span className={styles.navIcon}>
-                    <Icon size={14} />
-                  </span>
-                  <span className={styles.navLabel}>{section.title}</span>
+      {sections.map((section, index) => (
+        <button
+          key={section.id}
+          type="button"
+          className={`${styles.navButton} ${
+            activeSectionId === section.id ? styles.navButtonActive : ''
+          }`}
+          onClick={() => handleSectionJump(section.id)}
+        >
+          <span className={styles.navIndex}>{index + 1}</span>
+          <span className={styles.navMain}>
+            <span className={styles.navHeadingRow}>
+              <span className={styles.navLabel}>{section.title}</span>
+              {section.errorCount > 0 ? (
+                <span className={styles.navBadge} aria-hidden="true">
+                  {section.errorCount}
                 </span>
-                {section.errorCount > 0 ? (
-                  <span className={styles.navBadge} aria-hidden="true">
-                    {section.errorCount}
-                  </span>
-                ) : null}
-              </span>
-              <span className={styles.navDescription}>{section.description}</span>
+              ) : null}
             </span>
-          </button>
-        );
-      })}
+            <span className={styles.navDescription}>{section.description}</span>
+          </span>
+        </button>
+      ))}
     </div>
   );
 
   return (
-    <div className={styles.visualEditor}>
-      <div className={styles.overview}>
-        {hasValidationIssues ? (
+    <div ref={workspaceRef} className={styles.visualEditor}>
+      {hasValidationIssues ? (
+        <div className={styles.overview}>
           <div className={styles.overviewHeader}>
             <div className={styles.overviewMeta}>
               <span className={`${styles.overviewPill} ${styles.overviewPillWarning}`}>
@@ -530,46 +468,12 @@ export function VisualConfigEditor({
               </span>
             </div>
           </div>
-        ) : null}
-
-        <div className={styles.overviewFocusList}>
-          {focusSections.map((section) => {
-            const Icon = section.icon;
-
-            return (
-              <button
-                key={section.id}
-                type="button"
-                className={`${styles.overviewFocusLink} ${
-                  activeSectionId === section.id ? styles.overviewFocusLinkActive : ''
-                }`}
-                onClick={() => handleSectionJump(section.id)}
-              >
-                <span className={styles.focusIcon}>
-                  <Icon size={16} />
-                </span>
-                <span className={styles.focusCopy}>
-                  <span className={styles.focusTitle}>{section.title}</span>
-                  <span className={styles.focusDescription}>{section.description}</span>
-                </span>
-                {section.errorCount > 0 ? (
-                  <span className={styles.navBadge} aria-hidden="true">
-                    {section.errorCount}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
         </div>
-      </div>
+      ) : null}
 
-      <div ref={workspaceRef} className={styles.workspace}>
-        {isMobile ? (
+      {isMobile ? (
           <div className={styles.mobileSectionNav}>
-            <div
-              ref={mobileNavScrollerRef}
-              className={styles.mobileSectionNavScroller}
-            >
+            <div ref={mobileNavScrollerRef} className={styles.mobileSectionNavScroller}>
               {sections.map((section, index) => (
                 <button
                   key={section.id}
@@ -582,9 +486,7 @@ export function VisualConfigEditor({
                   }`}
                   onClick={() => handleSectionJump(section.id)}
                 >
-                  <span className={styles.mobileSectionNavIndex}>
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
+                  <span className={styles.mobileSectionNavIndex}>{index + 1}</span>
                   <span className={styles.mobileSectionNavLabel}>{section.title}</span>
                   {section.errorCount > 0 ? (
                     <span className={styles.mobileSectionNavBadge} aria-hidden="true">
@@ -597,22 +499,21 @@ export function VisualConfigEditor({
           </div>
         ) : null}
 
-        <aside ref={sidebarAnchorRef} className={styles.sidebar}>
-          {isFloatingSidebar ? (
-            <div className={styles.sidebarPlaceholder} aria-hidden="true" />
-          ) : (
-            <div className={styles.sidebarRail}>{navContent}</div>
-          )}
-        </aside>
+      <aside ref={sidebarAnchorRef} className={styles.sidebar}>
+        {isWideDesktopNav ? (
+          <div className={styles.sidebarPlaceholder} aria-hidden="true" />
+        ) : (
+          <div className={styles.sidebarRail}>{navContent}</div>
+        )}
+      </aside>
 
-        <div className={styles.sections}>
+      <div className={styles.sections}>
           <ConfigSection
             id="server"
+            highlighted={activeSectionId === 'server'}
             ref={(node) => {
               sectionRefs.current.server = node;
             }}
-            indexLabel="01"
-            icon={<IconSettings size={16} />}
             title={t('config_management.visual.sections.server.title')}
             description={t('config_management.visual.sections.server.description')}
           >
@@ -638,11 +539,10 @@ export function VisualConfigEditor({
 
           <ConfigSection
             id="tls"
+            highlighted={activeSectionId === 'tls'}
             ref={(node) => {
               sectionRefs.current.tls = node;
             }}
-            indexLabel="02"
-            icon={<IconShield size={16} />}
             title={t('config_management.visual.sections.tls.title')}
             description={t('config_management.visual.sections.tls.description')}
           >
@@ -681,29 +581,30 @@ export function VisualConfigEditor({
 
           <ConfigSection
             id="remote"
+            highlighted={activeSectionId === 'remote'}
             ref={(node) => {
               sectionRefs.current.remote = node;
             }}
-            indexLabel="03"
-            icon={<IconSatellite size={16} />}
             title={t('config_management.visual.sections.remote.title')}
             description={t('config_management.visual.sections.remote.description')}
           >
             <SectionStack>
-              <ToggleRow
-                title={t('config_management.visual.sections.remote.allow_remote')}
-                description={t('config_management.visual.sections.remote.allow_remote_desc')}
-                checked={values.rmAllowRemote}
-                disabled={disabled}
-                onChange={(rmAllowRemote) => onChange({ rmAllowRemote })}
-              />
-              <ToggleRow
-                title={t('config_management.visual.sections.remote.disable_panel')}
-                description={t('config_management.visual.sections.remote.disable_panel_desc')}
-                checked={values.rmDisableControlPanel}
-                disabled={disabled}
-                onChange={(rmDisableControlPanel) => onChange({ rmDisableControlPanel })}
-              />
+              <SectionGrid>
+                <ToggleRow
+                  title={t('config_management.visual.sections.remote.allow_remote')}
+                  description={t('config_management.visual.sections.remote.allow_remote_desc')}
+                  checked={values.rmAllowRemote}
+                  disabled={disabled}
+                  onChange={(rmAllowRemote) => onChange({ rmAllowRemote })}
+                />
+                <ToggleRow
+                  title={t('config_management.visual.sections.remote.disable_panel')}
+                  description={t('config_management.visual.sections.remote.disable_panel_desc')}
+                  checked={values.rmDisableControlPanel}
+                  disabled={disabled}
+                  onChange={(rmDisableControlPanel) => onChange({ rmDisableControlPanel })}
+                />
+              </SectionGrid>
               <SectionGrid>
                 <Input
                   label={t('config_management.visual.sections.remote.secret_key')}
@@ -726,11 +627,10 @@ export function VisualConfigEditor({
 
           <ConfigSection
             id="auth"
+            highlighted={activeSectionId === 'auth'}
             ref={(node) => {
               sectionRefs.current.auth = node;
             }}
-            indexLabel="04"
-            icon={<IconKey size={16} />}
             title={t('config_management.visual.sections.auth.title')}
             description={t('config_management.visual.sections.auth.description')}
           >
@@ -755,11 +655,10 @@ export function VisualConfigEditor({
 
           <ConfigSection
             id="system"
+            highlighted={activeSectionId === 'system'}
             ref={(node) => {
               sectionRefs.current.system = node;
             }}
-            indexLabel="05"
-            icon={<IconDiamond size={16} />}
             title={t('config_management.visual.sections.system.title')}
             description={t('config_management.visual.sections.system.description')}
           >
@@ -804,11 +703,10 @@ export function VisualConfigEditor({
 
           <ConfigSection
             id="network"
+            highlighted={activeSectionId === 'network'}
             ref={(node) => {
               sectionRefs.current.network = node;
             }}
-            indexLabel="06"
-            icon={<IconTrendingUp size={16} />}
             title={t('config_management.visual.sections.network.title')}
             description={t('config_management.visual.sections.network.description')}
           >
@@ -916,11 +814,10 @@ export function VisualConfigEditor({
 
           <ConfigSection
             id="quota"
+            highlighted={activeSectionId === 'quota'}
             ref={(node) => {
               sectionRefs.current.quota = node;
             }}
-            indexLabel="07"
-            icon={<IconTimer size={16} />}
             title={t('config_management.visual.sections.quota.title')}
             description={t('config_management.visual.sections.quota.description')}
           >
@@ -941,9 +838,7 @@ export function VisualConfigEditor({
               />
               <ToggleRow
                 title={t('config_management.visual.sections.quota.antigravity_credits')}
-                description={t(
-                  'config_management.visual.sections.quota.antigravity_credits_desc'
-                )}
+                description={t('config_management.visual.sections.quota.antigravity_credits_desc')}
                 checked={values.quotaAntigravityCredits}
                 disabled={disabled}
                 onChange={(quotaAntigravityCredits) => onChange({ quotaAntigravityCredits })}
@@ -953,11 +848,10 @@ export function VisualConfigEditor({
 
           <ConfigSection
             id="streaming"
+            highlighted={activeSectionId === 'streaming'}
             ref={(node) => {
               sectionRefs.current.streaming = node;
             }}
-            indexLabel="08"
-            icon={<IconSatellite size={16} />}
             title={t('config_management.visual.sections.streaming.title')}
             description={t('config_management.visual.sections.streaming.description')}
           >
@@ -1054,11 +948,10 @@ export function VisualConfigEditor({
 
           <ConfigSection
             id="payload"
+            highlighted={activeSectionId === 'payload'}
             ref={(node) => {
               sectionRefs.current.payload = node;
             }}
-            indexLabel="09"
-            icon={<IconCode size={16} />}
             title={t('config_management.visual.sections.payload.title')}
             description={t('config_management.visual.sections.payload.description')}
           >
@@ -1124,7 +1017,6 @@ export function VisualConfigEditor({
             </SectionStack>
           </ConfigSection>
         </div>
-      </div>
 
       {shouldRenderFloatingSidebar && typeof document !== 'undefined'
         ? createPortal(

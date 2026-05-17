@@ -436,6 +436,11 @@
   background: color-mix(in srgb, #2563eb 16%, var(--bg-secondary));
 }
 
+.bentoIconUsageTokens {
+  color: #8b5cf6;
+  background: color-mix(in srgb, #8b5cf6 16%, var(--bg-secondary));
+}
+
 .bentoCard:hover .bentoIconKey {
   background: color-mix(in srgb, #ca8a04 24%, var(--bg-secondary));
 }
@@ -450,6 +455,10 @@
 
 .bentoCard:hover .bentoIconModels {
   background: color-mix(in srgb, #2563eb 24%, var(--bg-secondary));
+}
+
+.bentoCard:hover .bentoIconUsageTokens {
+  background: color-mix(in srgb, #8b5cf6 24%, var(--bg-secondary));
 }
 
 .bentoContent {

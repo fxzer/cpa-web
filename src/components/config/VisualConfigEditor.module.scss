@@ -2,9 +2,27 @@
 @use '../../styles/variables' as *;
 
 .visualEditor {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xl;
+  display: grid;
+  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+  column-gap: 24px;
+  row-gap: $spacing-xl;
+  align-items: start;
+
+  > .overview {
+    grid-column: 1 / -1;
+  }
+
+  > .mobileSectionNav {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 1024px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @include mobile {
+    row-gap: 16px;
+  }
 
   :global(.form-group) {
     gap: 8px;
@@ -200,96 +218,6 @@
   background: var(--warning-bg);
 }
 
-.overviewFocusList {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  @include mobile {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.overviewFocusLink {
-  @include button-reset;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  width: 100%;
-  padding: 14px 16px;
-  border-radius: 20px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
-  background: color-mix(in srgb, var(--bg-primary) 74%, transparent);
-  text-align: left;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    background-color 0.18s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    border-color: color-mix(in srgb, var(--primary-color) 26%, var(--border-color));
-    background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
-  }
-}
-
-.overviewFocusLinkActive {
-  border-color: color-mix(in srgb, var(--primary-color) 28%, var(--border-color));
-  background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
-}
-
-.focusIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-secondary));
-  color: var(--primary-hover);
-  flex: 0 0 auto;
-}
-
-.focusCopy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.focusTitle {
-  color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.focusDescription {
-  color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-
-  @media (max-width: 1024px) {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  @include mobile {
-    gap: 16px;
-  }
-}
-
 .mobileSectionNav {
   display: none;
 
@@ -323,14 +251,19 @@
   flex: 0 0 auto;
   padding: 10px 14px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
+  border: 2px solid color-mix(in srgb, var(--border-color) 84%, transparent);
   background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
   box-shadow: 0 18px 36px -30px rgba(0, 0, 0, 0.28);
   white-space: nowrap;
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 .mobileSectionNavButtonActive {
-  border-color: color-mix(in srgb, var(--primary-color) 24%, var(--border-color));
+  border: 2px solid color-mix(in srgb, var(--success-color) 24%, var(--border-color));
   background: color-mix(in srgb, var(--bg-primary) 96%, transparent);
 }
 
@@ -338,15 +271,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  padding: 0 2px;
+  font-size: clamp(22px, 5.5vw, 30px);
+  font-style: italic;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--text-primary) 18%, transparent);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  user-select: none;
+  pointer-events: none;
+}
+
+.mobileSectionNavButtonActive .mobileSectionNavIndex {
+  color: color-mix(in srgb, var(--success-color) 40%, transparent);
 }
 
 .mobileSectionNavLabel {
@@ -388,7 +329,7 @@
 }
 
 .sidebarRail {
-  max-height: calc(100vh - var(--header-height, 64px) - 36px);
+  max-height: calc(100dvh - var(--header-height, 64px) - 36px);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 12px;
@@ -458,13 +399,14 @@
 
 .navButton {
   @include button-reset;
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 14px;
   width: 100%;
   padding: 14px;
   border-radius: 20px;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   background: transparent;
   color: inherit;
   text-align: left;
@@ -473,10 +415,16 @@
     background-color 0.18s ease,
     border-color 0.18s ease;
 
-  &:hover {
+  // 避免 :hover 盖过 .navButtonActive（否则点击后鼠标仍在项上会先灰框）
+  &:hover:not(.navButtonActive) {
     transform: translateX(2px);
     background: color-mix(in srgb, var(--bg-secondary) 86%, transparent);
     border-color: color-mix(in srgb, var(--border-color) 88%, transparent);
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
   }
 
   @media (max-width: 1024px) {
@@ -491,24 +439,33 @@
 
 .navButtonActive {
   background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
-  border-color: color-mix(in srgb, var(--primary-color) 24%, var(--border-color));
+  border: 2px solid color-mix(in srgb, var(--success-color) 24%, var(--border-color));
   box-shadow: 0 18px 36px -30px rgba(0, 0, 0, 0.32);
 }
 
 .navIndex {
-  display: inline-flex;
+  flex: 0 0 auto;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  flex: 0 0 auto;
+  min-width: 2.75rem;
+  padding: 0 2px;
+  font-size: clamp(28px, 3.2vw, 40px);
+  font-style: italic;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--text-primary) 16%, transparent);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  user-select: none;
+  pointer-events: none;
+}
+
+.navButtonActive .navIndex {
+  color: color-mix(in srgb, var(--success-color) 38%, transparent);
 }
 
 .navMain {
@@ -526,22 +483,9 @@
   min-width: 0;
 }
 
-.navLabelWrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.navIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary-hover);
-  flex: 0 0 auto;
-}
-
 .navLabel {
+  flex: 1;
+  min-width: 0;
   color: var(--text-primary);
   font-size: 15px;
   font-weight: 700;
@@ -574,7 +518,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: clamp(20px, 3vw, 30px);
+  padding: 0;
+  overflow: hidden;
   border-radius: 32px;
   border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
   background: color-mix(in srgb, var(--bg-primary) 76%, transparent);
@@ -785,6 +730,73 @@
   background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
 }
 
+.apiKeyToolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.apiKeyList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+
+  @include mobile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.apiKeyRow {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  min-width: 0;
+  padding: 12px 16px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+  background: color-mix(in srgb, var(--bg-primary) 84%, transparent);
+}
+
+.apiKeyMask {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    'Liberation Mono',
+    'Courier New',
+    monospace;
+  letter-spacing: 0.02em;
+}
+
+.apiKeyRowActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+
+  :global(.btn) {
+    min-height: 32px;
+    height: 32px;
+    padding: 0 12px;
+    box-sizing: border-box;
+  }
+}
+
 .stringList {
   display: flex;
   flex-direction: column;
@@ -876,13 +888,9 @@
     border-radius: 24px;
   }
 
-  .overviewFocusLink {
-    padding: 12px 14px;
-  }
-
   .sections {
     border-radius: 26px;
-    padding: 16px;
+    padding: 0;
   }
 
   .subsection {
@@ -917,9 +925,12 @@
 }
 
 @media (max-width: 380px) {
-  .overview,
-  .sections {
+  .overview {
     padding: 14px;
+  }
+
+  .sections {
+    padding: 0;
   }
 
   .subsection,
