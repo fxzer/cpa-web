@@ -25,6 +25,7 @@
     "connecting_status": "连接中",
     "connected_status": "已连接",
     "disconnected_status": "未连接",
+    "error_status": "连接异常",
     "yes": "是",
     "no": "否",
     "not_set": "未设置",
@@ -480,7 +481,7 @@
     "model_filter_empty": "暂无可筛选模型"
   },
   "auth_files": {
-    "title": "认证文件管理",
+    "title": "认证文件",
     "title_section": "认证文件",
     "description": "这里集中管理 CLI Proxy 支持的所有 JSON 认证文件（如 Qwen、Gemini、Vertex 等），上传后即可在运行时启用相应的 AI 服务。",
     "upload_button": "上传文件",
@@ -995,6 +996,9 @@
     "loaded_lines": "已载入 {{count}} 行",
     "filtered_lines": "已过滤 {{count}} 行",
     "hide_management_logs": "屏蔽 {{prefix}} 日志",
+    "log_view_mode_aria": "日志显示方式",
+    "log_view_parsed": "解析",
+    "log_view_raw": "原始",
     "show_raw_logs": "显示原始日志",
     "show_raw_logs_hint": "直接显示原始日志文本，方便多行复制",
     "search_placeholder": "搜索日志内容或关键字",

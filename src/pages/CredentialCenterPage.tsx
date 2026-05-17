@@ -120,35 +120,39 @@ export function CredentialCenterPage() {
         </div>
       )}
 
-      <div className={styles.header}>
-        <h1 className={styles.pageTitle}>{t('credential_center.title')}</h1>
-        <div className={styles.headerActions}>
-          <div className={styles.timeRangeButtons}>
-          {lastRefreshedAt && (
-            <span className={styles.lastRefreshed}>
-              {t('usage_stats.last_updated')}: {lastRefreshedAt.toLocaleTimeString()}
-            </span>
-          )}
-            {USAGE_TIME_RANGE_OPTIONS.map((option) => (
-              <Button
-                key={option.value}
-                variant={timeRange === option.value ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => handleTimeRangeChange(option.value)}
-              >
-                {t(option.labelKey)}
-              </Button>
-            ))}
+      <div className={styles.pageHead}>
+        <div className={styles.pageHeadMain}>
+          <div className={styles.pageHeadText}>
+            <h1 className={styles.pageTitle}>{t('credential_center.title')}</h1>
+            {lastRefreshedAt && (
+              <p className={styles.pageSubtitle}>
+                {t('usage_stats.last_updated')}: {lastRefreshedAt.toLocaleTimeString()}
+              </p>
+            )}
           </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => void handleRefresh().catch(() => {})}
-            disabled={loading || authRefreshQueueLoading}
-          >
-            {loading || authRefreshQueueLoading ? t('common.loading') : t('usage_stats.refresh')}
-          </Button>
-         
+          <div className={styles.pageHeadToolbar}>
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={loading || authRefreshQueueLoading}
+              onClick={() => void handleRefresh().catch(() => {})}
+            >
+              {t('usage_stats.refresh')}
+            </Button>
+            <span className={styles.pageHeadToolbarSpacer} aria-hidden />
+            <div className={styles.timeRangeButtons}>
+              {USAGE_TIME_RANGE_OPTIONS.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={timeRange === option.value ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => handleTimeRangeChange(option.value)}
+                >
+                  {t(option.labelKey)}
+                </Button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

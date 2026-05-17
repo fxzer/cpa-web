@@ -130,11 +130,9 @@
   align-items: center;
   gap: $spacing-sm;
   flex-wrap: wrap;
-  margin-left: auto;
 
   @include mobile {
     align-items: flex-start;
-    margin-left: 0;
     width: 100%;
   }
 }
@@ -214,6 +212,67 @@
     gap: $spacing-sm;
     margin-bottom: $spacing-sm;
   }
+}
+
+.logsTableToolbarLeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-md;
+  min-width: 0;
+}
+
+.logsTableToolbarTrailing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-md;
+  margin-left: auto;
+
+  @include mobile {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+.logViewModeBar {
+  display: flex;
+  align-items: stretch;
+  box-sizing: border-box;
+  height: 42px;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+  flex-shrink: 0;
+  min-width: 148px;
+}
+
+.logViewModeItem {
+  @include button-reset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+
+  @include pill-tab-interaction;
 }
 
 .filterPanelHeader {
@@ -777,7 +836,7 @@
 
 .rawLog {
   margin: 0;
-  padding: 10px 12px;
+  padding: 4px 8px;
   cursor: text;
   user-select: text;
   white-space: pre;
@@ -785,17 +844,17 @@
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
-  font-size: 12.5px;
+  font-size: 10px;
   line-height: 1.45;
 
   @include tablet {
-    padding: 8px 10px;
-    font-size: 12px;
+    padding: 4px 8px;
+    font-size: 9.5px;
   }
 
   @include mobile {
-    padding: 8px 10px;
-    font-size: 11.5px;
+    padding: 4px 8px;
+    font-size: 9px;
   }
 }
 
@@ -803,14 +862,14 @@
   display: grid;
   grid-template-columns: 170px 1fr;
   gap: $spacing-md;
-  padding: 10px 12px;
+  padding: 4px 8px;
   border-bottom: 1px solid var(--border-color);
   border-left: 3px solid transparent;
   cursor: default;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
-  font-size: 12.5px;
+  font-size: 10px;
   line-height: 1.45;
   color: var(--text-primary);
 
@@ -821,15 +880,15 @@
   @include tablet {
     grid-template-columns: 140px 1fr;
     gap: $spacing-sm;
-    padding: 8px 10px;
-    font-size: 12px;
+    padding: 4px 8px;
+    font-size: 9.5px;
   }
 
   @include mobile {
     grid-template-columns: 1fr;
     gap: $spacing-xs;
-    padding: 8px 10px;
-    font-size: 11.5px;
+    padding: 4px 8px;
+    font-size: 9px;
   }
 }
 
@@ -864,7 +923,7 @@
   align-items: center;
   padding: 2px 8px;
   border-radius: $radius-full;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 800;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
@@ -877,7 +936,7 @@
   align-items: center;
   padding: 2px 8px;
   border-radius: $radius-full;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
@@ -898,7 +957,7 @@
 .requestIdBadge {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
     'Courier New', monospace;
-  font-size: 12px;
+  font-size: 10px;
   color: #0891b2;
   background: rgba(8, 145, 178, 0.1);
   border-color: rgba(8, 145, 178, 0.25);
@@ -1047,8 +1106,8 @@
   }
 
   .logRow {
-    padding: 8px 10px;
-    font-size: 12px;
+    padding: 4px 8px;
+    font-size: 9.5px;
   }
 
   .errorPanel {
@@ -1096,8 +1155,8 @@
   }
 
   .logRow {
-    padding: 6px 8px;
-    font-size: 12px;
+    padding: 4px 8px;
+    font-size: 9.5px;
     grid-template-columns: 130px 1fr;
     gap: $spacing-xs;
   }

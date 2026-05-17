@@ -476,10 +476,6 @@ export function ConfigPage() {
     </div>
   );
 
-  const pageEyebrow =
-    activeTab === 'visual'
-      ? t('config_management.tabs.visual', { defaultValue: '可视化编辑' })
-      : t('config_management.tabs.source', { defaultValue: '源文件编辑' });
   const pageDescription =
     activeTab === 'visual'
       ? t('config_management.visual.notice')
@@ -489,7 +485,6 @@ export function ConfigPage() {
     <div className={styles.container}>
       <div className={styles.pageHeader}>
         <div className={styles.pageHeaderCopy}>
-          <span className={styles.pageEyebrow}>{pageEyebrow}</span>
           <h1 className={styles.pageTitle}>{t('config_management.title')}</h1>
           <p className={styles.description}>{pageDescription}</p>
         </div>

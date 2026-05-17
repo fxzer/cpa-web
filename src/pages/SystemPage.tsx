@@ -255,7 +255,19 @@ export function SystemPage() {
 
             <div className={styles.infoTile}>
               <div className={styles.tileLabel}>{t('connection.status')}</div>
-              <div className={styles.tileValue}>{t(`common.${auth.connectionStatus}_status`)}</div>
+              <div
+                className={`${styles.tileValue} ${
+                  auth.connectionStatus === 'connected'
+                    ? styles.tileValueStatusConnected
+                    : auth.connectionStatus === 'connecting'
+                      ? styles.tileValueStatusConnecting
+                      : auth.connectionStatus === 'error'
+                        ? styles.tileValueStatusError
+                        : styles.tileValueStatusDisconnected
+                }`}
+              >
+                {t(`common.${auth.connectionStatus}_status`)}
+              </div>
               {auth.apiBase?.trim() ? (
                 <button
                   type="button"

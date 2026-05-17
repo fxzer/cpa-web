@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -10,12 +10,11 @@ import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import {
   IconDownload,
-  IconRefreshCw,
   IconSearch,
-  IconSettings,
   IconSlidersHorizontal,
 } from '@/components/ui/icons';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
   logsApi,
   usageApi,
@@ -42,6 +41,14 @@ import styles from './RequestMonitoringPage.module.scss';
 const MAX_VISIBLE_ROWS = 300;
 const AUTO_REFRESH_MS = 10_000;
 const MANAGEMENT_API_USAGE_PATH = '/v0/management/usage';
+
+/** 与监控中心 stat 卡片相近的强调色，用于顶部四卡渐变 */
+const REQUEST_MONITORING_STATUS_ACCENTS = [
+  { accent: '#8b8680', accentSoft: 'rgba(139, 134, 128, 0.18)', accentBorder: 'rgba(139, 134, 128, 0.35)' },
+  { accent: '#8b5cf6', accentSoft: 'rgba(139, 92, 246, 0.18)', accentBorder: 'rgba(139, 92, 246, 0.35)' },
+  { accent: '#22c55e', accentSoft: 'rgba(34, 197, 94, 0.18)', accentBorder: 'rgba(34, 197, 94, 0.32)' },
+  { accent: '#f97316', accentSoft: 'rgba(249, 115, 22, 0.18)', accentBorder: 'rgba(249, 115, 22, 0.32)' },
+] as const;
 
 type RequestMonitoringDataSource = 'usage-service' | 'management-api';
 
@@ -115,7 +122,10 @@ export function RequestMonitoringPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useLocalStorage(
+    'requestMonitoringPage.autoRefresh',
+    false
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [setupSaving, setSetupSaving] = useState(false);
   const [draftEnabled, setDraftEnabled] = useState(usageServiceEnabled);
@@ -411,15 +421,18 @@ export function RequestMonitoringPage() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.pageTitle}>{t('request_monitoring.title')}</h1>
-          <p className={styles.pageSubTitle}>{t('request_monitoring.subtitle')}</p>
+          <p className={styles.pageSubTitle}>
+            {t('request_monitoring.subtitle')}
+            {lastRefreshedAt && (
+              <>
+                {' '}
+                {t('usage_stats.last_updated')}: {lastRefreshedAt.toLocaleTimeString()}
+              </>
+            )}
+          </p>
         </div>
         <div className={styles.headerActions}>
           <div className={styles.toolbarCluster}>
-            {lastRefreshedAt && (
-              <span className={styles.lastRefreshed}>
-                {t('usage_stats.last_updated')}: {lastRefreshedAt.toLocaleTimeString()}
-              </span>
-            )}
             <ToggleSwitch
               checked={autoRefresh}
               onChange={setAutoRefresh}
@@ -429,14 +442,12 @@ export function RequestMonitoringPage() {
           <Button
             variant="secondary"
             size="sm"
+            loading={loading}
             onClick={() => void loadData()}
-            disabled={loading}
           >
-            <IconRefreshCw size={16} />
             {t('common.refresh')}
           </Button>
           <Button variant="secondary" size="sm" onClick={() => setSettingsOpen(true)}>
-            <IconSettings size={16} />
             {t('request_monitoring.settings')}
           </Button>
         </div>
@@ -455,21 +466,25 @@ export function RequestMonitoringPage() {
           label={t('request_monitoring.service_status')}
           value={t(`request_monitoring.collector_${serviceLabel}`, { defaultValue: serviceLabel })}
           meta={serviceMeta}
+          accent={REQUEST_MONITORING_STATUS_ACCENTS[0]}
         />
         <StatusCard
           label={t('request_monitoring.total_events')}
           value={formatCompactNumber(status?.events ?? rows.length)}
           meta={dbMeta}
+          accent={REQUEST_MONITORING_STATUS_ACCENTS[1]}
         />
         <StatusCard
           label={t('request_monitoring.success_rate')}
           value={`${successRate.toFixed(1)}%`}
           meta={t('request_monitoring.failed_count', { count: failedCount })}
+          accent={REQUEST_MONITORING_STATUS_ACCENTS[2]}
         />
         <StatusCard
           label={t('request_monitoring.collector_progress')}
           value={formatCompactNumber(collectorStatus?.totalInserted ?? rows.length)}
           meta={progressMeta}
+          accent={REQUEST_MONITORING_STATUS_ACCENTS[3]}
         />
       </div>
 
@@ -560,7 +575,6 @@ export function RequestMonitoringPage() {
             action={
               rows.length === 0 ? (
                 <Button variant="secondary" size="sm" onClick={() => setSettingsOpen(true)}>
-                  <IconSettings size={16} />
                   {t('request_monitoring.settings')}
                 </Button>
               ) : undefined
@@ -690,15 +704,31 @@ export function RequestMonitoringPage() {
   );
 }
 
+interface StatusCardAccent {
+  accent: string;
+  accentSoft: string;
+  accentBorder: string;
+}
+
 interface StatusCardProps {
   label: string;
   value: string;
   meta: string;
+  accent: StatusCardAccent;
 }
 
-function StatusCard({ label, value, meta }: StatusCardProps) {
+function StatusCard({ label, value, meta, accent }: StatusCardProps) {
   return (
-    <div className={styles.statusCard}>
+    <div
+      className={styles.statusCard}
+      style={
+        {
+          '--accent': accent.accent,
+          '--accent-soft': accent.accentSoft,
+          '--accent-border': accent.accentBorder,
+        } as CSSProperties
+      }
+    >
       <div className={styles.statusCardLabel}>{label}</div>
       <div className={styles.statusCardValue}>{value}</div>
       <div className={styles.statusCardMeta}>{meta}</div>

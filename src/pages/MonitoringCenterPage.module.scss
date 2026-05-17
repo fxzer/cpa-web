@@ -10,12 +10,59 @@
   position: relative;
 }
 
-.header {
+.pageHead {
   display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.pageHeadMain {
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  gap: $spacing-lg;
   flex-wrap: wrap;
+}
+
+.pageHeadText {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.pageSubtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.pageHeadToolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  flex: 1 1 14rem;
+  min-width: 0;
+  max-width: 100%;
+
+  @include mobile {
+    flex-wrap: wrap;
+    width: 100%;
+    row-gap: $spacing-sm;
+    justify-content: space-between;
+  }
+}
+
+.pageHeadToolbarSpacer {
+  flex: 1 1 auto;
+  min-width: $spacing-md;
+
+  @include mobile {
+    display: none;
+  }
 }
 
 .pageTitle {
@@ -25,24 +72,17 @@
   margin: 0;
 }
 
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.lastRefreshed {
-  font-size: 14px;
-  color: var(--text-tertiary);
-  white-space: nowrap;
-}
-
 .timeRangeButtons {
   display: inline-flex;
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
+  flex: 0 0 auto;
+
+  @include mobile {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 .errorBox {
@@ -165,7 +205,7 @@
 }
 
 .statValue {
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.15;
@@ -688,7 +728,7 @@
 }
 
 @include mobile {
-  .headerActions {
+  .pageHeadToolbar {
     width: 100%;
   }
 

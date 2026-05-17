@@ -666,7 +666,7 @@ export function AuthFilesPage() {
         title={titleNode}
         extra={
           <div className={styles.headerActions}>
-            <Button variant="secondary" size="sm" onClick={handleHeaderRefresh} disabled={loading}>
+            <Button variant="secondary" size="sm" onClick={handleHeaderRefresh} loading={loading}>
               {t('common.refresh')}
             </Button>
             <Button

@@ -190,34 +190,39 @@ export function MonitoringCenterPage() {
         </div>
       )}
 
-      <div className={styles.header}>
-        <h1 className={styles.pageTitle}>{t('monitoring_center.title')}</h1>
-        <div className={styles.headerActions}>
-          <div className={styles.timeRangeButtons}>
+      <div className={styles.pageHead}>
+        <div className={styles.pageHeadMain}>
+          <div className={styles.pageHeadText}>
+            <h1 className={styles.pageTitle}>{t('monitoring_center.title')}</h1>
             {lastRefreshedAt && (
-              <span className={styles.lastRefreshed}>
+              <p className={styles.pageSubtitle}>
                 {t('usage_stats.last_updated')}: {lastRefreshedAt.toLocaleTimeString()}
-              </span>
+              </p>
             )}
-            {USAGE_TIME_RANGE_OPTIONS.map((option) => (
-              <Button
-                key={option.value}
-                variant={timeRange === option.value ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => handleTimeRangeChange(option.value)}
-              >
-                {t(option.labelKey)}
-              </Button>
-            ))}
           </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => void handleRefresh().catch(() => {})}
-            disabled={loading}
-          >
-            {loading ? t('common.loading') : t('usage_stats.refresh')}
-          </Button>
+          <div className={styles.pageHeadToolbar}>
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={loading}
+              onClick={() => void handleRefresh().catch(() => {})}
+            >
+              {t('usage_stats.refresh')}
+            </Button>
+            <span className={styles.pageHeadToolbarSpacer} aria-hidden />
+            <div className={styles.timeRangeButtons}>
+              {USAGE_TIME_RANGE_OPTIONS.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={timeRange === option.value ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => handleTimeRangeChange(option.value)}
+                >
+                  {t(option.labelKey)}
+                </Button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

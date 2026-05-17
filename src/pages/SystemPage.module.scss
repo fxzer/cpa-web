@@ -32,7 +32,7 @@
 .aboutLogo {
   width: 108px;
   height: 108px;
-  border-radius: 26px;
+  border-radius: 24px;
   object-fit: cover;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
 }
@@ -122,18 +122,36 @@
   word-break: break-word;
 }
 
+// 关于页「连接状态」主文案：按状态着色，便于一眼区分
+.tileValueStatusConnected {
+  color: var(--success-color);
+}
+
+.tileValueStatusConnecting {
+  color: var(--quota-medium-color);
+}
+
+.tileValueStatusDisconnected {
+  color: var(--error-color);
+}
+
+.tileValueStatusError {
+  color: var(--failure-badge-text, var(--error-color));
+}
+
 .tileSub {
   font-size: 12px;
   color: var(--text-tertiary);
   line-height: 1.4;
 }
 
+// 连接状态下方 API 地址：与状态主文案左缘对齐，不用内边距块避免悬浮时出现错位背景条
 .tileSubButton {
   margin: 0;
-  padding: 4px 8px;
+  padding: 0;
   max-width: 100%;
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
   font: inherit;
   font-size: 12px;
@@ -143,15 +161,19 @@
   text-align: left;
   cursor: pointer;
   word-break: break-all;
+  align-self: flex-start;
 
   &:hover {
     color: var(--text-primary);
-    background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    background: transparent;
   }
 
   &:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 28%, transparent);
+    border-radius: 2px;
   }
 }
 

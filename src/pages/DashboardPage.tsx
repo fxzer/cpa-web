@@ -19,6 +19,7 @@ interface QuickStat {
   path: string;
   loading?: boolean;
   sublabel?: string;
+  iconAccent: 'key' | 'providers' | 'auth' | 'models';
 }
 
 interface ProviderStats {
@@ -221,7 +222,7 @@ export function DashboardPage() {
       icon: <IconKey size={24} />,
       path: '/config',
       loading: loading && stats.apiKeys === null,
-      sublabel: t('nav.config_management')
+      iconAccent: 'key'
     },
     {
       label: t('nav.ai_providers'),
@@ -236,7 +237,8 @@ export function DashboardPage() {
             claude: providerStats.claude ?? '-',
             openai: providerStats.openai ?? '-'
           })
-        : undefined
+        : undefined,
+      iconAccent: 'providers'
     },
     {
       label: t('nav.auth_files'),
@@ -244,15 +246,16 @@ export function DashboardPage() {
       icon: <IconFileText size={24} />,
       path: '/auth-files',
       loading: loading && stats.authFiles === null,
-      sublabel: t('dashboard.oauth_credentials')
+      sublabel: t('dashboard.oauth_credentials'),
+      iconAccent: 'auth'
     },
     {
       label: t('dashboard.available_models'),
       value: modelsLoading ? '-' : models.length,
       icon: <IconSatellite size={24} />,
-      path: '/system',
+      path: '/models',
       loading: modelsLoading,
-      sublabel: t('dashboard.available_models_desc')
+      iconAccent: 'models'
     }
   ];
 
@@ -287,6 +290,30 @@ export function DashboardPage() {
     hour: '2-digit',
     minute: '2-digit'
   });
+
+  const connectionStatusLabel = t(
+    connectionStatus === 'connected'
+      ? 'common.connected'
+      : connectionStatus === 'connecting'
+        ? 'common.connecting'
+        : 'common.disconnected'
+  );
+
+  const trimmedServerVersion = serverVersion?.trim() ?? '';
+  const displayServerVersion =
+    trimmedServerVersion !== '' ? `v${trimmedServerVersion.replace(/^[vV]+/, '')}` : '';
+
+  const connectionPillTitle =
+    displayServerVersion && connectionStatus === 'connected'
+      ? `${connectionStatusLabel} · ${displayServerVersion}`
+      : connectionStatusLabel;
+
+  const bentoIconByAccent: Record<QuickStat['iconAccent'], string> = {
+    key: styles.bentoIconKey,
+    providers: styles.bentoIconProviders,
+    auth: styles.bentoIconAuth,
+    models: styles.bentoIconModels
+  };
 
   return (
     <div className={styles.dashboard}>
@@ -325,7 +352,7 @@ export function DashboardPage() {
                 {apiBase}
               </button>
             )}
-            <div className={styles.connectionPill}>
+            <div className={styles.connectionPill} title={connectionPillTitle}>
               <span
                 className={`${styles.statusDot} ${
                   connectionStatus === 'connected'
@@ -335,17 +362,7 @@ export function DashboardPage() {
                       : styles.disconnected
                 }`}
               />
-              <span className={styles.pillText}>
-                {serverVersion
-                  ? `v${serverVersion.trim().replace(/^[vV]+/, '')}`
-                  : t(
-                      connectionStatus === 'connected'
-                        ? 'common.connected'
-                        : connectionStatus === 'connecting'
-                          ? 'common.connecting'
-                          : 'common.disconnected'
-                    )}
-              </span>
+              <span className={styles.pillText}>{connectionStatusLabel}</span>
             </div>
           </div>
           {serverBuildDate && (
@@ -367,7 +384,7 @@ export function DashboardPage() {
               className={`${styles.bentoCard} ${index === 0 ? styles.bentoLarge : ''}`}
               style={{ animationDelay: `${index * 80}ms` }}
             >
-              <div className={styles.bentoIcon}>{stat.icon}</div>
+              <div className={`${styles.bentoIcon} ${bentoIconByAccent[stat.iconAccent]}`}>{stat.icon}</div>
               <div className={styles.bentoContent}>
                 <span className={styles.bentoValue}>
                   {stat.loading ? '...' : stat.value}
@@ -385,7 +402,12 @@ export function DashboardPage() {
       {/* Config pills section */}
       {config && (
         <section className={styles.configSection}>
-          <h2 className={styles.sectionHeading}>{t('dashboard.current_config')}</h2>
+          <div className={styles.configSectionHeader}>
+            <h2 className={styles.sectionHeading}>{t('dashboard.current_config')}</h2>
+            <Link to="/config" className={styles.configEditLink}>
+              {t('dashboard.edit_settings')} →
+            </Link>
+          </div>
           <div className={styles.configPillGrid}>
             <div className={styles.configPill}>
               <span className={styles.configPillLabel}>{t('basic_settings.debug_enable')}</span>
@@ -422,9 +444,6 @@ export function DashboardPage() {
               </div>
             )}
           </div>
-          <Link to="/config" className={styles.viewMoreLink}>
-            {t('dashboard.edit_settings')} →
-          </Link>
         </section>
       )}
     </div>

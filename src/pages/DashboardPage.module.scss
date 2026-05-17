@@ -319,7 +319,7 @@
 }
 
 .sectionHeading {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0;
@@ -381,7 +381,7 @@
   );
 
   .bentoValue {
-    font-size: 44px;
+    font-size: 50px;
   }
 
   .bentoIcon {
@@ -393,7 +393,7 @@
     grid-row: auto;
 
     .bentoValue {
-      font-size: 32px;
+      font-size: 34px;
     }
 
     .bentoIcon {
@@ -410,13 +410,46 @@
   width: 44px;
   height: 44px;
   border-radius: $radius-md;
-  background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-secondary));
-  color: var(--primary-color);
-  transition: background $transition-fast;
+  transition:
+    background $transition-fast,
+    color $transition-fast,
+    transform $transition-fast;
 }
 
-.bentoCard:hover .bentoIcon {
-  background: color-mix(in srgb, var(--primary-color) 16%, var(--bg-secondary));
+.bentoIconKey {
+  color: #ca8a04;
+  background: color-mix(in srgb, #ca8a04 16%, var(--bg-secondary));
+}
+
+.bentoIconProviders {
+  color: #7c3aed;
+  background: color-mix(in srgb, #7c3aed 16%, var(--bg-secondary));
+}
+
+.bentoIconAuth {
+  color: #059669;
+  background: color-mix(in srgb, #059669 16%, var(--bg-secondary));
+}
+
+.bentoIconModels {
+  color: #2563eb;
+  background: color-mix(in srgb, #2563eb 16%, var(--bg-secondary));
+}
+
+.bentoCard:hover .bentoIconKey {
+  background: color-mix(in srgb, #ca8a04 24%, var(--bg-secondary));
+}
+
+.bentoCard:hover .bentoIconProviders {
+  background: color-mix(in srgb, #7c3aed 24%, var(--bg-secondary));
+}
+
+.bentoCard:hover .bentoIconAuth {
+  background: color-mix(in srgb, #059669 24%, var(--bg-secondary));
+}
+
+.bentoCard:hover .bentoIconModels {
+  background: color-mix(in srgb, #2563eb 24%, var(--bg-secondary));
 }
 
 .bentoContent {
@@ -426,7 +459,7 @@
 }
 
 .bentoValue {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
@@ -434,12 +467,12 @@
 }
 
 .bentoLabel {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--text-secondary);
 }
 
 .bentoSublabel {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
   opacity: 0.7;
   margin-top: 2px;
@@ -454,6 +487,36 @@
   flex-direction: column;
   gap: $spacing-md;
   animation: cardEnter 0.4s ease-out 0.5s both;
+}
+
+.configSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+
+  .sectionHeading {
+    margin: 0;
+  }
+}
+
+.configEditLink {
+  display: inline-flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #2563eb;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+  }
 }
 
 .configPillGrid {
@@ -543,23 +606,6 @@
 .configBadgeUnknown {
   color: var(--text-secondary);
   background: var(--bg-primary);
-}
-
-// ─── View More Link ─────────────────────────────────────
-
-.viewMoreLink {
-  display: inline-flex;
-  align-items: center;
-  font-size: 13px;
-  color: var(--primary-color);
-  text-decoration: none;
-  margin-top: $spacing-xs;
-  transition: color $transition-fast;
-
-  &:hover {
-    text-decoration: underline;
-    color: var(--primary-hover);
-  }
 }
 
 // ─── Animations ─────────────────────────────────────────

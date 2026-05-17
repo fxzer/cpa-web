@@ -10,13 +10,10 @@ import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import {
   IconChevronDown,
   IconChevronUp,
-  IconCode,
   IconDownload,
-  IconEyeOff,
   IconRefreshCw,
   IconSearch,
   IconSlidersHorizontal,
-  IconTimer,
   IconTrash2,
   IconX,
 } from '@/components/ui/icons';
@@ -665,81 +662,94 @@ export function LogsPage() {
 
               <div className={styles.logsTableColumn}>
                 <div className={styles.logsTableToolbar}>
-                  <ToggleSwitch
-                    checked={hideManagementLogs}
-                    onChange={setHideManagementLogs}
-                    label={
-                      <span className={styles.switchLabel}>
-                        <IconEyeOff size={16} />
-                        {t('logs.hide_management_logs', { prefix: MANAGEMENT_API_PREFIX })}
-                      </span>
-                    }
-                  />
-
-                  <ToggleSwitch
-                    checked={showRawLogs}
-                    onChange={setShowRawLogs}
-                    label={
-                      <span
-                        className={styles.switchLabel}
-                        title={t('logs.show_raw_logs_hint', {
-                          defaultValue: 'Show original log text for easier multi-line copy',
-                        })}
-                      >
-                        <IconCode size={16} />
-                        {t('logs.show_raw_logs', { defaultValue: 'Show raw logs' })}
-                      </span>
-                    }
-                  />
-
-                  <div className={styles.toolbar}>
+                  <div className={styles.logsTableToolbarLeading}>
+                    <ToggleSwitch
+                      checked={hideManagementLogs}
+                      onChange={setHideManagementLogs}
+                      label={
+                        <span className={styles.switchLabel}>
+                          {t('logs.hide_management_logs', { prefix: MANAGEMENT_API_PREFIX })}
+                        </span>
+                      }
+                    />
                     <ToggleSwitch
                       checked={autoRefresh}
                       onChange={(value) => setAutoRefresh(value)}
                       disabled={disableControls}
                       label={
                         <span className={styles.switchLabel}>
-                          <IconTimer size={16} />
                           {t('logs.auto_refresh')}
                         </span>
                       }
                     />
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => loadLogs(false)}
-                      disabled={disableControls || loading}
-                      className={styles.actionButton}
-                    >
-                      <span className={styles.buttonContent}>
-                        <IconRefreshCw size={16} />
-                        {t('logs.refresh_button')}
-                      </span>
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={downloadLogs}
-                      disabled={logState.buffer.length === 0}
-                      className={styles.actionButton}
-                    >
-                      <span className={styles.buttonContent}>
-                        <IconDownload size={16} />
-                        {t('logs.download_button')}
-                      </span>
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={clearLogs}
-                      disabled={disableControls}
-                      className={styles.actionButton}
-                    >
-                      <span className={styles.buttonContent}>
-                        <IconTrash2 size={16} />
-                        {t('logs.clear_button')}
-                      </span>
-                    </Button>
+                  </div>
+
+                  <div className={styles.logsTableToolbarTrailing}>
+                    <div className={styles.toolbar}>
+                      <div
+                        className={styles.logViewModeBar}
+                        role="group"
+                        aria-label={t('logs.log_view_mode_aria', {
+                          defaultValue: 'Log display mode',
+                        })}
+                        title={t('logs.show_raw_logs_hint', {
+                          defaultValue: 'Show original log text for easier multi-line copy',
+                        })}
+                      >
+                        <button
+                          type="button"
+                          className={`${styles.logViewModeItem} ${!showRawLogs ? styles.tabActive : ''}`}
+                          onClick={() => setShowRawLogs(false)}
+                          aria-pressed={!showRawLogs}
+                        >
+                          {t('logs.log_view_parsed', { defaultValue: 'Parsed' })}
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.logViewModeItem} ${showRawLogs ? styles.tabActive : ''}`}
+                          onClick={() => setShowRawLogs(true)}
+                          aria-pressed={showRawLogs}
+                        >
+                          {t('logs.log_view_raw', { defaultValue: 'Raw' })}
+                        </button>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => loadLogs(false)}
+                        disabled={disableControls || loading}
+                        className={styles.actionButton}
+                      >
+                        <span className={styles.buttonContent}>
+                          <IconRefreshCw size={16} />
+                          {t('logs.refresh_button')}
+                        </span>
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={downloadLogs}
+                        disabled={logState.buffer.length === 0}
+                        className={styles.actionButton}
+                      >
+                        <span className={styles.buttonContent}>
+                          <IconDownload size={16} />
+                          {t('logs.download_button')}
+                        </span>
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={clearLogs}
+                        disabled={disableControls}
+                        className={styles.actionButton}
+                      >
+                        <span className={styles.buttonContent}>
+                          <IconTrash2 size={16} />
+                          {t('logs.clear_button')}
+                        </span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -57,6 +57,56 @@ const formatClockTime = (timestampMs: number): string =>
     minute: '2-digit',
     second: '2-digit'
   }).format(new Date(timestampMs));
+
+/** 与 RequestMonitoringPage `REQUEST_MONITORING_STATUS_ACCENTS[0]` 一致，用于「最早刷新」与「更长时间」中性格 */
+const STATUS_CARD_NEUTRAL = {
+  accent: '#8b8680',
+  accentSoft: 'rgba(139, 134, 128, 0.18)',
+  accentBorder: 'rgba(139, 134, 128, 0.35)'
+} as const;
+
+/**
+ * 与 RequestMonitoringPage 顶部 `StatusCard` 相同写法：--accent / --accent-soft / --accent-border
+ * 数值与时段语义对齐（红→橙→蓝→紫→灰）
+ */
+const REFRESH_QUEUE_BUCKET_CARD_ACCENTS: Record<
+  RefreshBucketId,
+  { accent: string; accentSoft: string; accentBorder: string }
+> = {
+  within_1m: {
+    accent: '#dc2626',
+    accentSoft: 'rgba(220, 38, 38, 0.18)',
+    accentBorder: 'rgba(220, 38, 38, 0.35)'
+  },
+  within_10m: {
+    accent: '#f97316',
+    accentSoft: 'rgba(249, 115, 22, 0.18)',
+    accentBorder: 'rgba(249, 115, 22, 0.32)'
+  },
+  within_1h: {
+    accent: '#d97706',
+    accentSoft: 'rgba(217, 119, 6, 0.18)',
+    accentBorder: 'rgba(217, 119, 6, 0.32)'
+  },
+  within_1d: {
+    accent: '#2563eb',
+    accentSoft: 'rgba(37, 99, 235, 0.16)',
+    accentBorder: 'rgba(37, 99, 235, 0.3)'
+  },
+  within_7d: {
+    accent: '#7c3aed',
+    accentSoft: 'rgba(124, 58, 237, 0.16)',
+    accentBorder: 'rgba(124, 58, 237, 0.3)'
+  },
+  longer: STATUS_CARD_NEUTRAL
+};
+
+const bucketCardAccentStyle = (accent: (typeof REFRESH_QUEUE_BUCKET_CARD_ACCENTS)[RefreshBucketId]): CSSProperties =>
+  ({
+    '--accent': accent.accent,
+    '--accent-soft': accent.accentSoft,
+    '--accent-border': accent.accentBorder
+  }) as CSSProperties;
 
 export function AuthRefreshQueueCountdownCard({
   queue,
@@ -230,33 +280,37 @@ export function AuthRefreshQueueCountdownCard({
       ) : (
         <div className={styles.refreshQueueFloatingRoot}>
           <div className={styles.refreshQueueSummary}>
-            <div className={styles.refreshQueueEarliest}>
-              <span className={styles.refreshQueueEarliestLabel}>
-                {t('credential_center.refresh_queue_earliest')}
-              </span>
-              <span className={styles.refreshQueueEarliestValue}>
-                {earliestEntry ? formatDueLabel(earliestEntry.deltaMs) : '--'}
-              </span>
-              {earliestEntry && (
-                <span className={styles.refreshQueueEarliestName}>{getDisplayName(earliestEntry.item)}</span>
-              )}
+            <div className={styles.refreshQueueEarliestSlot}>
+              <div
+                className={styles.refreshQueueStatusCard}
+                style={bucketCardAccentStyle(STATUS_CARD_NEUTRAL)}
+              >
+                <div className={styles.refreshQueueStatusCardLabel}>
+                  {t('credential_center.refresh_queue_earliest')}
+                </div>
+                <div className={styles.refreshQueueStatusCardValue}>
+                  {earliestEntry ? formatDueLabel(earliestEntry.deltaMs) : '--'}
+                </div>
+                {earliestEntry && (
+                  <div className={styles.refreshQueueStatusCardMeta}>
+                    {getDisplayName(earliestEntry.item)}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className={styles.refreshQueueBuckets} ref={bucketAreaRef}>
               {buckets.map((bucket) => {
                 const isActive = activeBucketId === bucket.id;
                 const isEmpty = bucket.entries.length === 0;
-                const bucketCellClassName = [
-                  styles.refreshQueueBucketCell,
-                  bucket.toneClass,
-                  isEmpty ? styles.refreshQueueBucketEmpty : ''
-                ]
+                const bucketCellClassName = [styles.refreshQueueBucketCell, bucket.toneClass]
                   .filter(Boolean)
                   .join(' ');
-                const className = [
-                  styles.refreshQueueBucket,
-                  bucket.toneClass,
-                  isActive ? styles.refreshQueueBucketActive : '',
+                const cardAccent = REFRESH_QUEUE_BUCKET_CARD_ACCENTS[bucket.id];
+                const buttonClassName = [
+                  styles.refreshQueueStatusCard,
+                  styles.refreshQueueStatusCardInteractive,
+                  isActive ? styles.refreshQueueStatusCardActive : '',
                   isEmpty ? styles.refreshQueueBucketEmpty : ''
                 ]
                   .filter(Boolean)
@@ -266,12 +320,13 @@ export function AuthRefreshQueueCountdownCard({
                   <div key={bucket.id} className={bucketCellClassName}>
                     <button
                       type="button"
-                      className={className}
+                      className={buttonClassName}
+                      style={bucketCardAccentStyle(cardAccent)}
                       onClick={() => toggleBucket(bucket.id)}
                       aria-pressed={isActive}
                     >
-                      <span className={styles.refreshQueueBucketCount}>{bucket.entries.length}</span>
-                      <span className={styles.refreshQueueBucketLabel}>{t(bucket.labelKey)}</span>
+                      <div className={styles.refreshQueueStatusCardLabel}>{t(bucket.labelKey)}</div>
+                      <div className={styles.refreshQueueStatusCardValue}>{bucket.entries.length}</div>
                     </button>
                     {isActive && (
                       <div className={styles.refreshQueueDetails} ref={detailsRef}>

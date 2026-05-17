@@ -295,35 +295,13 @@
   }
 }
 
-// 卡片渐变背景 — 基于 TYPE_COLORS light.bg 转 rgba
-.claudeCard {
-  background-image: linear-gradient(180deg,
-      rgba(251, 236, 228, 0.18),
-      rgba(251, 236, 228, 0));
-}
-
-.antigravityCard {
-  background-image: linear-gradient(180deg,
-      rgba(224, 247, 250, 0.12),
-      rgba(224, 247, 250, 0));
-}
-
-.codexCard {
-  background-image: linear-gradient(180deg,
-      rgba(234, 231, 255, 0.18),
-      rgba(234, 231, 255, 0));
-}
-
-.geminiCliCard {
-  background-image: linear-gradient(180deg,
-      rgba(224, 232, 255, 0.2),
-      rgba(224, 232, 255, 0));
-}
-
+// 配额卡片基底为 .fileCard，不再叠 linear-gradient
+.claudeCard,
+.antigravityCard,
+.codexCard,
+.geminiCliCard,
 .kimiCard {
-  background-image: linear-gradient(180deg,
-      rgba(220, 232, 255, 0.2),
-      rgba(220, 232, 255, 0));
+  background-image: none;
 }
 
 .quotaSection {

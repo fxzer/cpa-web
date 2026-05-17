@@ -25,6 +25,7 @@
     "connecting_status": "Connecting",
     "connected_status": "Connected",
     "disconnected_status": "Disconnected",
+    "error_status": "Connection error",
     "yes": "Yes",
     "no": "No",
     "not_set": "Not set",
@@ -479,7 +480,7 @@
     "model_filter_empty": "No models to filter"
   },
   "auth_files": {
-    "title": "Auth Files Management",
+    "title": "Auth Files",
     "title_section": "Auth Files",
     "description": "Manage all CLI Proxy JSON auth files here (e.g. Qwen, Gemini, Vertex). Uploading a credential immediately enables the corresponding AI integration.",
     "upload_button": "Upload File",
@@ -994,6 +995,9 @@
     "loaded_lines": "Loaded: {{count}} lines",
     "filtered_lines": "Filtered: {{count}} lines",
     "hide_management_logs": "Hide {{prefix}} logs",
+    "log_view_mode_aria": "Log display mode",
+    "log_view_parsed": "Parsed",
+    "log_view_raw": "Raw",
     "show_raw_logs": "Show Raw Logs",
     "show_raw_logs_hint": "Show original log text for easier multi-line copy",
     "search_placeholder": "Search logs by content or keyword",
