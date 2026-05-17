@@ -69,9 +69,9 @@ export function MonitorStatCards({
       key: 'requests',
       label: t('usage_stats.total_requests'),
       icon: <IconSatellite size={20} />,
-      accent: '#8b8680',
-      accentSoft: 'rgba(139, 134, 128, 0.18)',
-      accentBorder: 'rgba(139, 134, 128, 0.35)',
+      accent: '#0ea5e9',
+      accentSoft: 'rgba(14, 165, 233, 0.18)',
+      accentBorder: 'rgba(14, 165, 233, 0.32)',
       value: loading ? '-' : (usage?.total_requests ?? 0).toLocaleString(),
       trend: sparklines.requests
     },
@@ -109,9 +109,9 @@ export function MonitorStatCards({
       key: 'cost',
       label: t('usage_stats.total_cost'),
       icon: <IconDollarSign size={20} />,
-      accent: '#f59e0b',
-      accentSoft: 'rgba(245, 158, 11, 0.18)',
-      accentBorder: 'rgba(245, 158, 11, 0.32)',
+      accent: '#ec4899',
+      accentSoft: 'rgba(236, 72, 153, 0.18)',
+      accentBorder: 'rgba(236, 72, 153, 0.34)',
       value: loading ? '-' : hasPrices ? formatUsd(totalCost) : '--',
       trend: hasPrices ? sparklines.cost : null
     }

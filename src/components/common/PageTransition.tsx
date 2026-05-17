@@ -188,6 +188,11 @@ export function PageTransition({
         return [nextCurrent];
       }
 
+      if (variant === 'vertical') {
+        nextLayersRef.current = [nextCurrent];
+        return [nextCurrent];
+      }
+
       const exitingLayer: Layer = { ...previousCurrent, status: 'exiting' };
 
       nextLayersRef.current = [nextCurrent];
