@@ -33,21 +33,39 @@
 
 本项目基于 [router-for-me/Cli-Proxy-API-Management-Center](https://github.com/router-for-me/Cli-Proxy-API-Management-Center) fork，主要改动如下：
 
+### 监控中心与凭证中心
+
+- **页面集成**：新增监控中心、凭证中心等页面与路由。
+- **请求监控**：时间列与状态标签样式统一；凭据行展示与标题格式化，便于快速扫读。
+- **统计与动效**：监控首页统计卡片强调色与仪表盘一致；页面切换组件支持竖向过渡变体。
+- **页头与状态区**：两中心页头、刷新队列与监控状态卡片样式统一；按钮加载态更清晰，并改进键盘与读屏相关体验。
+
 ### UI/UX
 
-- **模型列表**：从系统页拆出为 `ModelsPage`，侧栏「模型列表」→ `/models`，全宽；图标 `IconSidebarModels`。
+- **模型列表**：从系统页拆出为独立页，侧栏「模型列表」全宽展示；标题与刷新控件同一行，标题保持在卡片外。
 - **菜单**：「OAuth 登录」排在「认证文件」前。
-- **开关**：`ToggleSwitch` 开启态用 `--success-color`（原为 `--primary-color`）。
+- **开关**：`ToggleSwitch` 开启态使用 `--success-color`（原为 `--primary-color`）。
+- **配置编辑**：`ConfigSection` / `VisualConfigEditor` 采用网格布局并优化内边距与过渡；API Key 等区块可读性提升；用量相关页与配置相关页共用浏览器本地存储中的时间范围选择。
+- **仪表盘**：样式与布局与近期其它页面统一。
 
 ### 国际化
 
-- 移除 zh-TW、ru，仅保留 en、zh-CN。
+- **语言**：移除 zh-TW、ru，仅保留 en、zh-CN。
 
 ### 布局与页面
 
 - **认证文件**：禁用态下卡片操作仍可辨识。
 - **AI 提供商**：修复 OpenAI 卡片溢出。
 - **系统信息**：去掉模型列表（见独立页）；其余（关于、版本、快捷链接、清除登录存储）不变。
+
+### 部署与工程化
+
+- **deploy.sh**：支持仅前端、仅后端等部署模式；部署前可备份 `management.html` 与后端二进制；补充用法说明、注释与依赖/配置检查。
+- **站点标题**：`index.html` / `main.tsx` 中应用标题为 **cliproxyapi-management**。
+
+### 文档
+
+- **README**：「配对后端」与后端 fork 文档互链；合并英文说明，移除独立 `README_CN`。
 
 ## 快速开始
 
