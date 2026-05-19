@@ -25,9 +25,10 @@ import {
   formatDurationMs,
   normalizeAuthIndex,
   type UsageThinking,
+  USAGE_TIME_RANGE_MS,
   type UsageTimeRange,
 } from '@/utils/usage';
-import { USAGE_TIME_RANGE_OPTIONS } from '@/utils/usageTimeRange';
+import { REQUEST_EVENTS_TIME_RANGE_OPTIONS } from '@/utils/usageTimeRange';
 import { downloadBlob } from '@/utils/download';
 import styles from '@/pages/UsagePage.module.scss';
 
@@ -510,7 +511,7 @@ export function RequestEventsDetailsCard({
 
   const timeRangeOptions = useMemo(
     () =>
-      USAGE_TIME_RANGE_OPTIONS.map((option) => ({
+      REQUEST_EVENTS_TIME_RANGE_OPTIONS.map((option) => ({
         value: option.value,
         label: t(option.labelKey),
       })),
@@ -521,13 +522,7 @@ export function RequestEventsDetailsCard({
     if (timeRange === 'all') return rows;
 
     const nowMs = Date.now();
-    const rangeMsByValue: Record<Exclude<UsageTimeRange, 'all'>, number> = {
-      '7h': 7 * 60 * 60 * 1000,
-      '24h': 24 * 60 * 60 * 1000,
-      '7d': 7 * 24 * 60 * 60 * 1000,
-      '30d': 30 * 24 * 60 * 60 * 1000,
-    };
-    const startMs = nowMs - rangeMsByValue[timeRange];
+    const startMs = nowMs - USAGE_TIME_RANGE_MS[timeRange];
     return rows.filter((row) => row.timestampMs >= startMs && row.timestampMs <= nowMs);
   }, [rows, timeRange]);
 

@@ -11,6 +11,7 @@ import {
   type UsageDetail,
   type UsageDetailWithEndpoint,
   type UsageStatsSnapshot,
+  USAGE_TIME_RANGE_MS,
   type UsageTimeRange,
 } from '@/utils/usage';
 import i18n from '@/i18n';
@@ -18,12 +19,7 @@ import i18n from '@/i18n';
 export const USAGE_STATS_STALE_TIME_MS = 240_000;
 
 const USAGE_REFRESH_LOOKBACK_MS = 2 * 60 * 60 * 1000;
-const USAGE_RANGE_MS: Record<Exclude<UsageTimeRange, 'all'>, number> = {
-  '7h': 7 * 60 * 60 * 1000,
-  '24h': 24 * 60 * 60 * 1000,
-  '7d': 7 * 24 * 60 * 60 * 1000,
-  '30d': 30 * 24 * 60 * 60 * 1000,
-};
+const USAGE_RANGE_MS = USAGE_TIME_RANGE_MS;
 
 export type LoadUsageStatsOptions = {
   force?: boolean;
