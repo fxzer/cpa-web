@@ -974,6 +974,40 @@
   flex-wrap: wrap;
 }
 
+.requestEventsClearFilters:global(.btn.btn-ghost) {
+  color: var(--error-color, #ef4444);
+  border: 1px solid var(--error-color, #ef4444);
+  background: transparent;
+
+  &:hover:not(:disabled) {
+    color: #dc2626;
+    border-color: #dc2626;
+    background: rgba(239, 68, 68, 0.08);
+  }
+
+  &:disabled {
+    color: rgba(239, 68, 68, 0.45);
+    border-color: rgba(239, 68, 68, 0.35);
+    background: transparent;
+  }
+}
+
+:global([data-theme='dark']) .requestEventsClearFilters:global(.btn.btn-ghost) {
+  color: var(--error-color, #f87171);
+  border-color: var(--error-color, #f87171);
+
+  &:hover:not(:disabled) {
+    color: #fca5a5;
+    border-color: #fca5a5;
+    background: rgba(248, 113, 113, 0.12);
+  }
+
+  &:disabled {
+    color: rgba(248, 113, 113, 0.45);
+    border-color: rgba(248, 113, 113, 0.35);
+  }
+}
+
 .requestEventsTitle {
   display: inline-flex;
   align-items: baseline;
@@ -986,6 +1020,13 @@
   font: inherit;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.requestEventsSuccessRate {
+  margin-left: 2px;
+  color: #86efac;
+  font: inherit;
+  font-weight: 600;
 }
 
 .requestEventsToolbar {
@@ -1027,6 +1068,24 @@
 
 .requestEventsSelect {
   min-width: 180px;
+}
+
+.requestEventsResultFilterItem {
+  min-width: 90px;
+}
+
+.requestEventsResultSelect {
+  min-width: 90px;
+}
+
+.requestEventsResultOptionSuccess {
+  color: var(--success-color, #22c55e);
+  font-weight: 600;
+}
+
+.requestEventsResultOptionFailure {
+  color: var(--error-color, #ef4444);
+  font-weight: 600;
 }
 
 .requestEventsAutoRefreshControls {

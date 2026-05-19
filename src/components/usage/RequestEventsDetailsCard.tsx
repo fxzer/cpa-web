@@ -593,8 +593,16 @@ export function RequestEventsDetailsCard({
   const resultOptions = useMemo(
     () => [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      { value: RESULT_SUCCESS_FILTER, label: t('stats.success') },
-      { value: RESULT_FAILURE_FILTER, label: t('stats.failure') },
+      {
+        value: RESULT_SUCCESS_FILTER,
+        label: t('stats.success'),
+        labelClassName: styles.requestEventsResultOptionSuccess,
+      },
+      {
+        value: RESULT_FAILURE_FILTER,
+        label: t('stats.failure'),
+        labelClassName: styles.requestEventsResultOptionFailure,
+      },
     ],
     [t]
   );
@@ -683,6 +691,12 @@ export function RequestEventsDetailsCard({
       timeFilteredRows,
     ]
   );
+
+  const filteredSuccessRate = useMemo(() => {
+    if (filteredRows.length === 0) return null;
+    const failedCount = filteredRows.filter((row) => row.failed).length;
+    return ((filteredRows.length - failedCount) / filteredRows.length) * 100;
+  }, [filteredRows]);
 
   const renderedRows = useMemo(() => filteredRows.slice(0, MAX_RENDERED_EVENTS), [filteredRows]);
 
@@ -855,6 +869,13 @@ export function RequestEventsDetailsCard({
           <span>{t('usage_stats.request_events_title')}</span>
           <span className={styles.requestEventsTitleCount}>
             {t('usage_stats.request_events_count', { count: filteredRows.length })}
+            {filteredSuccessRate !== null && (
+              <span className={styles.requestEventsSuccessRate}>
+                {t('usage_stats.request_events_success_rate_suffix', {
+                  rate: filteredSuccessRate.toFixed(1),
+                })}
+              </span>
+            )}
           </span>
         </span>
       }
@@ -864,6 +885,7 @@ export function RequestEventsDetailsCard({
           <Button
             variant="ghost"
             size="sm"
+            className={styles.requestEventsClearFilters}
             onClick={handleClearFilters}
             disabled={!hasActiveFilters}
           >
@@ -889,6 +911,21 @@ export function RequestEventsDetailsCard({
       }
     >
       <div className={styles.requestEventsToolbar}>
+        <div
+          className={`${styles.requestEventsFilterItem} ${styles.requestEventsResultFilterItem}`}
+        >
+          <span className={styles.requestEventsFilterLabel}>
+            {t('usage_stats.request_events_filter_result')}
+          </span>
+          <Select
+            value={effectiveResultFilter}
+            options={resultOptions}
+            onChange={setResultFilter}
+            className={`${styles.requestEventsSelect} ${styles.requestEventsResultSelect}`}
+            ariaLabel={t('usage_stats.request_events_filter_result')}
+            fullWidth={false}
+          />
+        </div>
         <div className={styles.requestEventsFilterItem}>
           <span className={styles.requestEventsFilterLabel}>
             {t('usage_stats.request_events_filter_time_range')}
@@ -963,19 +1000,6 @@ export function RequestEventsDetailsCard({
             onChange={setApiKeyFilter}
             className={styles.requestEventsSelect}
             ariaLabel={t('usage_stats.request_events_filter_api_key')}
-            fullWidth={false}
-          />
-        </div>
-        <div className={styles.requestEventsFilterItem}>
-          <span className={styles.requestEventsFilterLabel}>
-            {t('usage_stats.request_events_filter_result')}
-          </span>
-          <Select
-            value={effectiveResultFilter}
-            options={resultOptions}
-            onChange={setResultFilter}
-            className={styles.requestEventsSelect}
-            ariaLabel={t('usage_stats.request_events_filter_result')}
             fullWidth={false}
           />
         </div>

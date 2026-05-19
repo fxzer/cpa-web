@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -18,20 +18,10 @@ import {
 import type { UsageServiceStatus } from '@/services/api/usageService';
 import { useAuthStore, useConfigStore, useNotificationStore, useUsageServiceStore } from '@/stores';
 import { detectApiBaseFromLocation } from '@/utils/connection';
-import { formatCompactNumber } from '@/utils/usage';
-import { buildRequestMonitoringRows } from '@/utils/requestMonitoring';
 import styles from './RequestMonitoringPage.module.scss';
 
 const AUTO_REFRESH_MS = 10_000;
 const MANAGEMENT_API_USAGE_PATH = '/v0/management/usage';
-
-/** 与监控中心 stat 卡片相近的强调色，用于顶部四卡渐变 */
-const REQUEST_MONITORING_STATUS_ACCENTS = [
-  { accent: '#8b8680', accentSoft: 'rgba(139, 134, 128, 0.18)', accentBorder: 'rgba(139, 134, 128, 0.35)' },
-  { accent: '#8b5cf6', accentSoft: 'rgba(139, 92, 246, 0.18)', accentBorder: 'rgba(139, 92, 246, 0.35)' },
-  { accent: '#22c55e', accentSoft: 'rgba(34, 197, 94, 0.18)', accentBorder: 'rgba(34, 197, 94, 0.32)' },
-  { accent: '#f97316', accentSoft: 'rgba(249, 115, 22, 0.18)', accentBorder: 'rgba(249, 115, 22, 0.32)' },
-] as const;
 
 type RequestMonitoringDataSource = 'usage-service' | 'management-api';
 
@@ -39,22 +29,6 @@ const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
   return '';
-};
-
-const formatTimeAgo = (timestampMs?: number): string => {
-  if (!timestampMs || timestampMs <= 0) return '-';
-  const diffMs = Math.max(0, Date.now() - timestampMs);
-  if (diffMs < 60_000) return `${Math.max(1, Math.round(diffMs / 1000))}s`;
-  if (diffMs < 3_600_000) return `${Math.round(diffMs / 60_000)}m`;
-  if (diffMs < 86_400_000) return `${Math.round(diffMs / 3_600_000)}h`;
-  return `${Math.round(diffMs / 86_400_000)}d`;
-};
-
-const resolveServiceLabel = (status: UsageServiceStatus | null, loading: boolean): string => {
-  if (loading) return 'checking';
-  if (!status) return 'offline';
-  const collector = status.collector?.collector || 'unknown';
-  return collector === 'running' ? 'running' : collector;
 };
 
 const buildManagementApiStatus = (): UsageServiceStatus => ({
@@ -185,10 +159,6 @@ export function RequestMonitoringPage() {
     setDraftServiceBase(usageServiceBase || serviceBase || apiBase || detectApiBaseFromLocation());
   }, [apiBase, serviceBase, settingsOpen, usageServiceBase, usageServiceEnabled]);
 
-  const rows = useMemo(() => buildRequestMonitoringRows(usagePayload), [usagePayload]);
-  const failedCount = useMemo(() => rows.filter((row) => row.status === 'failed').length, [rows]);
-  const successRate = rows.length > 0 ? ((rows.length - failedCount) / rows.length) * 100 : 100;
-
   const saveLocalServiceConfig = useCallback(() => {
     const normalizedServiceBase = normalizeUsageServiceBase(draftServiceBase);
     const normalizedApiBase = normalizeUsageServiceBase(apiBase);
@@ -284,20 +254,7 @@ export function RequestMonitoringPage() {
     updateConfigValue,
   ]);
 
-  const serviceLabel = resolveServiceLabel(status, loading && !status);
   const collectorStatus = status?.collector;
-  const serviceMeta =
-    dataSource === 'management-api'
-      ? t('request_monitoring.management_api_meta', { path: MANAGEMENT_API_USAGE_PATH })
-      : serviceBase || t('request_monitoring.service_base_empty');
-  const dbMeta =
-    dataSource === 'management-api'
-      ? t('request_monitoring.management_api_db_meta')
-      : status?.dbPath || t('request_monitoring.db_path_empty');
-  const progressMeta =
-    dataSource === 'management-api'
-      ? t('request_monitoring.management_api_progress_meta')
-      : `${t('request_monitoring.last_inserted')} ${formatTimeAgo(collectorStatus?.lastInsertedAt)}`;
   const showUsageStatisticsDisabledWarning =
     dataSource === 'management-api' && !usageStatisticsEnabled;
 
@@ -354,33 +311,6 @@ export function RequestMonitoringPage() {
           {t('request_monitoring.usage_statistics_disabled')}
         </div>
       )}
-
-      <div className={styles.statsGrid}>
-        <StatusCard
-          label={t('request_monitoring.service_status')}
-          value={t(`request_monitoring.collector_${serviceLabel}`, { defaultValue: serviceLabel })}
-          meta={serviceMeta}
-          accent={REQUEST_MONITORING_STATUS_ACCENTS[0]}
-        />
-        <StatusCard
-          label={t('request_monitoring.total_events')}
-          value={formatCompactNumber(status?.events ?? rows.length)}
-          meta={dbMeta}
-          accent={REQUEST_MONITORING_STATUS_ACCENTS[1]}
-        />
-        <StatusCard
-          label={t('request_monitoring.success_rate')}
-          value={`${successRate.toFixed(1)}%`}
-          meta={t('request_monitoring.failed_count', { count: failedCount })}
-          accent={REQUEST_MONITORING_STATUS_ACCENTS[2]}
-        />
-        <StatusCard
-          label={t('request_monitoring.collector_progress')}
-          value={formatCompactNumber(collectorStatus?.totalInserted ?? rows.length)}
-          meta={progressMeta}
-          accent={REQUEST_MONITORING_STATUS_ACCENTS[3]}
-        />
-      </div>
 
       {collectorStatus?.lastError && (
         <div className={styles.warningBox}>
@@ -447,38 +377,6 @@ export function RequestMonitoringPage() {
           </div>
         </div>
       </Modal>
-    </div>
-  );
-}
-
-interface StatusCardAccent {
-  accent: string;
-  accentSoft: string;
-  accentBorder: string;
-}
-
-interface StatusCardProps {
-  label: string;
-  value: string;
-  meta: string;
-  accent: StatusCardAccent;
-}
-
-function StatusCard({ label, value, meta, accent }: StatusCardProps) {
-  return (
-    <div
-      className={styles.statusCard}
-      style={
-        {
-          '--accent': accent.accent,
-          '--accent-soft': accent.accentSoft,
-          '--accent-border': accent.accentBorder,
-        } as CSSProperties
-      }
-    >
-      <div className={styles.statusCardLabel}>{label}</div>
-      <div className={styles.statusCardValue}>{value}</div>
-      <div className={styles.statusCardMeta}>{meta}</div>
     </div>
   );
 }

@@ -15,6 +15,8 @@ import styles from './Select.module.scss';
 export interface SelectOption {
   value: string;
   label: string;
+  /** 选项与选中后触发器文案的附加 class */
+  labelClassName?: string;
 }
 
 interface SelectProps {
@@ -279,7 +281,7 @@ export function Select({
                   type="button"
                   role="option"
                   aria-selected={active}
-                  className={`${styles.option} ${active ? styles.optionActive : ''} ${highlighted ? styles.optionHighlighted : ''}`.trim()}
+                  className={`${styles.option} ${active ? styles.optionActive : ''} ${highlighted ? styles.optionHighlighted : ''} ${opt.labelClassName ?? ''}`.trim()}
                   onMouseEnter={() => setHighlightedIndex(index)}
                   onKeyDown={handleKeyDown}
                   onClick={() => commitSelection(index)}
@@ -317,7 +319,9 @@ export function Select({
           aria-describedby={ariaDescribedBy}
           disabled={disabled}
         >
-          <span className={`${styles.triggerText} ${isPlaceholder ? styles.placeholder : ''}`}>
+          <span
+            className={`${styles.triggerText} ${isPlaceholder ? styles.placeholder : ''} ${selected?.labelClassName ?? ''}`.trim()}
+          >
             {displayText}
           </span>
           <span className={styles.triggerIcon} aria-hidden="true">

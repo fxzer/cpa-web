@@ -1542,6 +1542,7 @@
     "request_events_no_result_title": "No matching events",
     "request_events_no_result_desc": "Try different filters or clear the current filters.",
     "request_events_count": "{{count}} events",
+    "request_events_success_rate_suffix": "(success rate: {{rate}}%)",
     "request_events_limit_hint": "Showing {{shown}} events to keep rendering responsive.",
     "request_events_failure_log_title": "Failure log",
     "request_events_failure_log_view": "View failure log",
