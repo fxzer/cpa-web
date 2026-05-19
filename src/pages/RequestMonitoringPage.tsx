@@ -1,22 +1,14 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/Input';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
-import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-import {
-  IconDownload,
-  IconSearch,
-  IconSlidersHorizontal,
-} from '@/components/ui/icons';
+import { RequestEventsDetailsCard } from '@/components/usage';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
-  logsApi,
   usageApi,
   usageServiceApi,
   isUsageServiceId,
@@ -26,19 +18,10 @@ import {
 import type { UsageServiceStatus } from '@/services/api/usageService';
 import { useAuthStore, useConfigStore, useNotificationStore, useUsageServiceStore } from '@/stores';
 import { detectApiBaseFromLocation } from '@/utils/connection';
-import { downloadBlob } from '@/utils/download';
-import { formatCompactNumber, formatDurationMs } from '@/utils/usage';
-import {
-  buildRequestMonitoringOptions,
-  buildRequestMonitoringRows,
-  filterRequestMonitoringRows,
-  type RequestMonitoringFilters,
-  type RequestMonitoringRow,
-  type RequestMonitoringStatusFilter,
-} from '@/utils/requestMonitoring';
+import { formatCompactNumber } from '@/utils/usage';
+import { buildRequestMonitoringRows } from '@/utils/requestMonitoring';
 import styles from './RequestMonitoringPage.module.scss';
 
-const MAX_VISIBLE_ROWS = 300;
 const AUTO_REFRESH_MS = 10_000;
 const MANAGEMENT_API_USAGE_PATH = '/v0/management/usage';
 
@@ -66,35 +49,6 @@ const formatTimeAgo = (timestampMs?: number): string => {
   if (diffMs < 86_400_000) return `${Math.round(diffMs / 3_600_000)}h`;
   return `${Math.round(diffMs / 86_400_000)}d`;
 };
-
-const formatTokenParts = (row: RequestMonitoringRow): string => {
-  const parts = [
-    `in ${formatCompactNumber(row.inputTokens)}`,
-    `out ${formatCompactNumber(row.outputTokens)}`,
-  ];
-  if (row.cachedTokens > 0) parts.push(`cache ${formatCompactNumber(row.cachedTokens)}`);
-  if (row.reasoningTokens > 0) parts.push(`think ${formatCompactNumber(row.reasoningTokens)}`);
-  return parts.join(' / ');
-};
-
-/** 凭证列第二行：apikey #<authIndex>-<hash>，单行不换行 */
-const formatCredentialKeyLine = (row: RequestMonitoringRow): string => {
-  const type = row.authType && row.authType !== '-' ? row.authType : '';
-  const idx = row.authIndex && row.authIndex !== '-' ? row.authIndex : '';
-  const hash = row.apiKeyHashShort && row.apiKeyHashShort !== '-' ? row.apiKeyHashShort : '';
-  let tail = '';
-  if (idx && hash) tail = `#${idx}-${hash}`;
-  else if (idx) tail = `#${idx}`;
-  else if (hash) tail = hash;
-  else tail = '-';
-  if (type) return `${type} ${tail}`;
-  return tail;
-};
-
-const buildSelectOptions = (label: string, values: readonly string[]) => [
-  { value: '', label },
-  ...values.map((value) => ({ value, label: value })),
-];
 
 const resolveServiceLabel = (status: UsageServiceStatus | null, loading: boolean): string => {
   if (loading) return 'checking';
@@ -146,13 +100,6 @@ export function RequestMonitoringPage() {
   const [draftServiceBase, setDraftServiceBase] = useState(
     usageServiceBase || apiBase || detectApiBaseFromLocation()
   );
-  const [search, setSearch] = useState('');
-  const deferredSearch = useDeferredValue(search);
-  const [statusFilter, setStatusFilter] = useState<RequestMonitoringStatusFilter>('all');
-  const [providerFilter, setProviderFilter] = useState('');
-  const [modelFilter, setModelFilter] = useState('');
-  const [apiKeyFilter, setApiKeyFilter] = useState('');
-  const [downloadingRequestId, setDownloadingRequestId] = useState('');
 
   const resolveUsageServiceBase = useCallback(async (): Promise<string> => {
     if (!usageServiceEnabled || !usageServiceBase) return '';
@@ -239,52 +186,8 @@ export function RequestMonitoringPage() {
   }, [apiBase, serviceBase, settingsOpen, usageServiceBase, usageServiceEnabled]);
 
   const rows = useMemo(() => buildRequestMonitoringRows(usagePayload), [usagePayload]);
-  const providerOptions = useMemo(() => buildRequestMonitoringOptions(rows, 'provider'), [rows]);
-  const modelOptions = useMemo(() => buildRequestMonitoringOptions(rows, 'model'), [rows]);
-  const apiKeyOptions = useMemo(() => buildRequestMonitoringOptions(rows, 'apiKeyHash'), [rows]);
-  const apiKeyLabels = useMemo(() => {
-    const map = new Map<string, string>();
-    rows.forEach((row) => {
-      if (row.apiKeyHash && !map.has(row.apiKeyHash)) {
-        map.set(row.apiKeyHash, row.apiKeyHashShort);
-      }
-    });
-    return map;
-  }, [rows]);
-
-  const filters = useMemo<RequestMonitoringFilters>(
-    () => ({
-      search: deferredSearch,
-      status: statusFilter,
-      provider: providerFilter,
-      model: modelFilter,
-      apiKeyHash: apiKeyFilter,
-    }),
-    [apiKeyFilter, deferredSearch, modelFilter, providerFilter, statusFilter]
-  );
-
-  const filteredRows = useMemo(() => filterRequestMonitoringRows(rows, filters), [filters, rows]);
-  const visibleRows = useMemo(() => filteredRows.slice(0, MAX_VISIBLE_ROWS), [filteredRows]);
   const failedCount = useMemo(() => rows.filter((row) => row.status === 'failed').length, [rows]);
   const successRate = rows.length > 0 ? ((rows.length - failedCount) / rows.length) * 100 : 100;
-  const selectedApiKeyOptions = useMemo(
-    () => [
-      { value: '', label: t('request_monitoring.filter_all_api_keys') },
-      ...apiKeyOptions.map((hash) => ({
-        value: hash,
-        label: apiKeyLabels.get(hash) || hash,
-      })),
-    ],
-    [apiKeyLabels, apiKeyOptions, t]
-  );
-
-  const resetFilters = () => {
-    setSearch('');
-    setStatusFilter('all');
-    setProviderFilter('');
-    setModelFilter('');
-    setApiKeyFilter('');
-  };
 
   const saveLocalServiceConfig = useCallback(() => {
     const normalizedServiceBase = normalizeUsageServiceBase(draftServiceBase);
@@ -380,29 +283,6 @@ export function RequestMonitoringPage() {
     t,
     updateConfigValue,
   ]);
-
-  const downloadRequestLog = useCallback(
-    async (requestId: string) => {
-      if (!requestId) return;
-      setDownloadingRequestId(requestId);
-      try {
-        const response = await logsApi.downloadRequestLogById(requestId);
-        const blob =
-          response.data instanceof Blob
-            ? response.data
-            : new Blob([response.data], { type: 'text/plain' });
-        downloadBlob({ filename: `${requestId}.log`, blob });
-      } catch (err) {
-        showNotification(
-          `${t('request_monitoring.download_failed')}${getErrorMessage(err) ? `: ${getErrorMessage(err)}` : ''}`,
-          'error'
-        );
-      } finally {
-        setDownloadingRequestId('');
-      }
-    },
-    [showNotification, t]
-  );
 
   const serviceLabel = resolveServiceLabel(status, loading && !status);
   const collectorStatus = status?.collector;
@@ -508,164 +388,20 @@ export function RequestMonitoringPage() {
         </div>
       )}
 
-      <Card
-        className={styles.tableCard}
-        title={t('request_monitoring.table_title')}
-        extra={
-          <span className={styles.tableCount}>
-            {t('request_monitoring.table_count', {
-              shown: visibleRows.length,
-              total: filteredRows.length,
-            })}
-          </span>
-        }
-      >
-        <div className={styles.filters}>
-          <div className={styles.searchBox}>
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t('request_monitoring.search_placeholder')}
-              rightElement={<IconSearch size={16} />}
-              aria-label={t('request_monitoring.search_placeholder')}
-            />
-          </div>
-          <Select
-            value={statusFilter}
-            onChange={(value) => setStatusFilter(value as RequestMonitoringStatusFilter)}
-            options={[
-              { value: 'all', label: t('request_monitoring.filter_all_status') },
-              { value: 'success', label: t('request_monitoring.status_success') },
-              { value: 'failed', label: t('request_monitoring.status_failed') },
-            ]}
-            ariaLabel={t('request_monitoring.filter_status')}
-            className={styles.select}
-          />
-          <Select
-            value={providerFilter}
-            onChange={setProviderFilter}
-            options={buildSelectOptions(t('request_monitoring.filter_all_providers'), providerOptions)}
-            ariaLabel={t('request_monitoring.filter_provider')}
-            className={styles.select}
-          />
-          <Select
-            value={modelFilter}
-            onChange={setModelFilter}
-            options={buildSelectOptions(t('request_monitoring.filter_all_models'), modelOptions)}
-            ariaLabel={t('request_monitoring.filter_model')}
-            className={styles.select}
-          />
-          <Select
-            value={apiKeyFilter}
-            onChange={setApiKeyFilter}
-            options={selectedApiKeyOptions}
-            ariaLabel={t('request_monitoring.filter_api_key')}
-            className={styles.select}
-          />
-          <Button variant="ghost" size="sm" onClick={resetFilters}>
-            <IconSlidersHorizontal size={16} />
-            {t('request_monitoring.reset_filters')}
-          </Button>
-        </div>
-
-        {visibleRows.length === 0 ? (
-          <EmptyState
-            title={
-              rows.length === 0
-                ? t('request_monitoring.empty_title')
-                : t('request_monitoring.no_result_title')
-            }
-            description={
-              rows.length === 0
-                ? dataSource === 'management-api'
-                  ? t(
-                      showUsageStatisticsDisabledWarning
-                        ? 'request_monitoring.empty_desc_usage_disabled'
-                        : 'request_monitoring.empty_desc_management_api'
-                    )
-                  : t('request_monitoring.empty_desc')
-                : t('request_monitoring.no_result_desc')
-            }
-            action={
-              rows.length === 0 ? (
-                <Button variant="secondary" size="sm" onClick={() => setSettingsOpen(true)}>
-                  {t('request_monitoring.settings')}
-                </Button>
-              ) : undefined
-            }
-          />
-        ) : (
-          <div className={styles.tableScroll}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>{t('request_monitoring.col_time')}</th>
-                  <th>{t('request_monitoring.col_provider_model')}</th>
-                  <th>{t('request_monitoring.col_endpoint')}</th>
-                  <th>{t('request_monitoring.col_credential')}</th>
-                  <th>{t('request_monitoring.col_usage')}</th>
-                  <th>{t('request_monitoring.col_request_id')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRows.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <div className={styles.timeCell}>
-                        <span className={styles.timeText}>{row.timestampLabel}</span>
-                        <span className={`${styles.statusPill} ${styles[row.status]}`}>
-                          {row.status === 'failed'
-                            ? t('request_monitoring.status_failed')
-                            : t('request_monitoring.status_success')}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className={styles.primaryText}>{row.provider}</div>
-                      <div className={styles.secondaryText}>{row.model}</div>
-                    </td>
-                    <td>
-                      <div className={styles.endpointLine}>
-                        <span className={styles.methodBadge}>{row.endpointMethod}</span>
-                        <span className={styles.pathText}>{row.endpointPath}</span>
-                      </div>
-                      <div className={styles.secondaryText}>{row.endpoint}</div>
-                    </td>
-                    <td className={styles.credentialTd}>
-                      <div className={styles.primaryText}>{row.account}</div>
-                      <div className={styles.credentialKeyLine} title={formatCredentialKeyLine(row)}>
-                        {formatCredentialKeyLine(row)}
-                      </div>
-                    </td>
-                    <td>
-                      <div className={styles.primaryText}>
-                        {formatCompactNumber(row.totalTokens)} /{' '}
-                        {formatDurationMs(row.latencyMs, { invalidText: '-' })}
-                      </div>
-                      <div className={styles.secondaryText}>{formatTokenParts(row)}</div>
-                    </td>
-                    <td>
-                      <div className={styles.requestIdText}>{row.requestId || '-'}</div>
-                      {requestLogEnabled && row.requestId && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => void downloadRequestLog(row.requestId)}
-                          loading={downloadingRequestId === row.requestId}
-                          title={t('request_monitoring.download_request_log')}
-                        >
-                          <IconDownload size={15} />
-                          {t('request_monitoring.download')}
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      <RequestEventsDetailsCard
+        usage={usagePayload}
+        loading={loading}
+        geminiKeys={config?.geminiApiKeys || []}
+        claudeConfigs={config?.claudeApiKeys || []}
+        codexConfigs={config?.codexApiKeys || []}
+        vertexConfigs={config?.vertexApiKeys || []}
+        openaiProviders={config?.openaiCompatibility || []}
+        requestLogEnabled={requestLogEnabled}
+        showAutoRefreshControls={false}
+        fixedHeight
+        onRefresh={loadData}
+        lastRefreshedAt={lastRefreshedAt}
+      />
 
       <Modal
         open={settingsOpen}

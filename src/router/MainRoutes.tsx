@@ -27,8 +27,10 @@ import { CredentialCenterPage } from '@/pages/CredentialCenterPage';
 const mainRoutes = [
   { path: '/', element: <DashboardPage /> },
   { path: '/dashboard', element: <DashboardPage /> },
-  { path: '/monitor', element: <MonitoringCenterPage /> },
-  { path: '/request-monitoring', element: <RequestMonitoringPage /> },
+  { path: '/monitoring-dashboard', element: <MonitoringCenterPage /> },
+  { path: '/request-details', element: <RequestMonitoringPage /> },
+  { path: '/monitor', element: <Navigate to="/monitoring-dashboard" replace /> },
+  { path: '/request-monitoring', element: <Navigate to="/request-details" replace /> },
   { path: '/credential-center', element: <CredentialCenterPage /> },
   { path: '/settings', element: <Navigate to="/config" replace /> },
   { path: '/api-keys', element: <Navigate to="/config" replace /> },

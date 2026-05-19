@@ -314,7 +314,7 @@ export function DashboardPage() {
       label: t('dashboard.total_tokens'),
       value: usageTokensDisplay,
       icon: <IconDiamond size={24} />,
-      path: '/monitor',
+      path: '/monitoring-dashboard',
       loading: usageTokensCardLoading,
       iconAccent: 'usageTokens'
     }

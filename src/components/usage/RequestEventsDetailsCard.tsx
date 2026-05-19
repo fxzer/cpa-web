@@ -6,26 +6,28 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
-import { IconMinus } from '@/components/usage/UsageIcons';
+import { IconDownload, IconSearch } from '@/components/ui/icons';
 import { getAuthFileStatusMessage } from '@/features/authFiles/constants';
 import { useInterval } from '@/hooks/useInterval';
 import { authFilesApi } from '@/services/api/authFiles';
+import { logsApi } from '@/services/api/logs';
 import { useNotificationStore } from '@/stores/useNotificationStore';
-import { useUsageStatsStore } from '@/stores/useUsageStatsStore';
 import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from '@/types';
 import type { AuthFileItem } from '@/types/authFile';
 import type { CredentialInfo } from '@/types/sourceInfo';
 import { buildSourceInfoMap, resolveSourceDisplay } from '@/utils/sourceResolver';
 import { parseTimestampMs } from '@/utils/timestamp';
 import {
-  collectUsageDetails,
+  collectUsageDetailsWithEndpoint,
   extractFirstByteLatencyMs,
   extractGenerationMs,
   extractTotalTokens,
   formatDurationMs,
   normalizeAuthIndex,
   type UsageThinking,
+  type UsageTimeRange,
 } from '@/utils/usage';
+import { USAGE_TIME_RANGE_OPTIONS } from '@/utils/usageTimeRange';
 import { downloadBlob } from '@/utils/download';
 import styles from '@/pages/UsagePage.module.scss';
 
@@ -36,19 +38,30 @@ const MAX_RENDERED_EVENTS = 500;
 
 type RequestEventRow = {
   id: string;
-  backendId: string | null;
   timestamp: string;
   timestampMs: number;
   timestampLabel: string;
+  requestId: string;
+  provider: string;
   model: string;
+  endpoint: string;
+  endpointMethod: string;
+  endpointPath: string;
   sourceKey: string;
   sourceRaw: string;
   source: string;
   sourceType: string;
   authIndex: string;
+  authType: string;
+  account: string;
+  authLabel: string;
+  authFile: string;
+  apiKeyHash: string;
+  apiKeyHashShort: string;
   failed: boolean;
   firstByteLatencyMs: number | null;
   generationMs: number | null;
+  latencyMs: number | null;
   tps: number | null;
   thinking: UsageThinking | null;
   thinkingLabel: string;
@@ -72,6 +85,8 @@ export interface RequestEventsDetailsCardProps {
   onRefresh?: () => Promise<void> | void;
   lastRefreshedAt?: Date | null;
   fixedHeight?: boolean;
+  requestLogEnabled?: boolean;
+  showAutoRefreshControls?: boolean;
 }
 
 const AUTO_REFRESH_OFF = 'off';
@@ -95,6 +110,67 @@ const toNumber = (value: unknown): number => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 0;
   return parsed;
+};
+
+const firstText = (...values: Array<unknown>): string => {
+  for (const value of values) {
+    if (value === null || value === undefined) continue;
+    const text = typeof value === 'string' ? value.trim() : String(value).trim();
+    if (text) return text;
+  }
+  return '';
+};
+
+const displaySource = (source: string): string => {
+  if (!source) return '';
+  if (source.startsWith('m:') || source.startsWith('t:')) {
+    return source.slice(2);
+  }
+  if (source.startsWith('k:')) {
+    return `hash ${source.slice(2, 14)}`;
+  }
+  return source;
+};
+
+const shortHash = (hash: string): string => {
+  const normalized = hash.trim().toLowerCase();
+  if (!normalized) return '';
+  return normalized.length > 16 ? `${normalized.slice(0, 12)}...` : normalized;
+};
+
+const buildCredentialHeadline = (detail: {
+  auth_provider_snapshot?: string;
+  provider?: string;
+  account_snapshot?: string;
+  auth_label_snapshot?: string;
+  api_key_hash?: string;
+  source?: string;
+}): string => {
+  const vendor = firstText(detail.auth_provider_snapshot, detail.provider);
+  const human = firstText(detail.account_snapshot, detail.auth_label_snapshot);
+  const apiKeyHash = firstText(detail.api_key_hash);
+  const hashShort = shortHash(apiKeyHash);
+  const sourceFallback = displaySource(firstText(detail.source));
+  const keyIdentity = human || hashShort || sourceFallback;
+  const parts: string[] = [];
+  if (vendor) parts.push(vendor);
+  if (keyIdentity) parts.push(keyIdentity);
+  return parts.join(' · ') || '-';
+};
+
+const formatCredentialKeyLine = (
+  row: Pick<RequestEventRow, 'authType' | 'authIndex' | 'apiKeyHashShort'>
+): string => {
+  const type = row.authType && row.authType !== '-' ? row.authType : '';
+  const idx = row.authIndex && row.authIndex !== '-' ? row.authIndex : '';
+  const hash = row.apiKeyHashShort && row.apiKeyHashShort !== '-' ? row.apiKeyHashShort : '';
+  let tail = '';
+  if (idx && hash) tail = `#${idx}-${hash}`;
+  else if (idx) tail = `#${idx}`;
+  else if (hash) tail = hash;
+  else tail = '-';
+  if (type) return `${type} ${tail}`;
+  return tail;
 };
 
 const normalizeCustomAutoRefreshSeconds = (value: unknown): number => {
@@ -141,6 +217,12 @@ const formatCacheHitRatio = (ratio: number | null): string => {
   return `${(ratio * 100).toFixed(1)}%`;
 };
 
+const formatEndpointHeadline = (method: string, path: string): string => {
+  const pathText = path.trim() || '-';
+  const methodText = method.trim();
+  return methodText ? `${methodText} ${pathText}` : pathText;
+};
+
 const encodeCsv = (value: string | number): string => {
   const text = String(value ?? '');
   const trimmedLeft = text.replace(/^\s+/, '');
@@ -160,13 +242,18 @@ export function RequestEventsDetailsCard({
   onRefresh,
   lastRefreshedAt,
   fixedHeight = false,
+  requestLogEnabled = false,
+  showAutoRefreshControls = true,
 }: RequestEventsDetailsCardProps) {
   const { t, i18n } = useTranslation();
-  const { showConfirmation, showNotification } = useNotificationStore();
-  const deleteUsageRecords = useUsageStatsStore((state) => state.deleteUsageRecords);
+  const { showNotification } = useNotificationStore();
 
+  const [search, setSearch] = useState('');
+  const [timeRange, setTimeRange] = useState<UsageTimeRange>('all');
   const [modelFilter, setModelFilter] = useState(ALL_FILTER);
+  const [providerFilter, setProviderFilter] = useState(ALL_FILTER);
   const [sourceFilter, setSourceFilter] = useState(ALL_FILTER);
+  const [apiKeyFilter, setApiKeyFilter] = useState(ALL_FILTER);
   const [resultFilter, setResultFilter] = useState(ALL_FILTER);
   const [autoRefreshValue, setAutoRefreshValue] = useState<AutoRefreshValue>(AUTO_REFRESH_OFF);
   const [customAutoRefreshSeconds, setCustomAutoRefreshSeconds] = useState(
@@ -174,7 +261,7 @@ export function RequestEventsDetailsCard({
   );
   const [localAuthFiles, setLocalAuthFiles] = useState<AuthFileItem[]>([]);
   const [selectedFailureRow, setSelectedFailureRow] = useState<RequestEventRow | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [downloadingRequestId, setDownloadingRequestId] = useState('');
   const [nextRefreshAtMs, setNextRefreshAtMs] = useState<number | null>(null);
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
 
@@ -295,7 +382,7 @@ export function RequestEventsDetailsCard({
       : null;
 
   const rows = useMemo<RequestEventRow[]>(() => {
-    const details = collectUsageDetails(usage);
+    const details = collectUsageDetailsWithEndpoint(usage);
 
     const baseRows = details.map((detail, index) => {
       const timestamp = detail.timestamp;
@@ -304,6 +391,11 @@ export function RequestEventsDetailsCard({
           ? detail.__timestampMs
           : parseTimestampMs(timestamp);
       const date = Number.isNaN(timestampMs) ? null : new Date(timestampMs);
+      const requestId = firstText(detail.request_id, detail.id);
+      const provider = firstText(detail.provider, detail.auth_provider_snapshot) || '-';
+      const endpoint = firstText(detail.__endpoint) || '-';
+      const endpointMethod = firstText(detail.__endpointMethod);
+      const endpointPath = firstText(detail.__endpointPath) || endpoint;
       const sourceRaw = String(detail.source ?? '').trim();
       const authIndexRaw = detail.auth_index as unknown;
       const authIndex =
@@ -326,9 +418,16 @@ export function RequestEventsDetailsCard({
         toNumber(detail.tokens?.total_tokens),
         extractTotalTokens(detail)
       );
-      const backendId = typeof detail.id === 'string' && detail.id.trim() ? detail.id.trim() : null;
+      const backendId = typeof detail.id === 'string' && detail.id.trim() ? detail.id.trim() : '';
+      const apiKeyHash = firstText(detail.api_key_hash);
+      const authType = firstText(detail.auth_type) || '-';
+      const account = buildCredentialHeadline(detail);
       const firstByteLatencyMs = extractFirstByteLatencyMs(detail);
       const generationMs = extractGenerationMs(detail);
+      const latencyMs =
+        typeof detail.latency_ms === 'number' && Number.isFinite(detail.latency_ms)
+          ? detail.latency_ms
+          : null;
       const tps = generationMs && generationMs > 0 ? outputTokens / (generationMs / 1000) : null;
       const thinking = detail.thinking ?? null;
       const thinkingEffort = normalizeThinkingText(detail.thinking_effort);
@@ -336,20 +435,31 @@ export function RequestEventsDetailsCard({
       const cacheHitRatio = inputTokens > 0 ? cachedTokens / inputTokens : null;
 
       return {
-        id: backendId ?? `${timestamp}-${model}-${sourceKey}-${authIndex}-${index}`,
-        backendId,
+        id: backendId || `${timestamp}-${model}-${sourceKey}-${authIndex}-${index}`,
         timestamp,
         timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
         timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
+        requestId,
+        provider,
         model,
+        endpoint,
+        endpointMethod,
+        endpointPath,
         sourceKey,
         sourceRaw: sourceRaw || '-',
         source,
         sourceType,
         authIndex,
+        authType,
+        account,
+        authLabel: firstText(detail.auth_label_snapshot) || '-',
+        authFile: firstText(detail.auth_file_snapshot) || '-',
+        apiKeyHash,
+        apiKeyHashShort: shortHash(apiKeyHash) || '-',
         failed: detail.failed === true,
         firstByteLatencyMs,
         generationMs,
+        latencyMs,
         tps,
         thinking,
         thinkingLabel,
@@ -398,25 +508,61 @@ export function RequestEventsDetailsCard({
       .sort((a, b) => b.timestampMs - a.timestampMs);
   }, [authFileMap, i18n.language, sourceInfoMap, usage]);
 
+  const timeRangeOptions = useMemo(
+    () =>
+      USAGE_TIME_RANGE_OPTIONS.map((option) => ({
+        value: option.value,
+        label: t(option.labelKey),
+      })),
+    [t]
+  );
+
+  const timeFilteredRows = useMemo(() => {
+    if (timeRange === 'all') return rows;
+
+    const nowMs = Date.now();
+    const rangeMsByValue: Record<Exclude<UsageTimeRange, 'all'>, number> = {
+      '7h': 7 * 60 * 60 * 1000,
+      '24h': 24 * 60 * 60 * 1000,
+      '7d': 7 * 24 * 60 * 60 * 1000,
+      '30d': 30 * 24 * 60 * 60 * 1000,
+    };
+    const startMs = nowMs - rangeMsByValue[timeRange];
+    return rows.filter((row) => row.timestampMs >= startMs && row.timestampMs <= nowMs);
+  }, [rows, timeRange]);
+
   const hasTimingData = useMemo(
-    () => rows.some((row) => row.firstByteLatencyMs !== null || row.generationMs !== null),
-    [rows]
+    () => timeFilteredRows.some((row) => row.firstByteLatencyMs !== null || row.generationMs !== null),
+    [timeFilteredRows]
   );
 
   const modelOptions = useMemo(
     () => [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(new Set(rows.map((row) => row.model))).map((model) => ({
+      ...Array.from(new Set(timeFilteredRows.map((row) => row.model))).map((model) => ({
         value: model,
         label: model,
       })),
     ],
-    [rows, t]
+    [timeFilteredRows, t]
+  );
+
+  const providerOptions = useMemo(
+    () => [
+      { value: ALL_FILTER, label: t('usage_stats.filter_all') },
+      ...Array.from(
+        new Set(timeFilteredRows.map((row) => row.provider).filter((provider) => provider !== '-'))
+      ).map((provider) => ({
+        value: provider,
+        label: provider,
+      })),
+    ],
+    [timeFilteredRows, t]
   );
 
   const sourceOptions = useMemo(() => {
     const optionMap = new Map<string, string>();
-    rows.forEach((row) => {
+    timeFilteredRows.forEach((row) => {
       if (!optionMap.has(row.sourceKey)) {
         optionMap.set(row.sourceKey, row.source);
       }
@@ -429,7 +575,25 @@ export function RequestEventsDetailsCard({
         label,
       })),
     ];
-  }, [rows, t]);
+  }, [timeFilteredRows, t]);
+
+  const apiKeyOptions = useMemo(() => {
+    const optionMap = new Map<string, string>();
+    timeFilteredRows.forEach((row) => {
+      if (!row.apiKeyHash) return;
+      if (!optionMap.has(row.apiKeyHash)) {
+        optionMap.set(row.apiKeyHash, row.apiKeyHashShort);
+      }
+    });
+
+    return [
+      { value: ALL_FILTER, label: t('usage_stats.filter_all') },
+      ...Array.from(optionMap.entries()).map(([value, label]) => ({
+        value,
+        label,
+      })),
+    ];
+  }, [timeFilteredRows, t]);
 
   const resultOptions = useMemo(
     () => [
@@ -444,9 +608,17 @@ export function RequestEventsDetailsCard({
     () => new Set(modelOptions.map((option) => option.value)),
     [modelOptions]
   );
+  const providerOptionSet = useMemo(
+    () => new Set(providerOptions.map((option) => option.value)),
+    [providerOptions]
+  );
   const sourceOptionSet = useMemo(
     () => new Set(sourceOptions.map((option) => option.value)),
     [sourceOptions]
+  );
+  const apiKeyOptionSet = useMemo(
+    () => new Set(apiKeyOptions.map((option) => option.value)),
+    [apiKeyOptions]
   );
   const resultOptionSet = useMemo(
     () => new Set(resultOptions.map((option) => option.value)),
@@ -454,34 +626,87 @@ export function RequestEventsDetailsCard({
   );
 
   const effectiveModelFilter = modelOptionSet.has(modelFilter) ? modelFilter : ALL_FILTER;
+  const effectiveProviderFilter = providerOptionSet.has(providerFilter) ? providerFilter : ALL_FILTER;
   const effectiveSourceFilter = sourceOptionSet.has(sourceFilter) ? sourceFilter : ALL_FILTER;
+  const effectiveApiKeyFilter = apiKeyOptionSet.has(apiKeyFilter) ? apiKeyFilter : ALL_FILTER;
   const effectiveResultFilter = resultOptionSet.has(resultFilter) ? resultFilter : ALL_FILTER;
+  const normalizedSearch = search.trim().toLowerCase();
 
   const filteredRows = useMemo(
     () =>
-      rows.filter((row) => {
+      timeFilteredRows.filter((row) => {
         const modelMatched =
           effectiveModelFilter === ALL_FILTER || row.model === effectiveModelFilter;
+        const providerMatched =
+          effectiveProviderFilter === ALL_FILTER || row.provider === effectiveProviderFilter;
         const sourceMatched =
           effectiveSourceFilter === ALL_FILTER || row.sourceKey === effectiveSourceFilter;
+        const apiKeyMatched =
+          effectiveApiKeyFilter === ALL_FILTER || row.apiKeyHash === effectiveApiKeyFilter;
         const resultMatched =
           effectiveResultFilter === ALL_FILTER ||
           (effectiveResultFilter === RESULT_FAILURE_FILTER ? row.failed : !row.failed);
-        return modelMatched && sourceMatched && resultMatched;
+        const searchMatched =
+          !normalizedSearch ||
+          [
+            row.requestId,
+            row.provider,
+            row.model,
+            row.endpoint,
+            row.endpointMethod,
+            row.endpointPath,
+            row.account,
+            row.authIndex,
+            row.authType,
+            row.authLabel,
+            row.authFile,
+            row.source,
+            row.sourceRaw,
+            row.apiKeyHash,
+            row.apiKeyHashShort,
+          ]
+            .join(' ')
+            .toLowerCase()
+            .includes(normalizedSearch);
+
+        return (
+          modelMatched &&
+          providerMatched &&
+          sourceMatched &&
+          apiKeyMatched &&
+          resultMatched &&
+          searchMatched
+        );
       }),
-    [effectiveModelFilter, effectiveResultFilter, effectiveSourceFilter, rows]
+    [
+      effectiveApiKeyFilter,
+      effectiveModelFilter,
+      effectiveProviderFilter,
+      effectiveResultFilter,
+      effectiveSourceFilter,
+      normalizedSearch,
+      timeFilteredRows,
+    ]
   );
 
   const renderedRows = useMemo(() => filteredRows.slice(0, MAX_RENDERED_EVENTS), [filteredRows]);
 
   const hasActiveFilters =
+    timeRange !== 'all' ||
+    normalizedSearch !== '' ||
     effectiveModelFilter !== ALL_FILTER ||
+    effectiveProviderFilter !== ALL_FILTER ||
     effectiveSourceFilter !== ALL_FILTER ||
+    effectiveApiKeyFilter !== ALL_FILTER ||
     effectiveResultFilter !== ALL_FILTER;
 
   const handleClearFilters = () => {
+    setTimeRange('all');
+    setSearch('');
     setModelFilter(ALL_FILTER);
+    setProviderFilter(ALL_FILTER);
     setSourceFilter(ALL_FILTER);
+    setApiKeyFilter(ALL_FILTER);
     setResultFilter(ALL_FILTER);
   };
 
@@ -490,9 +715,16 @@ export function RequestEventsDetailsCard({
 
     const csvHeader = [
       'timestamp',
+      'request_id',
+      'provider',
       'model',
+      'endpoint',
       'source',
       'source_raw',
+      'credential',
+      'auth_type',
+      'auth_index',
+      'api_key_hash',
       'result',
       ...(hasTimingData ? ['first_byte_latency_ms', 'generation_ms', 'tps'] : []),
       'thinking_effort',
@@ -507,9 +739,16 @@ export function RequestEventsDetailsCard({
     const csvRows = filteredRows.map((row) =>
       [
         row.timestamp,
+        row.requestId,
+        row.provider,
         row.model,
+        row.endpoint,
         row.source,
         row.sourceRaw,
+        row.account,
+        row.authType,
+        row.authIndex,
+        row.apiKeyHash,
         row.failed ? 'failed' : 'success',
         ...(hasTimingData
           ? [
@@ -543,9 +782,16 @@ export function RequestEventsDetailsCard({
 
     const payload = filteredRows.map((row) => ({
       timestamp: row.timestamp,
+      request_id: row.requestId,
+      provider: row.provider,
       model: row.model,
+      endpoint: row.endpoint,
       source: row.source,
       source_raw: row.sourceRaw,
+      credential: row.account,
+      auth_type: row.authType,
+      auth_index: row.authIndex,
+      api_key_hash: row.apiKeyHash,
       failed: row.failed,
       ...(hasTimingData && row.firstByteLatencyMs !== null
         ? { first_byte_latency_ms: row.firstByteLatencyMs }
@@ -571,39 +817,33 @@ export function RequestEventsDetailsCard({
     });
   };
 
-  const handleDeleteRow = useCallback(
-    (row: RequestEventRow) => {
-      const backendId = row.backendId;
-      if (!backendId) return;
-      showConfirmation({
-        title: t('usage_stats.request_events_delete_title'),
-        message: t('usage_stats.request_events_delete_confirm'),
-        confirmText: t('common.confirm'),
-        variant: 'danger',
-        onConfirm: async () => {
-          setDeletingId(backendId);
-          try {
-            await deleteUsageRecords([backendId]);
-            showNotification(t('usage_stats.request_events_delete_success'), 'success');
-          } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : '';
-            showNotification(
-              `${t('usage_stats.request_events_delete_failed')}${message ? `: ${message}` : ''}`,
-              'error'
-            );
-            throw err;
-          } finally {
-            setDeletingId(null);
-          }
-        },
-      });
-    },
-    [deleteUsageRecords, showConfirmation, showNotification, t]
-  );
-
   const handleCloseFailureModal = useCallback(() => {
     setSelectedFailureRow(null);
   }, []);
+
+  const handleDownloadRequestLog = useCallback(
+    async (requestId: string) => {
+      if (!requestId) return;
+      setDownloadingRequestId(requestId);
+      try {
+        const response = await logsApi.downloadRequestLogById(requestId);
+        const blob =
+          response.data instanceof Blob
+            ? response.data
+            : new Blob([response.data], { type: 'text/plain' });
+        downloadBlob({ filename: `${requestId}.log`, blob });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : '';
+        showNotification(
+          `${t('request_monitoring.download_failed')}${message ? `: ${message}` : ''}`,
+          'error'
+        );
+      } finally {
+        setDownloadingRequestId('');
+      }
+    },
+    [showNotification, t]
+  );
 
   const selectedCredentialInfo = useMemo(() => {
     if (!selectedFailureRow) return null;
@@ -615,7 +855,14 @@ export function RequestEventsDetailsCard({
 
   return (
     <Card
-      title={t('usage_stats.request_events_title')}
+      title={
+        <span className={styles.requestEventsTitle}>
+          <span>{t('usage_stats.request_events_title')}</span>
+          <span className={styles.requestEventsTitleCount}>
+            {t('usage_stats.request_events_count', { count: filteredRows.length })}
+          </span>
+        </span>
+      }
       className={fixedHeight ? styles.requestEventsFixedCard : undefined}
       extra={
         <div className={styles.requestEventsActions}>
@@ -649,6 +896,44 @@ export function RequestEventsDetailsCard({
       <div className={styles.requestEventsToolbar}>
         <div className={styles.requestEventsFilterItem}>
           <span className={styles.requestEventsFilterLabel}>
+            {t('usage_stats.request_events_filter_time_range')}
+          </span>
+          <Select
+            value={timeRange}
+            options={timeRangeOptions}
+            onChange={(value) => setTimeRange(value as UsageTimeRange)}
+            className={styles.requestEventsSelect}
+            ariaLabel={t('usage_stats.request_events_filter_time_range')}
+            fullWidth={false}
+          />
+        </div>
+        <div className={`${styles.requestEventsFilterItem} ${styles.requestEventsSearchItem}`}>
+          <span className={styles.requestEventsFilterLabel}>
+            {t('usage_stats.request_events_search_label')}
+          </span>
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t('usage_stats.request_events_search_placeholder')}
+            rightElement={<IconSearch size={16} />}
+            aria-label={t('usage_stats.request_events_search_placeholder')}
+          />
+        </div>
+        <div className={styles.requestEventsFilterItem}>
+          <span className={styles.requestEventsFilterLabel}>
+            {t('usage_stats.request_events_filter_provider')}
+          </span>
+          <Select
+            value={effectiveProviderFilter}
+            options={providerOptions}
+            onChange={setProviderFilter}
+            className={styles.requestEventsSelect}
+            ariaLabel={t('usage_stats.request_events_filter_provider')}
+            fullWidth={false}
+          />
+        </div>
+        <div className={styles.requestEventsFilterItem}>
+          <span className={styles.requestEventsFilterLabel}>
             {t('usage_stats.request_events_filter_model')}
           </span>
           <Select
@@ -675,6 +960,19 @@ export function RequestEventsDetailsCard({
         </div>
         <div className={styles.requestEventsFilterItem}>
           <span className={styles.requestEventsFilterLabel}>
+            {t('usage_stats.request_events_filter_api_key')}
+          </span>
+          <Select
+            value={effectiveApiKeyFilter}
+            options={apiKeyOptions}
+            onChange={setApiKeyFilter}
+            className={styles.requestEventsSelect}
+            ariaLabel={t('usage_stats.request_events_filter_api_key')}
+            fullWidth={false}
+          />
+        </div>
+        <div className={styles.requestEventsFilterItem}>
+          <span className={styles.requestEventsFilterLabel}>
             {t('usage_stats.request_events_filter_result')}
           </span>
           <Select
@@ -686,7 +984,7 @@ export function RequestEventsDetailsCard({
             fullWidth={false}
           />
         </div>
-        {onRefresh && (
+        {onRefresh && showAutoRefreshControls && (
           <div className={styles.requestEventsFilterItem}>
             <span className={styles.requestEventsFilterLabelRow}>
               <span className={styles.requestEventsFilterLabel}>{t('monitoring_center.auto_refresh')}</span>
@@ -736,135 +1034,197 @@ export function RequestEventsDetailsCard({
         />
       ) : (
         <>
-          <div className={styles.requestEventsMeta}>
-            <span>{t('usage_stats.request_events_count', { count: filteredRows.length })}</span>
-            {filteredRows.length > MAX_RENDERED_EVENTS && (
-              <span className={styles.requestEventsLimitHint}>
-                {t('usage_stats.request_events_limit_hint', {
-                  shown: MAX_RENDERED_EVENTS,
-                })}
-              </span>
-            )}
-          </div>
-
           <div className={styles.requestEventsTableWrapper}>
             <table className={`${styles.table} ${styles.requestEventsTable}`}>
               <colgroup>
-                <col className={styles.requestEventsActionCol} />
-                <col className={styles.requestEventsTimestampCol} />
-                <col className={styles.requestEventsModelCol} />
-                <col className={styles.requestEventsSourceCol} />
-                <col className={styles.requestEventsResultCol} />
-                {hasTimingData && <col className={styles.requestEventsTimingCol} />}
-                {hasTimingData && <col className={styles.requestEventsTimingCol} />}
-                {hasTimingData && <col className={styles.requestEventsTimingCol} />}
-                <col className={styles.requestEventsThinkingCol} />
-                <col className={styles.requestEventsTokenCol} />
-                <col className={styles.requestEventsTokenCol} />
-                <col className={styles.requestEventsTokenCol} />
-                <col className={styles.requestEventsTokenCol} />
-                <col className={styles.requestEventsTokenCol} />
-                <col className={styles.requestEventsTokenCol} />
+                <col className={styles.requestEventsTimeResultCol} />
+                <col className={styles.requestEventsProviderModelCol} />
+                <col className={styles.requestEventsEndpointRequestCol} />
+                <col className={styles.requestEventsCredentialCol} />
+                <col className={styles.requestEventsUsageCol} />
+                <col className={styles.requestEventsPerformanceCol} />
               </colgroup>
               <thead>
                 <tr>
-                  <th aria-label={t('usage_stats.request_events_delete_action')} />
-                  <th>{t('usage_stats.request_events_timestamp')}</th>
-                  <th>{t('usage_stats.model_name')}</th>
-                  <th>{t('usage_stats.request_events_source')}</th>
-                  <th>{t('usage_stats.request_events_result')}</th>
-                  {hasTimingData && <th>{t('usage_stats.first_byte_latency')}</th>}
-                  {hasTimingData && <th>{t('usage_stats.generation_time')}</th>}
-                  {hasTimingData && <th>{t('usage_stats.request_events_tps')}</th>}
-                  <th>{t('usage_stats.thinking_intensity')}</th>
-                  <th>{t('usage_stats.input_tokens')}</th>
-                  <th>{t('usage_stats.output_tokens')}</th>
-                  <th>{t('usage_stats.reasoning_tokens')}</th>
-                  <th>{t('usage_stats.cached_tokens')}</th>
-                  <th>{t('usage_stats.total_tokens')}</th>
-                  <th>{t('usage_stats.cache_hit')}</th>
+                  <th>{t('usage_stats.request_events_time_result')}</th>
+                  <th>{t('usage_stats.request_events_provider_model')}</th>
+                  <th>{t('usage_stats.request_events_endpoint_request')}</th>
+                  <th>{t('usage_stats.request_events_credential')}</th>
+                  <th>{t('usage_stats.request_events_usage')}</th>
+                  <th>{t('usage_stats.request_events_performance')}</th>
                 </tr>
               </thead>
               <tbody>
                 {renderedRows.map((row) => (
                   <tr key={row.id}>
-                    <td className={styles.requestEventsDeleteCell}>
-                      <button
-                        type="button"
-                        className={styles.requestEventsDeleteButton}
-                        onClick={() => handleDeleteRow(row)}
-                        disabled={!row.backendId || deletingId === row.backendId}
-                        title={t('usage_stats.request_events_delete_action')}
-                        aria-label={t('usage_stats.request_events_delete_action')}
+                    <td title={row.timestamp} className={styles.requestEventsTimeResultCell}>
+                      <div className={styles.requestEventsPrimaryText}>{row.timestampLabel}</div>
+                      <div className={styles.requestEventsStatusLine}>
+                        {row.failed ? (
+                          <button
+                            type="button"
+                            className={`${styles.requestEventsResultFailed} ${styles.requestEventsResultButton}`}
+                            onClick={() => setSelectedFailureRow(row)}
+                            aria-label={t('usage_stats.request_events_failure_log_view')}
+                          >
+                            {t('stats.failure')}
+                          </button>
+                        ) : (
+                          <span className={styles.requestEventsResultSuccess}>
+                            {t('stats.success')}
+                          </span>
+                        )}
+                        {row.cacheHitRatio !== null && (
+                          <span className={styles.requestEventsCacheHitBadge}>
+                            {t('usage_stats.request_events_cache_hit_short')}{' '}
+                            {formatCacheHitRatio(row.cacheHitRatio)}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className={styles.requestEventsProviderModelCell}>
+                      <div className={styles.requestEventsPrimaryText}>{row.provider}</div>
+                      <div className={styles.requestEventsSecondaryText}>{row.model}</div>
+                    </td>
+                    <td
+                      className={styles.requestEventsEndpointCell}
+                      title={[row.endpoint, row.requestId].filter(Boolean).join(' · ')}
+                    >
+                      <div className={styles.requestEventsEndpointLine}>
+                        {formatEndpointHeadline(row.endpointMethod, row.endpointPath)}
+                      </div>
+                      <div className={styles.requestEventsEndpointSubline}>{row.endpoint}</div>
+                      <div className={styles.requestEventsRequestLine}>
+                        <span className={styles.requestEventsRequestIdText}>
+                          {row.requestId || '-'}
+                        </span>
+                        {requestLogEnabled && row.requestId && (
+                          <Button
+                            className={styles.requestEventsDownloadButton}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void handleDownloadRequestLog(row.requestId)}
+                            loading={downloadingRequestId === row.requestId}
+                            title={t('request_monitoring.download_request_log')}
+                            aria-label={t('request_monitoring.download_request_log')}
+                          >
+                            <IconDownload size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                    <td className={styles.requestEventsCredentialCell}>
+                      <div className={styles.requestEventsPrimaryText} title={row.account}>
+                        {row.account}
+                        {row.sourceType && (
+                          <span className={styles.credentialType}>{row.sourceType}</span>
+                        )}
+                      </div>
+                      <div
+                        className={styles.requestEventsSecondaryText}
+                        title={`${formatCredentialKeyLine(row)} · ${row.source}`}
                       >
-                        <IconMinus size={14} />
-                      </button>
+                        {formatCredentialKeyLine(row)}
+                      </div>
                     </td>
-                    <td title={row.timestamp} className={styles.requestEventsTimestamp}>
-                      {row.timestampLabel}
+                    <td className={styles.requestEventsUsageCell}>
+                      <div className={styles.requestEventsMetricHeadline}>
+                        <span className={styles.requestEventsMetricLabel}>
+                          {t('usage_stats.request_events_total_short')}
+                        </span>
+                        <span className={styles.requestEventsMetricValue}>
+                          {row.totalTokens.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className={styles.requestEventsMetricGrid}>
+                        <span>
+                          <span className={styles.requestEventsMetricLabel}>
+                            {t('usage_stats.request_events_input_short')}
+                          </span>
+                          <span className={styles.requestEventsMetricValue}>
+                            {row.inputTokens.toLocaleString()}
+                          </span>
+                        </span>
+                        <span>
+                          <span className={styles.requestEventsMetricLabel}>
+                            {t('usage_stats.request_events_output_short')}
+                          </span>
+                          <span className={styles.requestEventsMetricValue}>
+                            {row.outputTokens.toLocaleString()}
+                          </span>
+                        </span>
+                        <span>
+                          <span className={styles.requestEventsMetricLabel}>
+                            {t('usage_stats.request_events_cached_short')}
+                          </span>
+                          <span className={styles.requestEventsMetricValue}>
+                            {row.cachedTokens.toLocaleString()}
+                          </span>
+                        </span>
+                        <span>
+                          <span className={styles.requestEventsMetricLabel}>
+                            {t('usage_stats.request_events_reasoning_short')}
+                          </span>
+                          <span className={styles.requestEventsMetricValue}>
+                            {row.reasoningTokens.toLocaleString()}
+                          </span>
+                        </span>
+                      </div>
+                      <div className={styles.requestEventsInlineBadges}>
+                        {row.thinkingLabel !== '-' && (
+                          <span
+                            className={styles.requestEventsCompactBadge}
+                            title={
+                              row.thinking
+                                ? [
+                                    row.thinking.mode
+                                      ? `${t('usage_stats.thinking_mode')}: ${row.thinking.mode}`
+                                      : '',
+                                    row.thinking.level
+                                      ? `${t('usage_stats.thinking_level')}: ${row.thinking.level}`
+                                      : '',
+                                    typeof row.thinking.budget === 'number'
+                                      ? `${t('usage_stats.thinking_budget')}: ${row.thinking.budget.toLocaleString()}`
+                                      : '',
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' · ')
+                                : undefined
+                            }
+                          >
+                            {t('usage_stats.request_events_thinking_short')} {row.thinkingLabel}
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className={styles.modelCell}>{row.model}</td>
-                    <td className={styles.requestEventsSourceCell} title={row.source}>
-                      <span>{row.source}</span>
-                      {row.sourceType && (
-                        <span className={styles.credentialType}>{row.sourceType}</span>
-                      )}
+                    <td className={styles.requestEventsPerformanceCell}>
+                      <div className={styles.requestEventsMetricHeadline}>
+                        <span className={styles.requestEventsMetricLabel}>
+                          {t('usage_stats.request_events_generation_short')}
+                        </span>
+                        <span className={styles.requestEventsMetricValue}>
+                          {formatDurationMs(row.generationMs)}
+                        </span>
+                      </div>
+                      <div className={styles.requestEventsMetricStack}>
+                        <span>
+                          <span className={styles.requestEventsMetricLabel}>
+                            {t('usage_stats.request_events_first_byte_short')}
+                          </span>
+                          <span className={styles.requestEventsMetricValue}>
+                            {formatDurationMs(row.firstByteLatencyMs)}
+                          </span>
+                        </span>
+                        <span>
+                          <span className={styles.requestEventsMetricLabel}>
+                            {t('usage_stats.request_events_tps')}
+                          </span>
+                          <span className={styles.requestEventsMetricValue}>
+                            {row.tps !== null ? row.tps.toFixed(2) : '--'}
+                          </span>
+                        </span>
+                      </div>
                     </td>
-                    <td>
-                      {row.failed ? (
-                        <button
-                          type="button"
-                          className={`${styles.requestEventsResultFailed} ${styles.requestEventsResultButton}`}
-                          onClick={() => setSelectedFailureRow(row)}
-                          aria-label={t('usage_stats.request_events_failure_log_view')}
-                        >
-                          {t('stats.failure')}
-                        </button>
-                      ) : (
-                        <span className={styles.requestEventsResultSuccess}>{t('stats.success')}</span>
-                      )}
-                    </td>
-                    {hasTimingData && (
-                      <td className={styles.durationCell}>{formatDurationMs(row.firstByteLatencyMs)}</td>
-                    )}
-                    {hasTimingData && (
-                      <td className={styles.durationCell}>{formatDurationMs(row.generationMs)}</td>
-                    )}
-                    {hasTimingData && <td>{row.tps !== null ? row.tps.toFixed(2) : '--'}</td>}
-                    <td>
-                      <span
-                        className={
-                          row.thinkingLabel !== '-'
-                            ? styles.requestEventsThinkingBadge
-                            : styles.requestEventsThinkingEmpty
-                        }
-                        title={
-                          row.thinking
-                            ? [
-                                row.thinking.mode
-                                  ? `${t('usage_stats.thinking_mode')}: ${row.thinking.mode}`
-                                  : '',
-                                row.thinking.level
-                                  ? `${t('usage_stats.thinking_level')}: ${row.thinking.level}`
-                                  : '',
-                                typeof row.thinking.budget === 'number'
-                                  ? `${t('usage_stats.thinking_budget')}: ${row.thinking.budget.toLocaleString()}`
-                                  : '',
-                              ]
-                                .filter(Boolean)
-                                .join(' · ')
-                            : undefined
-                        }
-                      >
-                        {row.thinkingLabel}
-                      </span>
-                    </td>
-                    <td>{row.inputTokens.toLocaleString()}</td>
-                    <td>{row.outputTokens.toLocaleString()}</td>
-                    <td>{row.reasoningTokens.toLocaleString()}</td>
-                    <td>{row.cachedTokens.toLocaleString()}</td>
-                    <td>{row.totalTokens.toLocaleString()}</td>
-                    <td>{formatCacheHitRatio(row.cacheHitRatio)}</td>
                   </tr>
                 ))}
               </tbody>

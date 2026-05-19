@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { authFilesApi } from '@/services/api/authFiles';
-import type { AuthFileItem } from '@/types/authFile';
 import {
   ArcElement,
   BarController,
@@ -21,11 +19,10 @@ import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
-import { useConfigStore, useThemeStore } from '@/stores';
+import { useThemeStore } from '@/stores';
 import {
   ModelStatsCard,
   PriceSettingsCard,
-  RequestEventsDetailsCard,
   useSparklines,
   useUsageData,
   type UsagePayload
@@ -68,7 +65,6 @@ export function MonitoringCenterPage() {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const isDark = resolvedTheme === 'dark';
-  const config = useConfigStore((state) => state.config);
   const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadMonitorUsageTimeRange);
   const [usageStatsDimension, setUsageStatsDimension] = useState<'model' | 'apiKey'>('model');
 
@@ -81,27 +77,12 @@ export function MonitoringCenterPage() {
     setModelPrices,
     loadUsage,
   } = useUsageData({ timeRange });
-  const [authFiles, setAuthFiles] = useState<AuthFileItem[]>([]);
-
-  const loadAuthFiles = useCallback(async () => {
-    const res = await authFilesApi.list();
-    const files = Array.isArray(res) ? res : (res as { files?: AuthFileItem[] })?.files;
-    if (!Array.isArray(files)) return;
-    setAuthFiles(files);
-  }, []);
 
   const handleRefresh = useCallback(async () => {
-    await Promise.all([loadUsage(), loadAuthFiles()]);
-  }, [loadAuthFiles, loadUsage]);
+    await loadUsage();
+  }, [loadUsage]);
 
   useHeaderRefresh(handleRefresh);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadAuthFiles().catch(() => {});
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [loadAuthFiles]);
 
   useEffect(() => {
     try {
@@ -269,21 +250,6 @@ export function MonitoringCenterPage() {
         />
       </div>
 
-      <div className={styles.fullWidthSection}>
-        <RequestEventsDetailsCard
-          usage={filteredUsage}
-          loading={loading}
-          geminiKeys={config?.geminiApiKeys || []}
-          claudeConfigs={config?.claudeApiKeys || []}
-          codexConfigs={config?.codexApiKeys || []}
-          vertexConfigs={config?.vertexApiKeys || []}
-          openaiProviders={config?.openaiCompatibility || []}
-          authFiles={authFiles}
-          fixedHeight
-          onRefresh={handleRefresh}
-          lastRefreshedAt={lastRefreshedAt}
-        />
-      </div>
     </div>
   );
 }

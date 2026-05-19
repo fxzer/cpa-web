@@ -405,9 +405,13 @@ export function MainLayout() {
       icon: sidebarIcons.credentialCenter,
     },
     { path: '/auth-files', label: t('nav.auth_files'), icon: sidebarIcons.authFiles },
-    { path: '/monitor', label: t('nav.monitoring_center'), icon: sidebarIcons.monitoring },
     {
-      path: '/request-monitoring',
+      path: '/monitoring-dashboard',
+      label: t('nav.monitoring_center'),
+      icon: sidebarIcons.monitoring,
+    },
+    {
+      path: '/request-details',
       label: t('nav.request_monitoring'),
       icon: sidebarIcons.requestMonitoring,
     },
