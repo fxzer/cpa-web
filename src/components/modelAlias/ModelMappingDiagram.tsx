@@ -22,7 +22,8 @@ import styles from './ModelMappingDiagram.module.scss';
 export interface ModelMappingDiagramProps {
   modelAlias: Record<string, OAuthModelAliasEntry[]>;
   allProviderModels?: Record<string, AuthFileModelItem[]>;
-  onUpdate?: (provider: string, sourceModel: string, newAlias: string) => void;
+  providerAliasSeeds?: Record<string, string[]>;
+  onUpdate?: (provider: string, sourceModel: string, newAlias: string) => void | Promise<void>;
   onDeleteLink?: (provider: string, sourceModel: string, alias: string) => void;
   onToggleFork?: (provider: string, sourceModel: string, alias: string, fork: boolean) => void;
   onRenameAlias?: (oldAlias: string, newAlias: string) => void;
@@ -50,6 +51,7 @@ export interface ModelMappingDiagramRef {
 export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappingDiagramProps>(function ModelMappingDiagram({ 
   modelAlias, 
   allProviderModels = {}, 
+  providerAliasSeeds = {},
   onUpdate,
   onDeleteLink,
   onToggleFork,
@@ -142,10 +144,18 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
         return a.name.localeCompare(b.name);
       });
 
-    // 4. Extra aliases (no mapping yet)
+    // 4. Alias names from AI provider config (deduplicated per channel)
+    Object.entries(providerAliasSeeds).forEach(([, aliases]) => {
+      (aliases ?? []).forEach((alias) => {
+        const trimmed = String(alias ?? '').trim();
+        if (trimmed) aliasSet.add(trimmed);
+      });
+    });
+
+    // 5. Extra aliases added manually in the diagram
     extraAliases.forEach((alias) => aliasSet.add(alias));
 
-    // 5. Alias nodes: distinct by id = alias; sources = SourceNodes that have this alias in their aliases
+    // 6. Alias nodes: distinct by id = alias; sources = SourceNodes that have this alias in their aliases
     const aliasNodesList: AliasNode[] = Array.from(aliasSet)
       .map((alias) => ({
         id: alias,
@@ -157,7 +167,7 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
         return a.alias.localeCompare(b.alias);
       });
 
-    // 6. Group sources by provider
+    // 7. Group sources by provider
     const providerMap = new Map<string, SourceNode[]>();
     sources.forEach((s) => {
       if (!providerMap.has(s.provider)) providerMap.set(s.provider, []);
@@ -168,7 +178,7 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
       .sort((a, b) => a.provider.localeCompare(b.provider));
 
     return { aliasNodes: aliasNodesList, providerNodes: providerNodesList };
-  }, [modelAlias, allProviderModels, extraAliases]);
+  }, [modelAlias, allProviderModels, providerAliasSeeds, extraAliases]);
 
   // Track element positions
   const providerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -326,10 +336,10 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
     setDropTargetAlias(null);
   };
 
-  const handleDrop = (e: DragEvent, alias: string) => {
+  const handleDrop = async (e: DragEvent, alias: string) => {
     e.preventDefault();
     if (draggedSource && !draggedSource.aliases.some((entry) => entry.alias === alias) && onUpdate) {
-      onUpdate(draggedSource.provider, draggedSource.name, alias);
+      await onUpdate(draggedSource.provider, draggedSource.name, alias);
     }
     setDraggedSource(null);
     setDropTargetAlias(null);
@@ -355,10 +365,10 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
     setDropTargetSource(null);
   };
 
-  const handleDropOnSource = (e: DragEvent, source: SourceNode) => {
+  const handleDropOnSource = async (e: DragEvent, source: SourceNode) => {
     e.preventDefault();
     if (draggedAlias && !source.aliases.some((entry) => entry.alias === draggedAlias) && onUpdate) {
-      onUpdate(source.provider, source.name, draggedAlias);
+      await onUpdate(source.provider, source.name, draggedAlias);
     }
     setDraggedAlias(null);
     setDropTargetSource(null);

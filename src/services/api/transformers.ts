@@ -269,16 +269,30 @@ const normalizeOpenAIProvider = (provider: unknown): OpenAIProviderConfig | null
   return result;
 };
 
-const normalizeOauthExcluded = (payload: unknown): Record<string, string[]> | undefined => {
+const normalizeOauthExcluded = (payload: unknown): Record<string, Record<string, boolean>> | undefined => {
   if (!isRecord(payload)) return undefined;
   const source = payload['oauth-excluded-models'] ?? payload.items ?? payload;
   if (!isRecord(source)) return undefined;
-  const map: Record<string, string[]> = {};
+  const map: Record<string, Record<string, boolean>> = {};
   Object.entries(source).forEach(([provider, models]) => {
     const key = String(provider || '').trim();
     if (!key) return;
-    const normalized = normalizeExcludedModels(models);
-    map[key.toLowerCase()] = normalized;
+    const providerMap: Record<string, boolean> = {};
+    if (Array.isArray(models)) {
+      normalizeExcludedModels(models).forEach((modelId) => {
+        providerMap[modelId] = true;
+      });
+    } else if (isRecord(models)) {
+      Object.entries(models).forEach(([modelId, value]) => {
+        if (value === true) {
+          const trimmed = String(modelId).trim();
+          if (trimmed) providerMap[trimmed] = true;
+        }
+      });
+    }
+    if (Object.keys(providerMap).length > 0) {
+      map[key.toLowerCase()] = providerMap;
+    }
   });
   return map;
 };

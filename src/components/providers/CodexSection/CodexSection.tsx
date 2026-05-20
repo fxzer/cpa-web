@@ -18,8 +18,11 @@ import {
   getProviderRecentBuckets,
   getProviderTotalStats,
   hasDisableAllModelsRule,
+  buildProviderOverviewLabel,
   type ProviderRecentUsageMap,
 } from '../utils';
+import type { ProviderAliasOverviewRequest } from '../types';
+import { AI_PROVIDER_ALIAS_CHANNEL } from '@/utils/providerModelAliasCatalog';
 
 interface CodexSectionProps {
   configs: ProviderKeyConfig[];
@@ -31,6 +34,7 @@ interface CodexSectionProps {
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
   onToggle: (index: number, enabled: boolean) => void;
+  onAliasOverview?: (request: ProviderAliasOverviewRequest) => void;
 }
 
 export function CodexSection({
@@ -43,6 +47,7 @@ export function CodexSection({
   onEdit,
   onDelete,
   onToggle,
+  onAliasOverview,
 }: CodexSectionProps) {
   const { t } = useTranslation();
   const actionsDisabled = disableControls || loading || isSwitching;
@@ -89,6 +94,19 @@ export function CodexSection({
           emptyDescription={t('ai_providers.codex_empty_desc')}
           onEdit={(_, index) => onEdit(index)}
           onDelete={(_, index) => onDelete(index)}
+          onAliasOverview={
+            onAliasOverview
+              ? (item, index) =>
+                  onAliasOverview({
+                    providerKey: AI_PROVIDER_ALIAS_CHANNEL.codex,
+                    providerLabel: buildProviderOverviewLabel(
+                      item,
+                      `${t('ai_providers.codex_item_title')} #${index + 1}`
+                    ),
+                    models: item.models,
+                  })
+              : undefined
+          }
           actionsDisabled={actionsDisabled}
           getRowDisabled={(item) => hasDisableAllModelsRule(item.excludedModels)}
           renderExtraActions={(item, index) => (

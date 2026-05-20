@@ -31,7 +31,7 @@ export interface Config {
   claudeApiKeys?: ProviderKeyConfig[];
   vertexApiKeys?: ProviderKeyConfig[];
   openaiCompatibility?: OpenAIProviderConfig[];
-  oauthExcludedModels?: Record<string, string[]>;
+  oauthExcludedModels?: Record<string, Record<string, boolean>>;
   raw?: Record<string, unknown>;
 }
 

@@ -17,6 +17,9 @@
 # 可选环境变量：
 #   BACKEND_ROOT=/path/to/CLIProxyAPI
 #   BACKEND_BUILD_MODE=auto|current|clean-head
+#   auto（默认）: 使用当前工作区构建（含未提交/未跟踪文件）
+#   current: 同 auto
+#   clean-head: 仅用 git HEAD 快照构建（不含未提交改动）
 #   CPA_CONFIG_PATH=/opt/homebrew/etc/cliproxyapi.conf
 #   MANAGEMENT_STATIC_PATH=/custom/static/or/management.html
 #   EXTRA_STATIC_DIRS="/path/a /path/b"
@@ -72,7 +75,7 @@ resolve_realpath() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FRONTEND_ROOT="$SCRIPT_DIR"
 BACKEND_ROOT="${BACKEND_ROOT:-/Users/fxj/n/CLIProxyAPI}"
-BACKEND_BUILD_MODE="${BACKEND_BUILD_MODE:-auto}"
+BACKEND_BUILD_MODE="${BACKEND_BUILD_MODE:-current}"
 
 if ! command -v brew >/dev/null 2>&1; then
   echo "未找到 brew，无法定位 Homebrew 服务。" >&2
@@ -147,7 +150,10 @@ deploy_frontend() {
 prepare_backend_build_dir() {
   local mode="$1"
   case "$mode" in
-    current)
+    auto|current)
+      if [[ -n "$(git -C "$BACKEND_ROOT" status --porcelain)" ]]; then
+        echo "后端工作区有未提交改动，将使用当前工作区构建（含未跟踪文件）。" >&2
+      fi
       echo "$BACKEND_ROOT"
       ;;
     clean-head)
@@ -155,14 +161,6 @@ prepare_backend_build_dir() {
       tmp_dir="$(mktemp -d -t cliproxyapi-build-src.XXXXXX)"
       git -C "$BACKEND_ROOT" archive --format=tar HEAD | tar -x -C "$tmp_dir"
       echo "$tmp_dir"
-      ;;
-    auto)
-      if [[ -z "$(git -C "$BACKEND_ROOT" status --porcelain)" ]]; then
-        echo "$BACKEND_ROOT"
-      else
-        echo "后端工作区有未提交改动，使用干净 HEAD 临时副本构建，不修改原工作区。" >&2
-        prepare_backend_build_dir clean-head
-      fi
       ;;
     *)
       echo "BACKEND_BUILD_MODE 只能是 auto、current 或 clean-head。" >&2
@@ -280,6 +278,13 @@ smoke_check() {
       exit 1
     fi
   done
+
+  code="$(curl -sS -o /dev/null -w '%{http_code}' "$base_url/v0/management/auth-files/models-config?name=__deploy_probe__.json" 2>/dev/null || true)"
+  echo "/v0/management/auth-files/models-config: $code"
+  if [[ "$code" == "404" || "$code" == "000" ]]; then
+    echo "models-config 路由不存在。若后端有未提交改动，请确认 deploy.sh 使用 current 模式构建。" >&2
+    exit 1
+  fi
 }
 
 main() {

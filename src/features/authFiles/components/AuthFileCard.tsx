@@ -6,7 +6,6 @@ import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import {
   IconDownload,
   IconInfo,
-  IconModelCluster,
   IconSettings,
   IconTrash2,
 } from '@/components/ui/icons';
@@ -249,14 +248,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   title={t('auth_files.models_button', { defaultValue: '模型' })}
                   disabled={disableControls}
                 >
-                  <>
-                    <span className={styles.modelsActionIconWrap}>
-                      <IconModelCluster className={styles.actionIcon} size={16} />
-                    </span>
-                    <span className={styles.actionButtonLabel}>
-                      {t('auth_files.models_button', { defaultValue: '模型' })}
-                    </span>
-                  </>
+                  {t('auth_files.models_button', { defaultValue: '模型' })}
                 </Button>
               )}
               {!isRuntimeOnly && (
@@ -301,6 +293,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
             {!isRuntimeOnly && (
               <div className={styles.statusToggle}>
                 <ToggleSwitch
+                  trackClassName={styles.cardStatusSwitchTrack}
                   ariaLabel={
                     file.disabled
                       ? t('auth_files.status_disabled_label')

@@ -29,8 +29,10 @@ import {
   getOpenAIProviderTotalStats,
   getOpenAIProviderKey,
   getProviderTotalStats,
+  buildProviderOverviewLabel,
   type ProviderRecentUsageMap,
 } from '../utils';
+import type { ProviderAliasOverviewRequest } from '../types';
 
 type SortOption = 'name' | 'priority' | 'recent-success';
 type SortDirection = 'asc' | 'desc';
@@ -48,6 +50,7 @@ interface OpenAISectionProps {
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
   onToggle: (index: number, enabled: boolean) => void;
+  onAliasOverview?: (request: ProviderAliasOverviewRequest) => void;
 }
 
 interface IndexedOpenAIProvider {
@@ -74,6 +77,7 @@ export function OpenAISection({
   onEdit,
   onDelete,
   onToggle,
+  onAliasOverview,
 }: OpenAISectionProps) {
   const { t } = useTranslation();
   const actionsDisabled = disableControls || loading || isSwitching;
@@ -558,6 +562,25 @@ export function OpenAISection({
         </div>
         <div className={styles.openaiProviderActions}>
           <div className="provider-card-action-buttons">
+            {onAliasOverview ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  onAliasOverview({
+                    providerKey: String(provider.name ?? provider.baseUrl ?? 'openai').trim().toLowerCase(),
+                    providerLabel: buildProviderOverviewLabel(
+                      provider,
+                      t('ai_providers.openai_item_title')
+                    ),
+                    models: provider.models,
+                  })
+                }
+                disabled={actionsDisabled}
+              >
+                {t('ai_providers.alias_overview_button')}
+              </Button>
+            ) : null}
             <Button
               variant="secondary"
               size="sm"

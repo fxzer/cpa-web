@@ -18,8 +18,11 @@ import {
   getProviderRecentBuckets,
   getProviderTotalStats,
   hasDisableAllModelsRule,
+  buildProviderOverviewLabel,
   type ProviderRecentUsageMap,
 } from '../utils';
+import type { ProviderAliasOverviewRequest } from '../types';
+import { AI_PROVIDER_ALIAS_CHANNEL } from '@/utils/providerModelAliasCatalog';
 
 interface GeminiSectionProps {
   configs: GeminiKeyConfig[];
@@ -31,6 +34,7 @@ interface GeminiSectionProps {
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
   onToggle: (index: number, enabled: boolean) => void;
+  onAliasOverview?: (request: ProviderAliasOverviewRequest) => void;
 }
 
 export function GeminiSection({
@@ -43,6 +47,7 @@ export function GeminiSection({
   onEdit,
   onDelete,
   onToggle,
+  onAliasOverview,
 }: GeminiSectionProps) {
   const { t } = useTranslation();
   const actionsDisabled = disableControls || loading || isSwitching;
@@ -89,6 +94,19 @@ export function GeminiSection({
           emptyDescription={t('ai_providers.gemini_empty_desc')}
           onEdit={(_, index) => onEdit(index)}
           onDelete={(_, index) => onDelete(index)}
+          onAliasOverview={
+            onAliasOverview
+              ? (item, index) =>
+                  onAliasOverview({
+                    providerKey: AI_PROVIDER_ALIAS_CHANNEL.gemini,
+                    providerLabel: buildProviderOverviewLabel(
+                      item,
+                      `${t('ai_providers.gemini_item_title')} #${index + 1}`
+                    ),
+                    models: item.models,
+                  })
+              : undefined
+          }
           actionsDisabled={actionsDisabled}
           getRowDisabled={(item) => hasDisableAllModelsRule(item.excludedModels)}
           renderExtraActions={(item, index) => (

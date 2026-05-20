@@ -29,10 +29,30 @@ export interface OAuthConfig {
   redirectUri?: string;
 }
 
-// OAuth 排除模型列表
-export interface OAuthExcludedModels {
-  models: string[];
-}
+// OAuth 排除模型（provider -> modelId -> disabled）
+export type OAuthExcludedModelsMap = Record<string, Record<string, boolean>>;
+
+export type AuthFileModelConfigRow = {
+  id: string;
+  display_name?: string;
+  type?: string;
+  owned_by?: string;
+  available: boolean;
+  alias: string;
+  fork: boolean;
+  disabled: boolean;
+};
+
+export type AuthFileModelsConfigResponse = {
+  provider: string;
+  rows: AuthFileModelConfigRow[];
+  summary: {
+    total: number;
+    aliased: number;
+    passthrough: number;
+    disabled: number;
+  };
+};
 
 // OAuth 模型别名
 export interface OAuthModelAliasEntry {

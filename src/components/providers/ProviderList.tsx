@@ -10,6 +10,7 @@ interface ProviderListProps<T> {
   renderContent: (item: T, index: number) => ReactNode;
   onEdit: (item: T, index: number) => void;
   onDelete: (item: T, index: number) => void;
+  onAliasOverview?: (item: T, index: number) => void;
   emptyTitle: string;
   emptyDescription: string;
   deleteLabel?: string;
@@ -29,6 +30,7 @@ export function ProviderList<T>({
   renderContent,
   onEdit,
   onDelete,
+  onAliasOverview,
   emptyTitle,
   emptyDescription,
   deleteLabel,
@@ -63,6 +65,16 @@ export function ProviderList<T>({
             <div className={metaClassName ?? 'item-meta'}>{renderContent(item, index)}</div>
             <div className={actionsClassName ?? 'item-actions'}>
               <div className="provider-card-action-buttons">
+                {onAliasOverview ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onAliasOverview(item, index)}
+                    disabled={actionsDisabled}
+                  >
+                    {t('ai_providers.alias_overview_button')}
+                  </Button>
+                ) : null}
                 <Button
                   variant="secondary"
                   size="sm"

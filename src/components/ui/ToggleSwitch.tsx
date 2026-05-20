@@ -10,6 +10,8 @@ interface ToggleSwitchProps {
   labelPosition?: 'left' | 'right';
   checkedText?: string;
   uncheckedText?: string;
+  trackClassName?: string;
+  tone?: 'default' | 'danger';
 }
 
 export function ToggleSwitch({
@@ -21,6 +23,8 @@ export function ToggleSwitch({
   labelPosition = 'right',
   checkedText,
   uncheckedText,
+  trackClassName,
+  tone = 'default',
 }: ToggleSwitchProps) {
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     onChange(event.target.checked);
@@ -45,7 +49,9 @@ export function ToggleSwitch({
         disabled={disabled}
         aria-label={ariaLabel}
       />
-      <span className={`${styles.track} ${showInlineState ? styles.trackInlineState : ''}`}>
+      <span
+        className={`${styles.track} ${tone === 'danger' ? styles.trackDanger : ''} ${showInlineState ? styles.trackInlineState : ''} ${trackClassName ?? ''}`.trim()}
+      >
         {showInlineState && (
           <>
             <span className={styles.trackInlineSizer} aria-hidden="true">

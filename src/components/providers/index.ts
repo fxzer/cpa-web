@@ -5,6 +5,7 @@ export { GeminiSection } from './GeminiSection';
 export { OpenAISection } from './OpenAISection';
 export { VertexSection } from './VertexSection';
 export { ProviderList } from './ProviderList';
+export { ProviderAliasOverviewModal } from './ProviderAliasOverviewModal';
 export { ProviderStatusBar } from './ProviderStatusBar';
 export { ProviderNav } from './ProviderNav';
 export * from './hooks/useProviderRecentRequests';

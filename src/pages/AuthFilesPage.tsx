@@ -9,7 +9,6 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { animate } from 'motion/mini';
 import type { AnimationPlaybackControlsWithThen } from 'motion-dom';
 import { useInterval } from '@/hooks/useInterval';
@@ -18,9 +17,7 @@ import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer'
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { copyToClipboard } from '@/utils/clipboard';
 import {
   MAX_CARD_PAGE_SIZE,
@@ -38,20 +35,22 @@ import {
 import { AuthFileCard } from '@/features/authFiles/components/AuthFileCard';
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
-import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
-import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
+import { OAuthAliasOverviewModal } from '@/features/authFiles/components/OAuthAliasOverviewModal';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
 import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
 import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth';
 import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
 import { useAuthFilesStatusBarCache } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import {
+  AUTH_FILES_SORT_MODES,
   isAuthFilesSortMode,
   readAuthFilesUiState,
   readPersistedAuthFilesCompactMode,
+  resolveAuthFilesStatusFilter,
   writeAuthFilesUiState,
   writePersistedAuthFilesCompactMode,
   type AuthFilesSortMode,
+  type AuthFilesStatusFilter,
 } from '@/features/authFiles/uiState';
 import { useAuthStore, useNotificationStore, useThemeStore } from '@/stores';
 import styles from './AuthFilesPage.module.scss';
@@ -79,11 +78,9 @@ export function AuthFilesPage() {
   const resolvedTheme: ResolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const pageTransitionLayer = usePageTransitionLayer();
   const isCurrentLayer = pageTransitionLayer ? pageTransitionLayer.status === 'current' : true;
-  const navigate = useNavigate();
 
   const [filter, setFilter] = useState<'all' | string>('all');
-  const [problemOnly, setProblemOnly] = useState(false);
-  const [disabledOnly, setDisabledOnly] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<AuthFilesStatusFilter>('all');
   const [compactMode, setCompactMode] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -92,7 +89,7 @@ export function AuthFilesPage() {
     compact: DEFAULT_COMPACT_PAGE_SIZE,
   });
   const [pageSizeInput, setPageSizeInput] = useState('9');
-  const [viewMode, setViewMode] = useState<'diagram' | 'list'>('list');
+  const [aliasOverviewOpen, setAliasOverviewOpen] = useState(false);
   const [sortMode, setSortMode] = useState<AuthFilesSortMode>('default');
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
   const [uiStateHydrated, setUiStateHydrated] = useState(false);
@@ -132,32 +129,33 @@ export function AuthFilesPage() {
   const statusBarCache = useAuthFilesStatusBarCache(files);
 
   const {
-    excluded,
-    excludedError,
+    modelsModalOpen,
+    modelsLoading,
+    modelsConfig,
+    modelsFileName,
+    modelsError,
+    showModels,
+    closeModelsModal,
+    invalidateModelsCache,
+  } = useAuthFilesModels();
+
+  const {
     modelAlias,
     modelAliasError,
     allProviderModels,
-    loadExcluded,
-    loadModelAlias,
-    deleteExcluded,
+    providerAliasSeeds,
+    reloadProviderConfigs,
     deleteModelAlias,
     handleMappingUpdate,
     handleDeleteLink,
     handleToggleFork,
     handleRenameAlias,
     handleDeleteAlias,
-  } = useAuthFilesOauth({ viewMode, files });
-
-  const {
-    modelsModalOpen,
-    modelsLoading,
-    modelsList,
-    modelsFileName,
-    modelsFileType,
-    modelsError,
-    showModels,
-    closeModelsModal,
-  } = useAuthFilesModels();
+  } = useAuthFilesOauth({
+    diagramOpen: aliasOverviewOpen,
+    files,
+    onAliasConfigChanged: invalidateModelsCache,
+  });
 
   const {
     prefixProxyEditor,
@@ -192,12 +190,7 @@ export function AuthFilesPage() {
       if (typeof persisted.filter === 'string' && persisted.filter.trim()) {
         setFilter(persisted.filter);
       }
-      if (typeof persisted.problemOnly === 'boolean') {
-        setProblemOnly(persisted.problemOnly);
-      }
-      if (typeof persisted.disabledOnly === 'boolean') {
-        setDisabledOnly(persisted.disabledOnly);
-      }
+      setStatusFilter(resolveAuthFilesStatusFilter(persisted));
       if (
         typeof persistedCompactMode !== 'boolean' &&
         typeof persisted.compactMode === 'boolean'
@@ -239,8 +232,7 @@ export function AuthFilesPage() {
 
     writeAuthFilesUiState({
       filter,
-      problemOnly,
-      disabledOnly,
+      statusFilter,
       compactMode,
       search,
       page,
@@ -252,14 +244,13 @@ export function AuthFilesPage() {
     writePersistedAuthFilesCompactMode(compactMode);
   }, [
     compactMode,
-    disabledOnly,
     filter,
     page,
     pageSize,
     pageSizeByMode,
-    problemOnly,
     search,
     sortMode,
+    statusFilter,
     uiStateHydrated,
   ]);
 
@@ -313,8 +304,8 @@ export function AuthFilesPage() {
   };
 
   const handleSortModeChange = useCallback(
-    (value: string) => {
-      if (!isAuthFilesSortMode(value) || value === sortMode) return;
+    (value: AuthFilesSortMode) => {
+      if (value === sortMode) return;
       setSortMode(value);
       setPage(1);
       void loadFiles().catch(() => {});
@@ -323,17 +314,22 @@ export function AuthFilesPage() {
   );
 
   const handleHeaderRefresh = useCallback(async () => {
-    await Promise.all([loadFiles(), loadExcluded(), loadModelAlias()]);
-  }, [loadFiles, loadExcluded, loadModelAlias]);
+    await loadFiles();
+  }, [loadFiles]);
+
+  const handleModelsConfigSaved = useCallback(async () => {
+    invalidateModelsCache();
+    if (aliasOverviewOpen) {
+      await reloadProviderConfigs().catch(() => {});
+    }
+  }, [aliasOverviewOpen, invalidateModelsCache, reloadProviderConfigs]);
 
   useHeaderRefresh(handleHeaderRefresh);
 
   useEffect(() => {
     if (!isCurrentLayer) return;
     loadFiles();
-    loadExcluded();
-    loadModelAlias();
-  }, [isCurrentLayer, loadFiles, loadExcluded, loadModelAlias]);
+  }, [isCurrentLayer, loadFiles]);
 
   useInterval(
     () => {
@@ -352,23 +348,17 @@ export function AuthFilesPage() {
     return Array.from(types);
   }, [files]);
 
+  const problemOnly = statusFilter === 'problem';
+  const disabledOnly = statusFilter === 'disabled';
+
   const filesMatchingStatusFilters = useMemo(
     () =>
       files.filter((file) => {
-        if (problemOnly && !hasAuthFileStatusMessage(file)) return false;
-        if (disabledOnly && file.disabled !== true) return false;
+        if (statusFilter === 'problem' && !hasAuthFileStatusMessage(file)) return false;
+        if (statusFilter === 'disabled' && file.disabled !== true) return false;
         return true;
       }),
-    [disabledOnly, files, problemOnly]
-  );
-
-  const sortOptions = useMemo(
-    () => [
-      { value: 'default', label: t('auth_files.sort_default') },
-      { value: 'az', label: t('auth_files.sort_az') },
-      { value: 'priority', label: t('auth_files.sort_priority') },
-    ],
-    [t]
+    [files, statusFilter]
   );
 
   const normalizedSearch = search.trim();
@@ -447,36 +437,6 @@ export function AuthFilesPage() {
       );
     },
     [showNotification, t]
-  );
-
-  const openExcludedEditor = useCallback(
-    (provider?: string) => {
-      const providerValue = (provider || (filter !== 'all' ? String(filter) : '')).trim();
-      const params = new URLSearchParams();
-      if (providerValue) {
-        params.set('provider', providerValue);
-      }
-      const nextSearch = params.toString();
-      navigate(`/auth-files/oauth-excluded${nextSearch ? `?${nextSearch}` : ''}`, {
-        state: { fromAuthFiles: true },
-      });
-    },
-    [filter, navigate]
-  );
-
-  const openModelAliasEditor = useCallback(
-    (provider?: string) => {
-      const providerValue = (provider || (filter !== 'all' ? String(filter) : '')).trim();
-      const params = new URLSearchParams();
-      if (providerValue) {
-        params.set('provider', providerValue);
-      }
-      const nextSearch = params.toString();
-      navigate(`/auth-files/oauth-model-alias${nextSearch ? `?${nextSearch}` : ''}`, {
-        state: { fromAuthFiles: true },
-      });
-    },
-    [filter, navigate]
   );
 
   useLayoutEffect(() => {
@@ -622,6 +582,14 @@ export function AuthFilesPage() {
             {t('common.refresh')}
           </Button>
           <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setAliasOverviewOpen(true)}
+            disabled={disableControls || modelAliasError === 'unsupported'}
+          >
+            {t('auth_files.alias_overview_button')}
+          </Button>
+          <Button
             size="sm"
             onClick={handleUploadClick}
             disabled={disableControls || uploading}
@@ -638,8 +606,8 @@ export function AuthFilesPage() {
                 problemOnly,
                 disabledOnly,
                 onResetFilterToAll: () => setFilter('all'),
-                onResetProblemOnly: () => setProblemOnly(false),
-                onResetDisabledOnly: () => setDisabledOnly(false),
+                onResetProblemOnly: () => setStatusFilter('all'),
+                onResetDisabledOnly: () => setStatusFilter('all'),
               })
             }
             disabled={disableControls || loading || deletingAll}
@@ -695,59 +663,58 @@ export function AuthFilesPage() {
               aria-label={t('auth_files.page_size_label')}
             />
           </label>
-          <label className={styles.globalToolbarField}>
+          <div className={styles.globalToolbarField}>
             <span className={styles.globalToolbarFieldLabel}>{t('auth_files.sort_label')}</span>
-            <Select
-              className={styles.globalToolbarSort}
-              value={sortMode}
-              options={sortOptions}
-              onChange={handleSortModeChange}
-              ariaLabel={t('auth_files.sort_label')}
-              fullWidth={false}
-            />
-          </label>
+            <div
+              className={styles.densitySwitch}
+              role="tablist"
+              aria-label={t('auth_files.sort_label')}
+            >
+              {AUTH_FILES_SORT_MODES.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={sortMode === value}
+                  className={`${styles.densitySwitchItem} ${sortMode === value ? styles.densitySwitchItemActive : ''}`}
+                  onClick={() => handleSortModeChange(value)}
+                >
+                  {t(`auth_files.sort_${value}`)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className={styles.globalToolbarDivider} aria-hidden="true" />
 
         <div className={styles.globalToolbarDisplay}>
-          <span className={styles.globalDisplayLabel}>{t('auth_files.display_options_label')}</span>
-          <div className={styles.globalDisplayItems}>
-            <div className={styles.globalDisplayToggle}>
-              <ToggleSwitch
-                checked={problemOnly}
-                onChange={(value) => {
-                  setProblemOnly(value);
+          <div
+            className={styles.densitySwitch}
+            role="tablist"
+            aria-label={t('auth_files.status_filter_label')}
+          >
+            {(['all', 'problem', 'disabled'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={statusFilter === value}
+                className={`${styles.densitySwitchItem} ${statusFilter === value ? styles.densitySwitchItemActive : ''}`}
+                onClick={() => {
+                  setStatusFilter(value);
                   setPage(1);
                 }}
-                ariaLabel={t('auth_files.problem_filter_only')}
-                label={
-                  <span className={styles.filterToggleLabel}>
-                    {t('auth_files.problem_filter_only')}
-                  </span>
-                }
-              />
-            </div>
-            <div className={styles.globalDisplayToggle}>
-              <ToggleSwitch
-                checked={disabledOnly}
-                onChange={(value) => {
-                  setDisabledOnly(value);
-                  setPage(1);
-                }}
-                ariaLabel={t('auth_files.disabled_filter_only')}
-                label={
-                  <span className={styles.filterToggleLabel}>
-                    {t('auth_files.disabled_filter_only')}
-                  </span>
-                }
-              />
-            </div>
-            <div
-              className={styles.densitySwitch}
-              role="tablist"
-              aria-label={t('auth_files.view_density_label')}
-            >
+              >
+                {t(`auth_files.status_filter_${value}`)}
+              </button>
+            ))}
+          </div>
+          <div
+            className={styles.densitySwitch}
+            role="tablist"
+            aria-label={t('auth_files.view_density_label')}
+          >
               <button
                 type="button"
                 role="tab"
@@ -767,7 +734,6 @@ export function AuthFilesPage() {
                 {t('auth_files.view_detailed')}
               </button>
             </div>
-          </div>
         </div>
       </div>
 
@@ -837,42 +803,33 @@ export function AuthFilesPage() {
         )}
       </Card>
 
-      <OAuthExcludedCard
+      <OAuthAliasOverviewModal
+        open={aliasOverviewOpen}
+        providerFilter={filter}
         disableControls={disableControls}
-        excludedError={excludedError}
-        excluded={excluded}
-        onAdd={() => openExcludedEditor()}
-        onEdit={openExcludedEditor}
-        onDelete={deleteExcluded}
-      />
-
-      <OAuthModelAliasCard
-        disableControls={disableControls}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        onAdd={() => openModelAliasEditor()}
-        onEditProvider={openModelAliasEditor}
-        onDeleteProvider={deleteModelAlias}
         modelAliasError={modelAliasError}
         modelAlias={modelAlias}
         allProviderModels={allProviderModels}
+        providerAliasSeeds={providerAliasSeeds}
+        onClose={() => setAliasOverviewOpen(false)}
         onUpdate={handleMappingUpdate}
         onDeleteLink={handleDeleteLink}
         onToggleFork={handleToggleFork}
         onRenameAlias={handleRenameAlias}
         onDeleteAlias={handleDeleteAlias}
+        onDeleteProvider={deleteModelAlias}
       />
 
       <AuthFileModelsModal
         open={modelsModalOpen}
         fileName={modelsFileName}
-        fileType={modelsFileType}
         loading={modelsLoading}
         error={modelsError}
-        models={modelsList}
-        excluded={excluded}
+        config={modelsConfig}
+        disableControls={disableControls}
         onClose={closeModelsModal}
         onCopyText={copyTextWithNotification}
+        onModelsConfigSaved={handleModelsConfigSaved}
       />
 
       <AuthFilesPrefixProxyEditorModal

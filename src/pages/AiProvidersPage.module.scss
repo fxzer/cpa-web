@@ -1765,3 +1765,36 @@ $openai-toolbar-control-height: 36px;
     color: #f1b0a6;
   }
 }
+
+.modalTitleInline {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.modalTitleText {
+  flex-shrink: 0;
+}
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid transparent;
+}
+
+.aliasOverviewModal :global(.modal-body) {
+  max-height: min(80vh, 860px);
+  overflow: auto;
+}
+
+.aliasOverviewDiagramWrap {
+  min-height: 420px;
+}

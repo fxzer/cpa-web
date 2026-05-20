@@ -48,6 +48,10 @@
   background: var(--success-color);
 }
 
+.root input:checked + .trackDanger {
+  background: var(--danger-color);
+}
+
 .root input:checked + .track .thumb {
   transform: translateX(20px);
 }

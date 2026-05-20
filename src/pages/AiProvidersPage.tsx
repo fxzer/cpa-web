@@ -7,9 +7,11 @@ import {
   CodexSection,
   GeminiSection,
   OpenAISection,
+  ProviderAliasOverviewModal,
   VertexSection,
   useProviderRecentRequests,
 } from '@/components/providers';
+import type { ProviderAliasOverviewRequest } from '@/components/providers/types';
 import {
   withDisableAllModelsRule,
   withoutDisableAllModelsRule,
@@ -76,6 +78,7 @@ export function AiProvidersPage() {
 
   const [configSwitchingKey, setConfigSwitchingKey] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<AiProviderTabId>('openai');
+  const [aliasOverview, setAliasOverview] = useState<ProviderAliasOverviewRequest | null>(null);
 
   const disableControls = connectionStatus !== 'connected';
   const isSwitching = Boolean(configSwitchingKey);
@@ -425,6 +428,14 @@ export function AiProvidersPage() {
     });
   };
 
+  const openAliasOverview = useCallback((request: ProviderAliasOverviewRequest) => {
+    setAliasOverview(request);
+  }, []);
+
+  const closeAliasOverview = useCallback(() => {
+    setAliasOverview(null);
+  }, []);
+
   return (
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>{t('ai_providers.title')}</h1>
@@ -459,6 +470,7 @@ export function AiProvidersPage() {
                 onEdit={(index) => openEditor(`/ai-providers/gemini/${index}`)}
                 onDelete={deleteGemini}
                 onToggle={(index, enabled) => void setConfigEnabled('gemini', index, enabled)}
+                onAliasOverview={openAliasOverview}
               />
             </div>
           )}
@@ -475,6 +487,7 @@ export function AiProvidersPage() {
                 onEdit={(index) => openEditor(`/ai-providers/codex/${index}`)}
                 onDelete={(index) => void deleteProviderEntry('codex', index)}
                 onToggle={(index, enabled) => void setConfigEnabled('codex', index, enabled)}
+                onAliasOverview={openAliasOverview}
               />
             </div>
           )}
@@ -491,6 +504,7 @@ export function AiProvidersPage() {
                 onEdit={(index) => openEditor(`/ai-providers/claude/${index}`)}
                 onDelete={(index) => void deleteProviderEntry('claude', index)}
                 onToggle={(index, enabled) => void setConfigEnabled('claude', index, enabled)}
+                onAliasOverview={openAliasOverview}
               />
             </div>
           )}
@@ -507,6 +521,7 @@ export function AiProvidersPage() {
                 onEdit={(index) => openEditor(`/ai-providers/vertex/${index}`)}
                 onDelete={deleteVertex}
                 onToggle={(index, enabled) => void setConfigEnabled('vertex', index, enabled)}
+                onAliasOverview={openAliasOverview}
               />
             </div>
           )}
@@ -536,11 +551,20 @@ export function AiProvidersPage() {
                 onEdit={(index) => openEditor(`/ai-providers/openai/${index}`)}
                 onDelete={deleteOpenai}
                 onToggle={(index, enabled) => void setOpenAIProviderEnabled(index, enabled)}
+                onAliasOverview={openAliasOverview}
               />
             </div>
           )}
         </div>
       </div>
+
+      <ProviderAliasOverviewModal
+        open={aliasOverview != null}
+        providerKey={aliasOverview?.providerKey ?? ''}
+        providerLabel={aliasOverview?.providerLabel ?? ''}
+        models={aliasOverview?.models}
+        onClose={closeAliasOverview}
+      />
     </div>
   );
 }

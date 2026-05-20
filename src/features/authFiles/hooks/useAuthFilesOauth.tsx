@@ -1,24 +1,40 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
+import { configApi } from '@/services/api/config';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem, OAuthModelAliasEntry } from '@/types';
 import type { AuthFileModelItem } from '@/features/authFiles/constants';
-import { normalizeProviderKey } from '@/features/authFiles/constants';
+import {
+  applyAliasEntriesToRows,
+  buildProviderModelAliasMap,
+  buildProviderModelsMap,
+  clearProviderAliases,
+  cloneConfigRows,
+  configToModelAliasEntries,
+  removeAliasLink,
+  removeAliasNameFromRows,
+  renameAliasInRows,
+  resolveRepresentativeAuthFile,
+  toggleRowFork,
+  type ProviderModelsConfigEntry,
+} from '@/utils/authFileModelsConfig';
+import {
+  isDistinctOAuthModelAlias,
+  resolveOAuthModelAliasChannel,
+  upsertOAuthModelAliasLink,
+} from '@/utils/oauthModelAliasForm';
+import { collectProviderAliasSeeds } from '@/utils/providerModelAliasCatalog';
 
 type UnsupportedError = 'unsupported' | null;
-type ViewMode = 'diagram' | 'list';
 
 export type UseAuthFilesOauthResult = {
-  excluded: Record<string, string[]>;
-  excludedError: UnsupportedError;
   modelAlias: Record<string, OAuthModelAliasEntry[]>;
   modelAliasError: UnsupportedError;
   allProviderModels: Record<string, AuthFileModelItem[]>;
+  providerAliasSeeds: Record<string, string[]>;
   providerList: string[];
-  loadExcluded: () => Promise<void>;
-  loadModelAlias: () => Promise<void>;
-  deleteExcluded: (provider: string) => void;
+  reloadProviderConfigs: () => Promise<void>;
   deleteModelAlias: (provider: string) => void;
   handleMappingUpdate: (provider: string, sourceModel: string, newAlias: string) => Promise<void>;
   handleDeleteLink: (provider: string, sourceModel: string, alias: string) => void;
@@ -33,182 +49,155 @@ export type UseAuthFilesOauthResult = {
 };
 
 export type UseAuthFilesOauthOptions = {
-  viewMode: ViewMode;
+  diagramOpen: boolean;
   files: AuthFileItem[];
+  onAliasConfigChanged?: () => void;
 };
 
 export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFilesOauthResult {
-  const { viewMode, files } = options;
+  const { diagramOpen, files, onAliasConfigChanged } = options;
   const { t } = useTranslation();
   const { showNotification, showConfirmation } = useNotificationStore();
 
-  const [excluded, setExcluded] = useState<Record<string, string[]>>({});
-  const [excludedError, setExcludedError] = useState<UnsupportedError>(null);
-  const [modelAlias, setModelAlias] = useState<Record<string, OAuthModelAliasEntry[]>>({});
+  const [providerConfigs, setProviderConfigs] = useState<Record<string, ProviderModelsConfigEntry>>(
+    {}
+  );
   const [modelAliasError, setModelAliasError] = useState<UnsupportedError>(null);
   const [allProviderModels, setAllProviderModels] = useState<Record<string, AuthFileModelItem[]>>(
     {}
   );
+  const [providerAliasSeeds, setProviderAliasSeeds] = useState<Record<string, string[]>>({});
+  const [configsLoading, setConfigsLoading] = useState(false);
 
-  const excludedUnsupportedRef = useRef(false);
-  const mappingsUnsupportedRef = useRef(false);
+  const providerConfigsRef = useRef(providerConfigs);
+  providerConfigsRef.current = providerConfigs;
 
   const providerList = useMemo(() => {
     const providers = new Set<string>();
 
-    Object.keys(modelAlias).forEach((provider) => {
-      const key = provider.trim().toLowerCase();
-      if (key) providers.add(key);
-    });
-
     files.forEach((file) => {
       if (typeof file.type === 'string') {
-        const key = file.type.trim().toLowerCase();
+        const key = resolveOAuthModelAliasChannel(file.type);
         if (key) providers.add(key);
       }
       if (typeof file.provider === 'string') {
-        const key = file.provider.trim().toLowerCase();
+        const key = resolveOAuthModelAliasChannel(file.provider);
         if (key) providers.add(key);
       }
     });
     return Array.from(providers);
-  }, [files, modelAlias]);
+  }, [files]);
 
-  useEffect(() => {
-    if (viewMode !== 'diagram') return;
+  const modelAlias = useMemo(
+    () => buildProviderModelAliasMap(providerConfigs),
+    [providerConfigs]
+  );
 
-    let cancelled = false;
+  const notifyAliasConfigChanged = useCallback(() => {
+    onAliasConfigChanged?.();
+  }, [onAliasConfigChanged]);
 
-    const loadAllModels = async () => {
-      if (providerList.length === 0) {
-        if (!cancelled) setAllProviderModels({});
-        return;
+  const persistProviderRows = useCallback(
+    async (provider: string, rows: ReturnType<typeof cloneConfigRows>) => {
+      const normalizedProvider = resolveOAuthModelAliasChannel(provider);
+      if (!normalizedProvider) return;
+
+      const cached = providerConfigsRef.current[normalizedProvider];
+      const file =
+        cached?.fileName != null
+          ? files.find((item) => item.name === cached.fileName)
+          : resolveRepresentativeAuthFile(files, normalizedProvider);
+
+      if (!file) {
+        throw new Error('representative auth file not found');
       }
 
+      await authFilesApi.saveAuthFileModelsConfig(file.name, rows);
+      const config = await authFilesApi.getAuthFileModelsConfig(file.name);
+      setProviderConfigs((prev) => ({
+        ...prev,
+        [normalizedProvider]: { fileName: file.name, config },
+      }));
+      notifyAliasConfigChanged();
+    },
+    [files, notifyAliasConfigChanged]
+  );
+
+  const reloadProviderConfigs = useCallback(async () => {
+    if (providerList.length === 0) {
+      setProviderConfigs({});
+      setAllProviderModels({});
+      setModelAliasError(null);
+      return;
+    }
+
+    setConfigsLoading(true);
+    try {
       const results = await Promise.all(
         providerList.map(async (provider) => {
-          try {
-            const models = await authFilesApi.getModelDefinitions(provider);
-            return { provider, models };
-          } catch {
-            return { provider, models: [] as AuthFileModelItem[] };
-          }
+          const file = resolveRepresentativeAuthFile(files, provider);
+          if (!file) return null;
+          const config = await authFilesApi.getAuthFileModelsConfig(file.name);
+          return {
+            provider,
+            entry: { fileName: file.name, config } satisfies ProviderModelsConfigEntry,
+          };
         })
       );
 
-      if (cancelled) return;
-
-      const nextModels: Record<string, AuthFileModelItem[]> = {};
-      results.forEach(({ provider, models }) => {
-        if (models.length > 0) {
-          nextModels[provider] = models;
+      const nextEntries: Record<string, ProviderModelsConfigEntry> = {};
+      results.forEach((result) => {
+        if (result) {
+          nextEntries[result.provider] = result.entry;
         }
       });
 
-      setAllProviderModels(nextModels);
-    };
-
-    void loadAllModels();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [providerList, viewMode]);
-
-  const loadExcluded = useCallback(async () => {
-    try {
-      const res = await authFilesApi.getOauthExcludedModels();
-      excludedUnsupportedRef.current = false;
-      setExcluded(res || {});
-      setExcludedError(null);
-    } catch (err: unknown) {
-      const status =
-        typeof err === 'object' && err !== null && 'status' in err
-          ? (err as { status?: unknown }).status
-          : undefined;
-
-      if (status === 404) {
-        setExcluded({});
-        setExcludedError('unsupported');
-        if (!excludedUnsupportedRef.current) {
-          excludedUnsupportedRef.current = true;
-          showNotification(t('oauth_excluded.upgrade_required'), 'warning');
-        }
-        return;
-      }
-      // 静默失败
-    }
-  }, [showNotification, t]);
-
-  const loadModelAlias = useCallback(async () => {
-    try {
-      const res = await authFilesApi.getOauthModelAlias();
-      mappingsUnsupportedRef.current = false;
-      setModelAlias(res || {});
+      setProviderConfigs(nextEntries);
+      setAllProviderModels(buildProviderModelsMap(nextEntries));
       setModelAliasError(null);
     } catch (err: unknown) {
       const status =
         typeof err === 'object' && err !== null && 'status' in err
           ? (err as { status?: unknown }).status
           : undefined;
-
       if (status === 404) {
-        setModelAlias({});
+        setProviderConfigs({});
+        setAllProviderModels({});
         setModelAliasError('unsupported');
-        if (!mappingsUnsupportedRef.current) {
-          mappingsUnsupportedRef.current = true;
-          showNotification(t('oauth_model_alias.upgrade_required'), 'warning');
-        }
-        return;
       }
-      // 静默失败
+      throw err;
+    } finally {
+      setConfigsLoading(false);
     }
-  }, [showNotification, t]);
+  }, [files, providerList]);
 
-  const deleteExcluded = useCallback(
-    (provider: string) => {
-      const providerLabel = provider.trim() || provider;
-      showConfirmation({
-        title: t('oauth_excluded.delete_title', { defaultValue: 'Delete Exclusion' }),
-        message: t('oauth_excluded.delete_confirm', { provider: providerLabel }),
-        variant: 'danger',
-        confirmText: t('common.confirm'),
-        onConfirm: async () => {
-          const providerKey = normalizeProviderKey(provider);
-          if (!providerKey) {
-            showNotification(t('oauth_excluded.provider_required'), 'error');
-            return;
-          }
-          try {
-            await authFilesApi.deleteOauthExcludedEntry(providerKey);
-            await loadExcluded();
-            showNotification(t('oauth_excluded.delete_success'), 'success');
-          } catch (err: unknown) {
-            try {
-              const current = await authFilesApi.getOauthExcludedModels();
-              const next: Record<string, string[]> = {};
-              Object.entries(current).forEach(([key, models]) => {
-                if (normalizeProviderKey(key) === providerKey) return;
-                next[key] = models;
-              });
-              await authFilesApi.replaceOauthExcludedModels(next);
-              await loadExcluded();
-              showNotification(t('oauth_excluded.delete_success'), 'success');
-            } catch (fallbackErr: unknown) {
-              const errorMessage =
-                fallbackErr instanceof Error
-                  ? fallbackErr.message
-                  : err instanceof Error
-                    ? err.message
-                    : '';
-              showNotification(`${t('oauth_excluded.delete_failed')}: ${errorMessage}`, 'error');
-            }
-          }
+  useEffect(() => {
+    if (!diagramOpen) return;
+    void reloadProviderConfigs().catch(() => {});
+  }, [diagramOpen, reloadProviderConfigs]);
+
+  useEffect(() => {
+    if (!diagramOpen) return;
+
+    let cancelled = false;
+
+    const loadProviderAliasSeeds = async () => {
+      try {
+        const config = await configApi.getConfig();
+        if (!cancelled) {
+          setProviderAliasSeeds(collectProviderAliasSeeds(config));
         }
-      });
-    },
-    [loadExcluded, showConfirmation, showNotification, t]
-  );
+      } catch {
+        if (!cancelled) setProviderAliasSeeds({});
+      }
+    };
+
+    void loadProviderAliasSeeds();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [diagramOpen]);
 
   const deleteModelAlias = useCallback(
     (provider: string) => {
@@ -219,60 +208,58 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
         confirmText: t('common.confirm'),
         onConfirm: async () => {
           try {
-            await authFilesApi.deleteOauthModelAlias(provider);
-            await loadModelAlias();
+            const normalizedProvider = resolveOAuthModelAliasChannel(provider);
+            if (!normalizedProvider) return;
+            const cached = providerConfigsRef.current[normalizedProvider];
+            if (!cached) return;
+            const nextRows = clearProviderAliases(cloneConfigRows(cached.config.rows));
+            await persistProviderRows(normalizedProvider, nextRows);
             showNotification(t('oauth_model_alias.delete_success'), 'success');
           } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : '';
             showNotification(`${t('oauth_model_alias.delete_failed')}: ${errorMessage}`, 'error');
           }
-        }
+        },
       });
     },
-    [loadModelAlias, showConfirmation, showNotification, t]
+    [persistProviderRows, showConfirmation, showNotification, t]
   );
 
   const handleMappingUpdate = useCallback(
     async (provider: string, sourceModel: string, newAlias: string) => {
       if (!provider || !sourceModel || !newAlias) return;
-      const normalizedProvider = normalizeProviderKey(provider);
+      const normalizedProvider = resolveOAuthModelAliasChannel(provider);
       if (!normalizedProvider) return;
-
-      const providerKey = Object.keys(modelAlias).find(
-        (key) => normalizeProviderKey(key) === normalizedProvider
-      );
-      const currentMappings = (providerKey ? modelAlias[providerKey] : null) ?? [];
 
       const nameTrim = sourceModel.trim();
       const aliasTrim = newAlias.trim();
-      const nameKey = nameTrim.toLowerCase();
-      const aliasKey = aliasTrim.toLowerCase();
 
-      if (
-        currentMappings.some(
-          (m) =>
-            (m.name ?? '').trim().toLowerCase() === nameKey &&
-            (m.alias ?? '').trim().toLowerCase() === aliasKey
-        )
-      ) {
+      if (!isDistinctOAuthModelAlias(nameTrim, aliasTrim)) {
+        showNotification(t('oauth_model_alias.name_equals_alias'), 'error');
         return;
       }
 
-      const nextMappings: OAuthModelAliasEntry[] = [
-        ...currentMappings,
-        { name: nameTrim, alias: aliasTrim, fork: true }
-      ];
-
       try {
-        await authFilesApi.saveOauthModelAlias(normalizedProvider, nextMappings);
-        await loadModelAlias();
+        const cached = providerConfigsRef.current[normalizedProvider];
+        if (!cached) return;
+
+        const currentMappings = configToModelAliasEntries(cached.config);
+        const nextMappings = upsertOAuthModelAliasLink(currentMappings, nameTrim, aliasTrim);
+
+        if (nextMappings === 'duplicate') {
+          showNotification(t('oauth_model_alias.link_already_exists'), 'info');
+          return;
+        }
+
+        const nextRows = applyAliasEntriesToRows(cloneConfigRows(cached.config.rows), nextMappings);
+        await persistProviderRows(normalizedProvider, nextRows);
         showNotification(t('oauth_model_alias.save_success'), 'success');
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : '';
         showNotification(`${t('oauth_model_alias.save_failed')}: ${errorMessage}`, 'error');
       }
     },
-    [loadModelAlias, modelAlias, showNotification, t]
+    [persistProviderRows, showNotification, t]
   );
 
   const handleDeleteLink = useCallback(
@@ -293,73 +280,46 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
         variant: 'danger',
         confirmText: t('common.confirm'),
         onConfirm: async () => {
-          const normalizedProvider = normalizeProviderKey(provider);
-          const providerKey = Object.keys(modelAlias).find(
-            (key) => normalizeProviderKey(key) === normalizedProvider
-          );
-          const currentMappings = (providerKey ? modelAlias[providerKey] : null) ?? [];
-          const nameKey = nameTrim.toLowerCase();
-          const aliasKey = aliasTrim.toLowerCase();
-          const nextMappings = currentMappings.filter(
-            (m) =>
-              (m.name ?? '').trim().toLowerCase() !== nameKey ||
-              (m.alias ?? '').trim().toLowerCase() !== aliasKey
-          );
-          if (nextMappings.length === currentMappings.length) return;
+          const normalizedProvider = resolveOAuthModelAliasChannel(provider);
+          const cached = providerConfigsRef.current[normalizedProvider];
+          if (!cached) return;
 
+          const nextRows = removeAliasLink(cloneConfigRows(cached.config.rows), nameTrim, aliasTrim);
           try {
-            if (nextMappings.length === 0) {
-              await authFilesApi.deleteOauthModelAlias(normalizedProvider);
-            } else {
-              await authFilesApi.saveOauthModelAlias(normalizedProvider, nextMappings);
-            }
-            await loadModelAlias();
+            await persistProviderRows(normalizedProvider, nextRows);
             showNotification(t('oauth_model_alias.save_success'), 'success');
           } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : '';
             showNotification(`${t('oauth_model_alias.save_failed')}: ${errorMessage}`, 'error');
           }
-        }
+        },
       });
     },
-    [loadModelAlias, modelAlias, showConfirmation, showNotification, t]
+    [persistProviderRows, showConfirmation, showNotification, t]
   );
 
   const handleToggleFork = useCallback(
     async (provider: string, sourceModel: string, alias: string, fork: boolean) => {
-      const normalizedProvider = normalizeProviderKey(provider);
-      if (!normalizedProvider) return;
+      const normalizedProvider = resolveOAuthModelAliasChannel(provider);
+      const cached = providerConfigsRef.current[normalizedProvider];
+      if (!normalizedProvider || !cached) return;
 
-      const providerKey = Object.keys(modelAlias).find(
-        (key) => normalizeProviderKey(key) === normalizedProvider
+      const nextRows = toggleRowFork(
+        cloneConfigRows(cached.config.rows),
+        sourceModel,
+        alias,
+        fork
       );
-      const currentMappings = (providerKey ? modelAlias[providerKey] : null) ?? [];
-      const nameKey = sourceModel.trim().toLowerCase();
-      const aliasKey = alias.trim().toLowerCase();
-      let changed = false;
-
-      const nextMappings = currentMappings.map((m) => {
-        const mName = (m.name ?? '').trim().toLowerCase();
-        const mAlias = (m.alias ?? '').trim().toLowerCase();
-        if (mName === nameKey && mAlias === aliasKey) {
-          changed = true;
-          return fork ? { ...m, fork: true } : { name: m.name, alias: m.alias };
-        }
-        return m;
-      });
-
-      if (!changed) return;
 
       try {
-        await authFilesApi.saveOauthModelAlias(normalizedProvider, nextMappings);
-        await loadModelAlias();
+        await persistProviderRows(normalizedProvider, nextRows);
         showNotification(t('oauth_model_alias.save_success'), 'success');
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : '';
         showNotification(`${t('oauth_model_alias.save_failed')}: ${errorMessage}`, 'error');
       }
     },
-    [loadModelAlias, modelAlias, showNotification, t]
+    [persistProviderRows, showNotification, t]
   );
 
   const handleRenameAlias = useCallback(
@@ -368,9 +328,10 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
       const newTrim = newAlias.trim();
       if (!oldTrim || !newTrim || oldTrim === newTrim) return;
 
-      const oldKey = oldTrim.toLowerCase();
-      const providersToUpdate = Object.entries(modelAlias).filter(([_, mappings]) =>
-        mappings.some((m) => (m.alias ?? '').trim().toLowerCase() === oldKey)
+      const providersToUpdate = Object.entries(providerConfigsRef.current).filter(([_, entry]) =>
+        entry.config.rows.some(
+          (row) => String(row.alias ?? '').trim().toLowerCase() === oldTrim.toLowerCase()
+        )
       );
 
       if (providersToUpdate.length === 0) return;
@@ -380,11 +341,9 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
 
       try {
         const results = await Promise.allSettled(
-          providersToUpdate.map(([provider, mappings]) => {
-            const nextMappings = mappings.map((m) =>
-              (m.alias ?? '').trim().toLowerCase() === oldKey ? { ...m, alias: newTrim } : m
-            );
-            return authFilesApi.saveOauthModelAlias(provider, nextMappings);
+          providersToUpdate.map(([provider, entry]) => {
+            const nextRows = renameAliasInRows(cloneConfigRows(entry.config.rows), oldTrim, newTrim);
+            return persistProviderRows(provider, nextRows);
           })
         );
 
@@ -397,8 +356,9 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
           const reason = failures[0].reason;
           failureMessage = reason instanceof Error ? reason.message : String(reason ?? '');
         }
-      } finally {
-        await loadModelAlias();
+      } catch (err: unknown) {
+        hadFailure = true;
+        failureMessage = err instanceof Error ? err.message : '';
       }
 
       if (hadFailure) {
@@ -412,16 +372,18 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
         showNotification(t('oauth_model_alias.save_success'), 'success');
       }
     },
-    [loadModelAlias, modelAlias, showNotification, t]
+    [persistProviderRows, showNotification, t]
   );
 
   const handleDeleteAlias = useCallback(
     (aliasName: string) => {
       const aliasTrim = aliasName.trim();
       if (!aliasTrim) return;
-      const aliasKey = aliasTrim.toLowerCase();
-      const providersToUpdate = Object.entries(modelAlias).filter(([_, mappings]) =>
-        mappings.some((m) => (m.alias ?? '').trim().toLowerCase() === aliasKey)
+
+      const providersToUpdate = Object.entries(providerConfigsRef.current).filter(([_, entry]) =>
+        entry.config.rows.some(
+          (row) => String(row.alias ?? '').trim().toLowerCase() === aliasTrim.toLowerCase()
+        )
       );
 
       if (providersToUpdate.length === 0) return;
@@ -443,14 +405,9 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
 
           try {
             const results = await Promise.allSettled(
-              providersToUpdate.map(([provider, mappings]) => {
-                const nextMappings = mappings.filter(
-                  (m) => (m.alias ?? '').trim().toLowerCase() !== aliasKey
-                );
-                if (nextMappings.length === 0) {
-                  return authFilesApi.deleteOauthModelAlias(provider);
-                }
-                return authFilesApi.saveOauthModelAlias(provider, nextMappings);
+              providersToUpdate.map(([provider, entry]) => {
+                const nextRows = removeAliasNameFromRows(cloneConfigRows(entry.config.rows), aliasTrim);
+                return persistProviderRows(provider, nextRows);
               })
             );
 
@@ -463,8 +420,9 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
               const reason = failures[0].reason;
               failureMessage = reason instanceof Error ? reason.message : String(reason ?? '');
             }
-          } finally {
-            await loadModelAlias();
+          } catch (err: unknown) {
+            hadFailure = true;
+            failureMessage = err instanceof Error ? err.message : '';
           }
 
           if (hadFailure) {
@@ -477,28 +435,24 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
           } else {
             showNotification(t('oauth_model_alias.delete_success'), 'success');
           }
-        }
+        },
       });
     },
-    [loadModelAlias, modelAlias, showConfirmation, showNotification, t]
+    [persistProviderRows, showConfirmation, showNotification, t]
   );
 
   return {
-    excluded,
-    excludedError,
     modelAlias,
-    modelAliasError,
+    modelAliasError: configsLoading ? null : modelAliasError,
     allProviderModels,
+    providerAliasSeeds,
     providerList,
-    loadExcluded,
-    loadModelAlias,
-    deleteExcluded,
+    reloadProviderConfigs,
     deleteModelAlias,
     handleMappingUpdate,
     handleDeleteLink,
     handleToggleFork,
     handleRenameAlias,
-    handleDeleteAlias
+    handleDeleteAlias,
   };
 }
-

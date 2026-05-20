@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import {
@@ -37,6 +38,7 @@ const MODEL_CATEGORY_ICONS: Record<string, string | { light: string; dark: strin
 
 export function ModelsPage() {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
   const { showNotification } = useNotificationStore();
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const auth = useAuthStore();
@@ -153,9 +155,10 @@ export function ModelsPage() {
   };
 
   useEffect(() => {
+    if (location.pathname !== '/models') return;
     fetchModels();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.connectionStatus, auth.apiBase]);
+  }, [auth.connectionStatus, auth.apiBase, location.pathname]);
 
   return (
     <div className={styles.container}>

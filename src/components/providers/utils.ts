@@ -15,6 +15,7 @@ import {
   type RecentRequestUsageEntry,
   type StatusBarData,
 } from '@/utils/recentRequests';
+import { maskApiKey } from '@/utils/format';
 import type { AmpcodeFormState, AmpcodeUpstreamApiKeyEntry, ModelEntry } from './types';
 
 export const DISABLE_ALL_MODELS_RULE = '*';
@@ -48,6 +49,21 @@ export const parseExcludedModels = parseTextList;
 
 export const excludedModelsToText = (models?: string[]) =>
   Array.isArray(models) ? models.join('\n') : '';
+
+export function buildProviderOverviewLabel(
+  item: { prefix?: string; apiKey?: string; baseUrl?: string; name?: string },
+  fallback: string
+): string {
+  const prefix = String(item.prefix ?? '').trim();
+  if (prefix) return prefix;
+  const name = String(item.name ?? '').trim();
+  if (name) return name;
+  const apiKey = String(item.apiKey ?? '').trim();
+  if (apiKey) return maskApiKey(apiKey);
+  const baseUrl = String(item.baseUrl ?? '').trim();
+  if (baseUrl) return baseUrl;
+  return fallback;
+}
 
 export const normalizeOpenAIBaseUrl = (baseUrl: string): string => {
   let trimmed = String(baseUrl || '').trim();
