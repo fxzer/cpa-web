@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ModelMappingDiagram, type ModelMappingDiagramRef } from '@/components/modelAlias';
 import { IconChevronUp } from '@/components/ui/icons';
+import { OAuthAliasMappingsGrid } from '@/features/authFiles/components/OAuthAliasMappingsGrid';
 import type { OAuthModelAliasEntry } from '@/types';
 import type { AuthFileModelItem } from '@/features/authFiles/constants';
 import styles from '@/pages/AuthFilesPage.module.scss';
@@ -124,26 +125,38 @@ export function OAuthModelAliasCard(props: OAuthModelAliasCardProps) {
         <EmptyState title={t('oauth_model_alias.list_empty_all')} />
       ) : (
         <div className={styles.excludedList}>
-          {Object.entries(modelAlias).map(([provider, mappings]) => (
-            <div key={provider} className={styles.excludedItem}>
-              <div className={styles.excludedInfo}>
-                <div className={styles.excludedProvider}>{provider}</div>
-                <div className={styles.excludedModels}>
-                  {mappings?.length
-                    ? t('oauth_model_alias.model_count', { count: mappings.length })
-                    : t('oauth_model_alias.no_models')}
+          {Object.entries(modelAlias).map(([provider, mappings]) => {
+            const configuredMappings = (mappings ?? []).filter(
+              (entry) => String(entry.name ?? '').trim() && String(entry.alias ?? '').trim()
+            );
+            return (
+              <div key={provider} className={`${styles.excludedItem} ${styles.oauthAliasItem}`}>
+                <div className={styles.oauthAliasProviderBlock}>
+                  <div className={styles.excludedProvider}>{provider}</div>
+                  <div className={styles.excludedModels}>
+                    {configuredMappings.length
+                      ? t('oauth_model_alias.model_count', { count: configuredMappings.length })
+                      : t('oauth_model_alias.no_models')}
+                  </div>
+                </div>
+                <div className={styles.oauthAliasMappingsBlock}>
+                  {configuredMappings.length > 0 ? (
+                    <OAuthAliasMappingsGrid mappings={configuredMappings} />
+                  ) : (
+                    <div className={styles.oauthAliasEmpty}>{t('oauth_model_alias.list_provider_empty')}</div>
+                  )}
+                </div>
+                <div className={styles.excludedActions}>
+                  <Button variant="secondary" size="sm" onClick={() => onEditProvider(provider)}>
+                    {t('common.edit')}
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={() => onDeleteProvider(provider)}>
+                    {t('oauth_model_alias.delete')}
+                  </Button>
                 </div>
               </div>
-              <div className={styles.excludedActions}>
-                <Button variant="secondary" size="sm" onClick={() => onEditProvider(provider)}>
-                  {t('common.edit')}
-                </Button>
-                <Button variant="danger" size="sm" onClick={() => onDeleteProvider(provider)}>
-                  {t('oauth_model_alias.delete')}
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </Card>

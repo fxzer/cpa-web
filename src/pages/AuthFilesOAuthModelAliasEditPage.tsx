@@ -12,14 +12,22 @@ import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useAuthStore, useNotificationStore } from '@/stores';
 import { authFilesApi } from '@/services/api';
 import type { AuthFileItem, OAuthModelAliasEntry } from '@/types';
-import { generateId } from '@/utils/helpers';
+import {
+  buildEmptyMappingEntry,
+  buildMappingsFromModels,
+  normalizeMappingEntries,
+  normalizeMappingsForSave,
+  resolveProviderAliasKey,
+  summarizeMappingEntries,
+  type OAuthModelMappingFormEntry,
+} from '@/utils/oauthModelAliasForm';
 import styles from './AuthFilesOAuthModelAliasEditPage.module.scss';
 
 type AuthFileModelItem = { id: string; display_name?: string; type?: string; owned_by?: string };
 
 type LocationState = { fromAuthFiles?: boolean } | null;
 
-type OAuthModelMappingFormEntry = OAuthModelAliasEntry & { id: string };
+type MappingFilter = 'all' | 'aliased' | 'passthrough';
 
 const OAUTH_PROVIDER_PRESETS = [
   'gemini-cli',
@@ -36,27 +44,6 @@ const OAUTH_PROVIDER_PRESETS = [
 const OAUTH_PROVIDER_EXCLUDES = new Set(['all', 'unknown', 'empty']);
 
 const normalizeProviderKey = (value: string) => value.trim().toLowerCase();
-
-const buildEmptyMappingEntry = (): OAuthModelMappingFormEntry => ({
-  id: generateId(),
-  name: '',
-  alias: '',
-  fork: true,
-});
-
-const normalizeMappingEntries = (
-  entries?: OAuthModelAliasEntry[]
-): OAuthModelMappingFormEntry[] => {
-  if (!Array.isArray(entries) || entries.length === 0) {
-    return [buildEmptyMappingEntry()];
-  }
-  return entries.map((entry) => ({
-    id: generateId(),
-    name: entry.name ?? '',
-    alias: entry.alias ?? '',
-    fork: Boolean(entry.fork),
-  }));
-};
 
 export function AuthFilesOAuthModelAliasEditPage() {
   const { t } = useTranslation();
@@ -76,11 +63,14 @@ export function AuthFilesOAuthModelAliasEditPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [modelAliasUnsupported, setModelAliasUnsupported] = useState(false);
 
-  const [mappings, setMappings] = useState<OAuthModelMappingFormEntry[]>([buildEmptyMappingEntry()]);
+  const [mappings, setMappings] = useState<OAuthModelMappingFormEntry[]>([]);
+  const [formSeed, setFormSeed] = useState('');
   const [modelsList, setModelsList] = useState<AuthFileModelItem[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<'unsupported' | null>(null);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [mappingFilter, setMappingFilter] = useState<MappingFilter>('all');
 
   useEffect(() => {
     setProvider(providerFromParams);
@@ -111,6 +101,13 @@ export function AuthFilesOAuthModelAliasEditPage() {
     return [...OAUTH_PROVIDER_PRESETS, ...extraList];
   }, [excluded, files, modelAlias]);
 
+  const catalogModelNames = useMemo(
+    () => new Set(modelsList.map((model) => model.id.trim().toLowerCase()).filter(Boolean)),
+    [modelsList]
+  );
+
+  const mappingSummary = useMemo(() => summarizeMappingEntries(mappings), [mappings]);
+
   const getTypeLabel = useCallback(
     (type: string): string => {
       const key = `auth_files.filter_${type}`;
@@ -136,6 +133,21 @@ export function AuthFilesOAuthModelAliasEditPage() {
     }
     return t('oauth_model_alias.model_source_loaded', { count: modelsList.length });
   }, [modelsError, modelsList.length, modelsLoading, provider, t]);
+
+  const filteredMappings = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    return mappings.filter((entry) => {
+      const name = String(entry.name ?? '').trim();
+      const alias = String(entry.alias ?? '').trim();
+      const hasAlias = Boolean(alias);
+
+      if (mappingFilter === 'aliased' && !hasAlias) return false;
+      if (mappingFilter === 'passthrough' && hasAlias) return false;
+
+      if (!keyword) return true;
+      return name.toLowerCase().includes(keyword) || alias.toLowerCase().includes(keyword);
+    });
+  }, [mappingFilter, mappings, search]);
 
   const handleBack = useCallback(() => {
     const state = location.state as LocationState;
@@ -194,7 +206,6 @@ export function AuthFilesOAuthModelAliasEditPage() {
 
         if (status === 404) {
           setModelAliasUnsupported(true);
-          return;
         }
       } finally {
         if (!cancelled) {
@@ -215,13 +226,42 @@ export function AuthFilesOAuthModelAliasEditPage() {
   }, []);
 
   useEffect(() => {
-    if (!resolvedProviderKey) {
-      setMappings([buildEmptyMappingEntry()]);
+    if (!resolvedProviderKey || modelsLoading) {
       return;
     }
-    const existing = modelAlias[resolvedProviderKey] ?? [];
-    setMappings(normalizeMappingEntries(existing));
-  }, [modelAlias, resolvedProviderKey]);
+
+    const providerKey = resolveProviderAliasKey(modelAlias, provider) ?? resolvedProviderKey;
+    const existing = modelAlias[providerKey] ?? [];
+    const seed = [
+      resolvedProviderKey,
+      modelsError ?? 'ok',
+      modelsList.map((model) => model.id).join('\u0001'),
+      JSON.stringify(existing),
+    ].join('\u0002');
+
+    if (seed === formSeed) {
+      return;
+    }
+
+    if (modelsList.length > 0) {
+      setMappings(buildMappingsFromModels(modelsList, existing));
+    } else if (modelsError === 'unsupported') {
+      setMappings(
+        existing.length > 0 ? normalizeMappingEntries(existing) : [buildEmptyMappingEntry()]
+      );
+    } else {
+      setMappings(existing.length > 0 ? normalizeMappingEntries(existing) : []);
+    }
+    setFormSeed(seed);
+  }, [
+    formSeed,
+    modelAlias,
+    modelsError,
+    modelsList,
+    modelsLoading,
+    provider,
+    resolvedProviderKey,
+  ]);
 
   useEffect(() => {
     if (!resolvedProviderKey || modelAliasUnsupported) {
@@ -234,6 +274,7 @@ export function AuthFilesOAuthModelAliasEditPage() {
     let cancelled = false;
     setModelsLoading(true);
     setModelsError(null);
+    setFormSeed('');
 
     authFilesApi
       .getModelDefinitions(resolvedProviderKey)
@@ -270,6 +311,9 @@ export function AuthFilesOAuthModelAliasEditPage() {
   const updateProvider = useCallback(
     (value: string) => {
       setProvider(value);
+      setSearch('');
+      setMappingFilter('all');
+      setFormSeed('');
       const next = new URLSearchParams(searchParams);
       const trimmed = value.trim();
       if (trimmed) {
@@ -291,15 +335,12 @@ export function AuthFilesOAuthModelAliasEditPage() {
     []
   );
 
-  const addMappingEntry = useCallback(() => {
+  const addManualMappingEntry = useCallback(() => {
     setMappings((prev) => [...prev, buildEmptyMappingEntry()]);
   }, []);
 
   const removeMappingEntry = useCallback((index: number) => {
-    setMappings((prev) => {
-      const next = prev.filter((_, idx) => idx !== index);
-      return next.length ? next : [buildEmptyMappingEntry()];
-    });
+    setMappings((prev) => prev.filter((_, idx) => idx !== index));
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -309,18 +350,7 @@ export function AuthFilesOAuthModelAliasEditPage() {
       return;
     }
 
-    const seen = new Set<string>();
-    const normalized = mappings
-      .map((entry) => {
-        const name = String(entry.name ?? '').trim();
-        const alias = String(entry.alias ?? '').trim();
-        if (!name || !alias) return null;
-        const key = `${name.toLowerCase()}::${alias.toLowerCase()}::${entry.fork ? '1' : '0'}`;
-        if (seen.has(key)) return null;
-        seen.add(key);
-        return entry.fork ? { name, alias, fork: true } : { name, alias };
-      })
-      .filter(Boolean) as OAuthModelAliasEntry[];
+    const normalized = normalizeMappingsForSave(mappings);
 
     setSaving(true);
     try {
@@ -417,63 +447,147 @@ export function AuthFilesOAuthModelAliasEditPage() {
 
           <Card className={styles.settingsCard}>
             <div className={styles.mappingsHeader}>
-              <div className={styles.mappingsTitle}>{t('oauth_model_alias.alias_label')}</div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={addMappingEntry}
-                disabled={disableControls || saving || modelAliasUnsupported}
-              >
-                {t('oauth_model_alias.add_alias')}
-              </Button>
+              <div>
+                <div className={styles.mappingsTitle}>{t('oauth_model_alias.alias_label')}</div>
+                <div className={styles.mappingsSummary}>
+                  {t('oauth_model_alias.mapping_summary', {
+                    total: mappingSummary.total,
+                    aliased: mappingSummary.aliasedModels,
+                    passthrough: mappingSummary.passthroughModels,
+                  })}
+                </div>
+              </div>
+              {modelsError === 'unsupported' && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={addManualMappingEntry}
+                  disabled={disableControls || saving}
+                >
+                  {t('oauth_model_alias.add_alias')}
+                </Button>
+              )}
             </div>
 
-            <div className={styles.mappingsBody}>
-              {mappings.map((entry, index) => (
-                <div key={entry.id} className={styles.mappingRow}>
-                  <AutocompleteInput
-                    wrapperStyle={{ flex: 1, marginBottom: 0 }}
-                    placeholder={t('oauth_model_alias.alias_name_placeholder')}
-                    value={entry.name}
-                    onChange={(val) => updateMappingEntry(index, 'name', val)}
-                    disabled={disableControls || saving}
-                    options={modelsList.map((model) => ({
-                      value: model.id,
-                      label:
-                        model.display_name && model.display_name !== model.id
-                          ? model.display_name
-                          : undefined,
-                    }))}
-                  />
-                  <span className={styles.mappingSeparator}>→</span>
-                  <input
-                    className={`input ${styles.mappingAliasInput}`}
-                    placeholder={t('oauth_model_alias.alias_placeholder')}
-                    value={entry.alias}
-                    onChange={(e) => updateMappingEntry(index, 'alias', e.target.value)}
-                    disabled={disableControls || saving}
-                  />
-                  <div className={styles.mappingFork}>
-                    <ToggleSwitch
-                      label={t('oauth_model_alias.alias_fork_label')}
-                      labelPosition="left"
-                      checked={Boolean(entry.fork)}
-                      onChange={(value) => updateMappingEntry(index, 'fork', value)}
+            <div className={styles.modelsHint}>{t('oauth_model_alias.mapping_passthrough_hint')}</div>
+
+            {mappingSummary.total > 0 && (
+              <div className={styles.mappingToolbar}>
+                <input
+                  className={`input ${styles.mappingSearch}`}
+                  placeholder={t('oauth_model_alias.mapping_search_placeholder')}
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  disabled={disableControls || saving}
+                />
+                <div className={styles.filterTabs}>
+                  {(['all', 'aliased', 'passthrough'] as MappingFilter[]).map((filter) => (
+                    <button
+                      key={filter}
+                      type="button"
+                      className={`${styles.filterTab} ${mappingFilter === filter ? styles.filterTabActive : ''}`}
+                      onClick={() => setMappingFilter(filter)}
                       disabled={disableControls || saving}
-                    />
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeMappingEntry(index)}
-                    disabled={disableControls || saving || mappings.length <= 1}
-                    title={t('common.delete')}
-                    aria-label={t('common.delete')}
-                  >
-                    <IconX size={14} />
-                  </Button>
+                    >
+                      {t(`oauth_model_alias.mapping_filter_${filter}`)}
+                    </button>
+                  ))}
                 </div>
-              ))}
+              </div>
+            )}
+
+            <div className={styles.mappingsBody}>
+              {modelsLoading && mappings.length === 0 ? (
+                <div className={styles.emptyMappings}>{t('oauth_model_alias.model_source_loading')}</div>
+              ) : filteredMappings.length === 0 ? (
+                <div className={styles.emptyMappings}>{t('oauth_model_alias.mapping_filter_empty')}</div>
+              ) : (
+                filteredMappings.map((entry) => {
+                  const rowIndex = mappings.findIndex((item) => item.id === entry.id);
+                  if (rowIndex < 0) return null;
+
+                  const name = String(entry.name ?? '').trim();
+                  const alias = String(entry.alias ?? '').trim();
+                  const hasAlias = Boolean(alias);
+                  const fromCatalog = catalogModelNames.has(name.toLowerCase());
+                  const modelMeta = modelsList.find((model) => model.id === name);
+                  const displayName =
+                    modelMeta?.display_name && modelMeta.display_name !== name
+                      ? modelMeta.display_name
+                      : null;
+
+                  return (
+                    <div
+                      key={entry.id}
+                      className={`${styles.mappingRow} ${hasAlias ? styles.mappingRowAliased : styles.mappingRowPassthrough} ${!fromCatalog ? styles.mappingRowManual : ''}`}
+                    >
+                      <div className={styles.mappingNameBlock}>
+                        {fromCatalog ? (
+                          <>
+                            <code className={styles.modelName} title={name}>
+                              {name || t('oauth_model_alias.alias_name_placeholder')}
+                            </code>
+                            {displayName && <span className={styles.modelDisplayName}>{displayName}</span>}
+                          </>
+                        ) : (
+                          <AutocompleteInput
+                            wrapperStyle={{ flex: 1, marginBottom: 0 }}
+                            placeholder={t('oauth_model_alias.alias_name_placeholder')}
+                            value={entry.name}
+                            onChange={(val) => updateMappingEntry(rowIndex, 'name', val)}
+                            disabled={disableControls || saving}
+                            options={modelsList.map((model) => ({
+                              value: model.id,
+                              label:
+                                model.display_name && model.display_name !== model.id
+                                  ? model.display_name
+                                  : undefined,
+                            }))}
+                          />
+                        )}
+                        {!fromCatalog && name && (
+                          <span className={styles.manualBadge}>{t('oauth_model_alias.manual_model_badge')}</span>
+                        )}
+                      </div>
+
+                      <span className={styles.mappingSeparator}>→</span>
+
+                      <input
+                        className={`input ${styles.mappingAliasInput}`}
+                        placeholder={t('oauth_model_alias.alias_empty_passthrough_placeholder')}
+                        value={entry.alias}
+                        onChange={(e) => updateMappingEntry(rowIndex, 'alias', e.target.value)}
+                        disabled={disableControls || saving || !name}
+                      />
+
+                      <div className={styles.mappingFork}>
+                        <ToggleSwitch
+                          label={t('oauth_model_alias.alias_fork_label')}
+                          labelPosition="left"
+                          checked={Boolean(entry.fork)}
+                          onChange={(value) => updateMappingEntry(rowIndex, 'fork', value)}
+                          disabled={disableControls || saving || !hasAlias}
+                        />
+                      </div>
+
+                      {!fromCatalog && (
+                        <div className={styles.mappingActions}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeMappingEntry(rowIndex)}
+                            disabled={disableControls || saving}
+                            title={t('common.delete')}
+                            aria-label={t('common.delete')}
+                          >
+                            <IconX size={14} />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </Card>
         </>

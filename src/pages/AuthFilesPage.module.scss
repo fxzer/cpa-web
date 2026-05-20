@@ -4,10 +4,27 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: $spacing-lg;
+  gap: $spacing-md;
   padding-bottom: calc(
     var(--auth-files-action-bar-height, 0px) + 16px + env(safe-area-inset-bottom)
   );
+}
+
+.pageTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+}
+
+.titleMain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .pageHeader {
@@ -21,6 +38,8 @@
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .description {
@@ -29,11 +48,224 @@
   margin: 0;
 }
 
+.globalToolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 50%, transparent);
+
+  :global(.form-group) {
+    margin: 0;
+  }
+
+  :global(.input) {
+    height: 32px;
+    padding: 4px 10px;
+    font-size: 13px;
+    box-sizing: border-box;
+  }
+
+  @include mobile {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.globalToolbarFilters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.globalToolbarField {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.globalToolbarFieldLabel {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.globalToolbarSearch {
+  width: min(400px, 100%);
+  min-width: 400px;
+}
+
+.globalToolbarPageSize {
+  width: 56px;
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 12%, transparent);
+  }
+}
+
+.globalToolbarSort {
+  width: 112px;
+  min-width: 96px;
+
+  :global(button) {
+    height: 32px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+}
+
+.globalToolbarDivider {
+  width: 1px;
+  align-self: stretch;
+  min-height: 28px;
+  background: color-mix(in srgb, var(--border-color) 70%, transparent);
+  flex: 0 0 auto;
+
+  @include mobile {
+    display: none;
+  }
+}
+
+.globalToolbarDisplay {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  flex: 0 1 auto;
+  min-width: 0;
+
+  @include mobile {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.globalDisplayLabel {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.globalDisplayItems {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  min-width: 0;
+  flex: 1 1 auto;
+
+  @include mobile {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.globalDisplayToggle {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
+  background: color-mix(in srgb, var(--bg-primary) 72%, transparent);
+
+  @include mobile {
+    width: 100%;
+  }
+}
+
+.densitySwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 32px;
+  padding: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+  box-sizing: border-box;
+  flex: 0 0 auto;
+
+  @include mobile {
+    width: 100%;
+  }
+}
+
+.densitySwitchItem {
+  @include button-reset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+
+  @include pill-tab-interaction;
+
+  @include mobile {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+}
+
+.densitySwitchItemActive {
+  color: var(--primary-contrast, #fff);
+  background: var(--success-color);
+  border-color: var(--success-color);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    color: var(--primary-contrast, #fff);
+    background: var(--success-color);
+    border-color: var(--success-color);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+  }
+}
+
 .headerActions {
   display: flex;
   gap: $spacing-sm;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
   min-width: 0;
   max-width: 100%;
 
@@ -43,14 +275,8 @@
 
   @include mobile {
     width: 100%;
+    justify-content: flex-start;
   }
-}
-
-.titleWrapper {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  line-height: 24px;
 }
 
 .countBadge {
@@ -78,237 +304,52 @@
   margin-bottom: $spacing-md;
 }
 
-// 筛选区域
-.filterSection {
+// 供应商分段器
+.providerSegmentBar {
   display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-  margin-bottom: $spacing-lg;
-}
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
 
-.filterRail {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
-  background: color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
   @include mobile {
-    padding: 10px;
+    width: 100%;
   }
 }
 
-
-.filterAllIconWrap {
-  position: relative;
-  border-color: color-mix(in srgb, var(--primary-color) 20%, var(--border-color));
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--bg-secondary) 94%, var(--primary-color) 8%),
-    color-mix(in srgb, var(--bg-primary) 92%, var(--primary-color) 5%)
-  );
-  box-shadow: 0 10px 22px -18px color-mix(in srgb, var(--primary-color) 50%, transparent);
-}
-
-.filterAllIcon {
-  position: relative;
-  z-index: 1;
-  display: block;
-  color: color-mix(in srgb, var(--primary-color) 70%, var(--text-primary));
-}
-
-
-.filterContent {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-  min-width: 0;
-}
-
-.filterTags {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.filterTag {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 12px 7px 8px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
-  background: color-mix(in srgb, var(--bg-secondary) 70%, transparent);
+.providerSegmentItem {
+  @include button-reset;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
   color: var(--text-secondary);
-  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
   white-space: nowrap;
   transition:
-    border-color $transition-fast,
-    background-color $transition-fast,
-    color $transition-fast;
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 
-  &:hover {
-    border-color: color-mix(in srgb, var(--filter-color) 40%, var(--border-color));
-    background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
-    color: var(--text-primary);
-  }
-}
-
-.filterTagActive {
-  border-color: color-mix(in srgb, var(--filter-color) 50%, var(--border-color));
-  background: color-mix(in srgb, var(--filter-surface) 22%, var(--bg-secondary));
-  color: var(--text-primary);
-
-  .filterTagIconWrap {
-    border-color: color-mix(in srgb, var(--filter-color) 40%, transparent);
-  }
-}
-
-.filterTagLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.filterTagIconWrap {
-  width: 24px;
-  height: 24px;
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent);
-  background: color-mix(in srgb, var(--bg-tertiary) 60%, transparent);
-}
-
-.filterTagIcon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  object-fit: contain;
-}
-
-.filterTagIconFallback {
-  color: var(--filter-color);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.filterTagText {
-  min-width: 0;
-  color: inherit;
-  @include text-ellipsis;
-}
-
-.filterTagCount {
-  display: inline-grid;
-  place-items: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--filter-color) 12%, transparent);
-  color: var(--text-tertiary);
-  font-size: 12px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  flex: 0 0 auto;
-  line-height: 1;
-  text-align: center;
-}
-
-.filterTagActive .filterTagCount {
-  background: color-mix(in srgb, var(--filter-color) 22%, transparent);
-  color: var(--filter-color);
-}
-
-.filterControlsPanel {
-  padding: 14px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
-  background: color-mix(in srgb, var(--bg-secondary) 50%, transparent);
-}
-
-.filterControls {
-  display: grid;
-  grid-template-columns: minmax(240px, 1.4fr) repeat(2, minmax(120px, 0.72fr)) minmax(220px, auto);
-  gap: $spacing-md;
-  align-items: flex-end;
-
-  // 修复 Input 组件在 filterItem 中的嵌套样式
-  :global(.form-group) {
-    margin: 0;
-  }
-
-  :global(.input) {
-    height: 40px;
-    box-sizing: border-box;
-  }
-
-  @include tablet {
-    grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(140px, 0.8fr));
-  }
+  @include pill-tab-interaction;
 
   @include mobile {
-    grid-template-columns: 1fr;
-  }
-}
-
-.filterItem {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-
-  label {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    padding-inline: 8px;
     font-size: 12px;
-    color: var(--text-tertiary);
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    white-space: nowrap;
   }
-}
-
-.filterToggleItem {
-  min-width: 0;
-
-  @include tablet {
-    grid-column: 1 / -1;
-  }
-}
-
-.filterToggleGroup {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  min-height: 40px;
-}
-
-.filterToggleCard {
-  display: flex;
-  align-items: center;
-  min-height: 40px;
-  padding: 0 2px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
-  background: color-mix(in srgb, var(--bg-secondary) 50%, transparent);
-}
-
-.filterToggle {
-  display: flex;
-  align-items: center;
-  min-height: 40px;
-  padding-inline: 2px;
 }
 
 .filterToggleLabel {
@@ -749,6 +790,10 @@
   }
 
   .cardBadgeRow {
+    gap: 6px;
+  }
+
+  .cardBadgeRow .cardStats {
     gap: 4px;
   }
 
@@ -870,9 +915,11 @@
 
 .cardBadgeRow {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .typeBadge {
@@ -1053,10 +1100,10 @@
 }
 
 .cardStats {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .cardStatsCompact {
@@ -1624,6 +1671,89 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+.oauthAliasItem {
+  display: grid;
+  grid-template-columns: minmax(88px, auto) minmax(0, 1fr) auto;
+  align-items: start;
+  gap: $spacing-md;
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.oauthAliasProviderBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 88px;
+  flex-shrink: 0;
+}
+
+.oauthAliasMappingsBlock {
+  min-width: 0;
+  width: 100%;
+}
+
+.oauthAliasGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+
+  @include tablet {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @include desktop {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.oauthAliasCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.oauthAliasUpstream {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.oauthAliasTarget {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-color);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+
+  &::before {
+    content: '→ ';
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+}
+
+.oauthAliasEmpty {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding: 8px 0;
 }
 
 .excludedInfo {

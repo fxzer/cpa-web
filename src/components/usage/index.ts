@@ -16,4 +16,7 @@ export { PriceSettingsCard } from './PriceSettingsCard';
 export type { PriceSettingsCardProps } from './PriceSettingsCard';
 
 export { RequestEventsDetailsCard } from './RequestEventsDetailsCard';
-export type { RequestEventsDetailsCardProps } from './RequestEventsDetailsCard';
+export type {
+  RequestEventsDetailsCardProps,
+  RequestEventsFilteredStats,
+} from './RequestEventsDetailsCard';

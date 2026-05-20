@@ -98,8 +98,7 @@ export function DiagramContextMenu({
     <div
       ref={menuRef}
       className={styles.contextMenu}
-      style={{ top: contextMenu.y, left: contextMenu.x }}
-      onClick={(e) => e.stopPropagation()}
+      style={{ left: contextMenu.x, top: contextMenu.y }}
     >
       {type === 'background' && renderBackground()}
       {type === 'alias' && renderAlias()}

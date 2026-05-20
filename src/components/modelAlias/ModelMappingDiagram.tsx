@@ -512,6 +512,7 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
       {enableTapLinking && onUpdate && (
         <div className={styles.tapHint}>{t('oauth_model_alias.diagram_tap_hint')}</div>
       )}
+      <div className={styles.tierHint}>{t('oauth_model_alias.diagram_overview_hint')}</div>
       <div
         className={styles.container}
         ref={containerRef}

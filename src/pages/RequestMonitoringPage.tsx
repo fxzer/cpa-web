@@ -5,7 +5,11 @@ import { Input } from '@/components/ui/Input';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-import { RequestEventsDetailsCard } from '@/components/usage';
+import {
+  RequestEventsDetailsCard,
+  type RequestEventsFilteredStats,
+} from '@/components/usage';
+import usageStyles from '@/pages/UsagePage.module.scss';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
@@ -69,6 +73,16 @@ export function RequestMonitoringPage() {
     false
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [filteredStats, setFilteredStats] = useState<RequestEventsFilteredStats>({
+    count: 0,
+    successRate: null,
+    canExport: false,
+    exportCsv: () => undefined,
+    exportJson: () => undefined,
+  });
+  const handleFilteredStatsChange = useCallback((stats: RequestEventsFilteredStats) => {
+    setFilteredStats(stats);
+  }, []);
   const [setupSaving, setSetupSaving] = useState(false);
   const [draftEnabled, setDraftEnabled] = useState(usageServiceEnabled);
   const [draftServiceBase, setDraftServiceBase] = useState(
@@ -271,7 +285,19 @@ export function RequestMonitoringPage() {
 
       <div className={styles.header}>
         <div>
-          <h1 className={styles.pageTitle}>{t('request_monitoring.title')}</h1>
+          <h1 className={styles.pageTitle}>
+            {t('request_monitoring.title')}
+            <span className={styles.pageTitleStats}>
+              {t('usage_stats.request_events_count', { count: filteredStats.count })}
+              {filteredStats.successRate !== null && (
+                <span className={usageStyles.requestEventsSuccessRate}>
+                  {t('usage_stats.request_events_success_rate_suffix', {
+                    rate: filteredStats.successRate.toFixed(1),
+                  })}
+                </span>
+              )}
+            </span>
+          </h1>
           <p className={styles.pageSubTitle}>
             {t('request_monitoring.subtitle')}
             {lastRefreshedAt && (
@@ -297,6 +323,22 @@ export function RequestMonitoringPage() {
             onClick={() => void loadData()}
           >
             {t('common.refresh')}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={filteredStats.exportCsv}
+            disabled={!filteredStats.canExport}
+          >
+            {t('usage_stats.export_csv')}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={filteredStats.exportJson}
+            disabled={!filteredStats.canExport}
+          >
+            {t('usage_stats.export_json')}
           </Button>
           <Button variant="secondary" size="sm" onClick={() => setSettingsOpen(true)}>
             {t('request_monitoring.settings')}
@@ -331,6 +373,7 @@ export function RequestMonitoringPage() {
         fixedHeight
         onRefresh={loadData}
         lastRefreshedAt={lastRefreshedAt}
+        onFilteredStatsChange={handleFilteredStatsChange}
       />
 
       <Modal

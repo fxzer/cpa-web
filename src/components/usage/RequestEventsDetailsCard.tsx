@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -74,6 +73,14 @@ type RequestEventRow = {
   cacheHitRatio: number | null;
 };
 
+export type RequestEventsFilteredStats = {
+  count: number;
+  successRate: number | null;
+  canExport: boolean;
+  exportCsv: () => void;
+  exportJson: () => void;
+};
+
 export interface RequestEventsDetailsCardProps {
   usage: unknown;
   loading: boolean;
@@ -88,6 +95,7 @@ export interface RequestEventsDetailsCardProps {
   fixedHeight?: boolean;
   requestLogEnabled?: boolean;
   showAutoRefreshControls?: boolean;
+  onFilteredStatsChange?: (stats: RequestEventsFilteredStats) => void;
 }
 
 const AUTO_REFRESH_OFF = 'off';
@@ -245,6 +253,7 @@ export function RequestEventsDetailsCard({
   fixedHeight = false,
   requestLogEnabled = false,
   showAutoRefreshControls = true,
+  onFilteredStatsChange,
 }: RequestEventsDetailsCardProps) {
   const { t, i18n } = useTranslation();
   const { showNotification } = useNotificationStore();
@@ -862,53 +871,25 @@ export function RequestEventsDetailsCard({
   }, [authFileMap, selectedFailureRow]);
   const selectedFailureMessage = selectedCredentialInfo?.statusMessage?.trim() || '';
 
+  const exportCsvRef = useRef(handleExportCsv);
+  const exportJsonRef = useRef(handleExportJson);
+  exportCsvRef.current = handleExportCsv;
+  exportJsonRef.current = handleExportJson;
+
+  useEffect(() => {
+    if (!onFilteredStatsChange) return;
+    onFilteredStatsChange({
+      count: filteredRows.length,
+      successRate: filteredSuccessRate,
+      canExport: filteredRows.length > 0,
+      exportCsv: () => exportCsvRef.current(),
+      exportJson: () => exportJsonRef.current(),
+    });
+  }, [filteredRows.length, filteredSuccessRate, onFilteredStatsChange]);
+
   return (
-    <Card
-      title={
-        <span className={styles.requestEventsTitle}>
-          <span>{t('usage_stats.request_events_title')}</span>
-          <span className={styles.requestEventsTitleCount}>
-            {t('usage_stats.request_events_count', { count: filteredRows.length })}
-            {filteredSuccessRate !== null && (
-              <span className={styles.requestEventsSuccessRate}>
-                {t('usage_stats.request_events_success_rate_suffix', {
-                  rate: filteredSuccessRate.toFixed(1),
-                })}
-              </span>
-            )}
-          </span>
-        </span>
-      }
-      className={fixedHeight ? styles.requestEventsFixedCard : undefined}
-      extra={
-        <div className={styles.requestEventsActions}>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={styles.requestEventsClearFilters}
-            onClick={handleClearFilters}
-            disabled={!hasActiveFilters}
-          >
-            {t('usage_stats.clear_filters')}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleExportCsv}
-            disabled={filteredRows.length === 0}
-          >
-            {t('usage_stats.export_csv')}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleExportJson}
-            disabled={filteredRows.length === 0}
-          >
-            {t('usage_stats.export_json')}
-          </Button>
-        </div>
-      }
+    <div
+      className={`${styles.requestEventsRoot} ${fixedHeight ? styles.requestEventsFixedRoot : ''}`.trim()}
     >
       <div className={styles.requestEventsToolbar}>
         <div
@@ -1002,6 +983,20 @@ export function RequestEventsDetailsCard({
             ariaLabel={t('usage_stats.request_events_filter_api_key')}
             fullWidth={false}
           />
+        </div>
+        <div className={`${styles.requestEventsFilterItem} ${styles.requestEventsClearFilterItem}`}>
+          <span className={styles.requestEventsFilterLabel} aria-hidden="true">
+            {'\u00a0'}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={styles.requestEventsClearFilters}
+            onClick={handleClearFilters}
+            disabled={!hasActiveFilters}
+          >
+            {t('usage_stats.clear_filters')}
+          </Button>
         </div>
         {onRefresh && showAutoRefreshControls && (
           <div className={styles.requestEventsFilterItem}>
@@ -1301,6 +1296,6 @@ export function RequestEventsDetailsCard({
           </div>
         )}
       </Modal>
-    </Card>
+    </div>
   );
 }

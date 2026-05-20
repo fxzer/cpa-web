@@ -243,6 +243,11 @@ export function AliasColumn({
           <span className={styles.itemName} title={node.alias}>
             {node.alias}
           </span>
+          {node.sources.length > 1 && (
+            <span className={styles.poolBadge} title={`${node.sources.length}`}>
+              pool
+            </span>
+          )}
           <span className={styles.itemCount}>{node.sources.length}</span>
         </div>
       ))}

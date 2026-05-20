@@ -975,6 +975,11 @@
 }
 
 .requestEventsClearFilters:global(.btn.btn-ghost) {
+  width: auto;
+  align-self: flex-start;
+  white-space: nowrap;
+  padding-left: 10px;
+  padding-right: 10px;
   color: var(--error-color, #ef4444);
   border: 1px solid var(--error-color, #ef4444);
   background: transparent;
@@ -1024,7 +1029,7 @@
 
 .requestEventsSuccessRate {
   margin-left: 2px;
-  color: #86efac;
+  color: var(--success-color);
   font: inherit;
   font-weight: 600;
 }
@@ -1042,6 +1047,12 @@
   flex-direction: column;
   gap: 4px;
   min-width: 180px;
+}
+
+.requestEventsFilterItem.requestEventsClearFilterItem {
+  min-width: 0;
+  width: auto;
+  flex: 0 0 auto;
 }
 
 .requestEventsSearchItem {
@@ -1120,22 +1131,28 @@
 
 .requestEventsTableWrapper {
   overflow: auto;
-  max-height: 460px;
+  max-height: 560px;
   border: 1px solid var(--border-color);
   border-radius: $radius-md;
 }
 
-.requestEventsFixedCard {
+.requestEventsRoot {
   display: flex;
   flex-direction: column;
-  height: 700px;
+  gap: $spacing-sm;
+  min-width: 0;
+}
+
+.requestEventsFixedRoot {
+  display: flex;
+  flex-direction: column;
+  height: 796px;
   overflow: hidden;
 
   @include mobile {
-    height: 580px;
+    height: 680px;
   }
 
-  :global(.card-header),
   .requestEventsToolbar {
     flex: 0 0 auto;
   }

@@ -123,22 +123,6 @@ export function AuthFileCard(props: AuthFileCardProps) {
 
   const priorityValue = parsePriorityValue(file.priority ?? file['priority']);
   const noteValue = typeof file.note === 'string' ? file.note.trim() : '';
-  const stateLabel = isRuntimeOnly
-    ? t('auth_files.type_virtual') || '虚拟认证文件'
-    : file.disabled
-      ? t('auth_files.health_status_disabled')
-      : hasStatusWarning
-        ? t('auth_files.health_status_warning')
-        : rawStatusMessage
-          ? t('auth_files.health_status_healthy')
-          : t('auth_files.status_toggle_label');
-  const stateBadgeClass = isRuntimeOnly
-    ? styles.stateBadgeVirtual
-    : file.disabled
-      ? styles.stateBadgeDisabled
-      : hasStatusWarning
-        ? styles.stateBadgeWarning
-        : styles.stateBadgeActive;
 
   return (
     <div
@@ -186,7 +170,16 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 >
                   {typeLabel}
                 </span>
-                <span className={`${styles.stateBadge} ${stateBadgeClass}`}>{stateLabel}</span>
+                <div className={`${styles.cardStats} ${compact ? styles.cardStatsCompact : ''}`}>
+                  <div className={`${styles.statPill} ${styles.statSuccess}`}>
+                    <span className={styles.statLabel}>{t('stats.success')}</span>
+                    <span className={styles.statValue}>{fileStats.success}</span>
+                  </div>
+                  <div className={`${styles.statPill} ${styles.statFailure}`}>
+                    <span className={styles.statLabel}>{t('stats.failure')}</span>
+                    <span className={styles.statValue}>{fileStats.failure}</span>
+                  </div>
+                </div>
               </div>
               <span className={styles.fileName} title={file.name}>
                 {file.name}
@@ -229,17 +222,6 @@ export function AuthFileCard(props: AuthFileCardProps) {
           )}
 
           <div className={`${styles.cardInsights} ${compact ? styles.cardInsightsCompact : ''}`}>
-            <div className={`${styles.cardStats} ${compact ? styles.cardStatsCompact : ''}`}>
-              <div className={`${styles.statPill} ${styles.statSuccess}`}>
-                <span className={styles.statLabel}>{t('stats.success')}</span>
-                <span className={styles.statValue}>{fileStats.success}</span>
-              </div>
-              <div className={`${styles.statPill} ${styles.statFailure}`}>
-                <span className={styles.statLabel}>{t('stats.failure')}</span>
-                <span className={styles.statValue}>{fileStats.failure}</span>
-              </div>
-            </div>
-
             <div className={`${styles.statusPanel} ${compact ? styles.statusPanelCompact : ''}`}>
               <div className={styles.statusPanelLabel}>
                 <span>{t('auth_files.health_status_label')}</span>
@@ -318,12 +300,15 @@ export function AuthFileCard(props: AuthFileCardProps) {
             </div>
             {!isRuntimeOnly && (
               <div className={styles.statusToggle}>
-                <span className={styles.statusToggleLabel}>
-                  {t('auth_files.status_toggle_label')}
-                </span>
                 <ToggleSwitch
-                  ariaLabel={t('auth_files.status_toggle_label')}
+                  ariaLabel={
+                    file.disabled
+                      ? t('auth_files.status_disabled_label')
+                      : t('auth_files.status_enabled_label')
+                  }
                   checked={!file.disabled}
+                  checkedText={t('auth_files.status_enabled_label')}
+                  uncheckedText={t('auth_files.status_disabled_label')}
                   disabled={disableControls || statusUpdating[file.name] === true}
                   onChange={(value) => onToggleStatus(file, value)}
                 />
