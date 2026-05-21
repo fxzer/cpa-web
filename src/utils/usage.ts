@@ -88,6 +88,8 @@ export interface UsageDetail {
   thinking?: UsageThinking | null;
   thinking_effort?: string;
   failed: boolean;
+  /** 请求时使用的模型别名（如 mini / lite / std / pro） */
+  model_alias?: string;
   __modelName?: string;
   __timestampMs?: number;
 }
@@ -269,6 +271,23 @@ const readOptionalNumberField = (
   return undefined;
 };
 
+const isSameModelIdentifier = (left: string, right: string): boolean =>
+  left.trim().toLowerCase() === right.trim().toLowerCase();
+
+/** 从 usage 明细中提取请求侧模型别名；与上游模型名相同时视为无独立别名。 */
+export const readUsageModelAlias = (
+  record: Record<string, unknown>,
+  upstreamModel: string
+): string | undefined => {
+  const alias = readOptionalStringField(record, 'alias', 'model_alias', 'modelAlias');
+  if (!alias) return undefined;
+  const upstream = String(upstreamModel ?? '').trim();
+  if (upstream && isSameModelIdentifier(alias, upstream)) {
+    return undefined;
+  }
+  return alias;
+};
+
 const normalizeUsageTokens = (value: unknown): UsageDetail['tokens'] => {
   const tokens = isRecord(value) ? value : {};
   const inputTokens = toNonNegativeNumber(tokens.input_tokens) ?? 0;
@@ -365,6 +384,7 @@ const normalizeUsageRecordDetail = (
     'auth_snapshot_at_ms',
     'authSnapshotAtMs'
   );
+  const modelAlias = readUsageModelAlias(detail, modelName);
 
   const endpointMatch = endpoint.match(USAGE_ENDPOINT_METHOD_REGEX);
 
@@ -389,6 +409,7 @@ const normalizeUsageRecordDetail = (
     thinking: normalizeUsageThinking(detail.thinking),
     ...(thinkingEffort ? { thinking_effort: thinkingEffort } : {}),
     failed: detail.failed === true,
+    ...(modelAlias ? { model_alias: modelAlias } : {}),
     __modelName: modelName,
     __endpoint: endpoint,
     __endpointMethod: endpointMatch?.[1]?.toUpperCase(),
@@ -422,7 +443,10 @@ const collectEncodedUsageRequestDetails = (usageData: unknown): UsageDetailWithE
       const record = decodeUsageRequestPayload(item);
       if (!record) return null;
       const endpoint = readOptionalStringField(record, 'endpoint') || 'unknown';
-      const modelName = readOptionalStringField(record, 'model', 'alias') || 'unknown';
+      const modelName =
+        readOptionalStringField(record, 'model', 'model_name', 'modelName') ||
+        readOptionalStringField(record, 'alias') ||
+        'unknown';
       return normalizeUsageRecordDetail(record, modelName, endpoint);
     })
     .filter((detail): detail is UsageDetailWithEndpoint => Boolean(detail));
@@ -1033,6 +1057,7 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
           'auth_snapshot_at_ms',
           'authSnapshotAtMs'
         );
+        const modelAlias = readUsageModelAlias(detailRaw, modelName);
         details.push({
           ...(id ? { id } : {}),
           ...(requestId ? { request_id: requestId } : {}),
@@ -1057,6 +1082,7 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
           thinking: normalizeUsageThinking(detailRaw.thinking),
           ...(thinkingEffort ? { thinking_effort: thinkingEffort } : {}),
           failed: detailRaw.failed === true,
+          ...(modelAlias ? { model_alias: modelAlias } : {}),
           __modelName: modelName,
           __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
         });
@@ -1164,6 +1190,7 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
           'auth_snapshot_at_ms',
           'authSnapshotAtMs'
         );
+        const modelAlias = readUsageModelAlias(detailRaw, modelName);
         details.push({
           ...(id ? { id } : {}),
           ...(requestId ? { request_id: requestId } : {}),
@@ -1188,6 +1215,7 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
           thinking: normalizeUsageThinking(detailRaw.thinking),
           ...(thinkingEffort ? { thinking_effort: thinkingEffort } : {}),
           failed: detailRaw.failed === true,
+          ...(modelAlias ? { model_alias: modelAlias } : {}),
           __modelName: modelName,
           __endpoint: endpoint,
           __endpointMethod: endpointMethod,

@@ -1250,6 +1250,21 @@
   font-weight: 650;
 }
 
+.requestEventsModelAliasTag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: $radius-full;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--accent-primary, #2563eb);
+  background: color-mix(in srgb, var(--accent-primary, #2563eb) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #2563eb) 28%, transparent);
+  vertical-align: middle;
+  text-transform: lowercase;
+}
+
 .requestEventsSecondaryText {
   margin-top: 4px;
   color: var(--text-secondary);

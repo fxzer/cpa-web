@@ -54,6 +54,7 @@ type RequestEventRow = {
   providerTag: string;
   providerDisplayName: string;
   model: string;
+  modelAlias: string;
   endpoint: string;
   endpointMethod: string;
   endpointPath: string;
@@ -438,6 +439,7 @@ export function RequestEventsDetailsCard({
       const sourceKey = sourceInfo.identityKey ?? `source:${sourceRaw || source}`;
       const sourceType = sourceInfo.type;
       const model = String(detail.__modelName ?? '').trim() || '-';
+      const modelAlias = firstText(detail.model_alias);
       const inputTokens = Math.max(toNumber(detail.tokens?.input_tokens), 0);
       const outputTokens = Math.max(toNumber(detail.tokens?.output_tokens), 0);
       const reasoningTokens = Math.max(toNumber(detail.tokens?.reasoning_tokens), 0);
@@ -499,6 +501,7 @@ export function RequestEventsDetailsCard({
         providerTag: providerColumn.tag,
         providerDisplayName: providerColumn.displayName,
         model,
+        modelAlias,
         endpoint,
         endpointMethod,
         endpointPath,
@@ -593,7 +596,13 @@ export function RequestEventsDetailsCard({
   const modelOptions = useMemo(
     () => [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(new Set(timeFilteredRows.map((row) => row.model))).map((model) => ({
+      ...Array.from(
+        new Set(
+          timeFilteredRows.flatMap((row) =>
+            [row.modelAlias, row.model].filter((value) => value && value !== '-')
+          )
+        )
+      ).map((model) => ({
         value: model,
         label: model,
       })),
@@ -699,7 +708,9 @@ export function RequestEventsDetailsCard({
     () =>
       timeFilteredRows.filter((row) => {
         const modelMatched =
-          effectiveModelFilter === ALL_FILTER || row.model === effectiveModelFilter;
+          effectiveModelFilter === ALL_FILTER ||
+          row.model === effectiveModelFilter ||
+          row.modelAlias === effectiveModelFilter;
         const providerMatched =
           effectiveProviderFilter === ALL_FILTER || row.provider === effectiveProviderFilter;
         const sourceMatched =
@@ -717,6 +728,7 @@ export function RequestEventsDetailsCard({
             row.providerTag,
             row.providerDisplayName,
             row.model,
+            row.modelAlias,
             row.endpoint,
             row.endpointMethod,
             row.endpointPath,
@@ -790,6 +802,7 @@ export function RequestEventsDetailsCard({
       'timestamp',
       'request_id',
       'provider',
+      'model_alias',
       'model',
       'endpoint',
       'source',
@@ -815,6 +828,7 @@ export function RequestEventsDetailsCard({
         row.timestamp,
         row.requestId,
         row.provider,
+        row.modelAlias,
         row.model,
         row.endpoint,
         row.source,
@@ -1161,7 +1175,11 @@ export function RequestEventsDetailsCard({
                     <td className={styles.requestEventsProviderModelCell}>
                       <div
                         className={styles.requestEventsPrimaryText}
-                        title={row.provider !== '-' ? row.provider : undefined}
+                        title={
+                          [row.provider !== '-' ? row.provider : '', row.modelAlias]
+                            .filter(Boolean)
+                            .join(' · ') || undefined
+                        }
                       >
                         {row.providerTag ? (
                           <>
@@ -1171,12 +1189,25 @@ export function RequestEventsDetailsCard({
                                 {row.providerDisplayName}
                               </span>
                             ) : null}
+                            {row.modelAlias ? (
+                              <span className={styles.requestEventsModelAliasTag}>{row.modelAlias}</span>
+                            ) : null}
                           </>
                         ) : (
-                          row.providerDisplayName || row.provider
+                          <>
+                            {row.providerDisplayName || row.provider}
+                            {row.modelAlias ? (
+                              <span className={styles.requestEventsModelAliasTag}>{row.modelAlias}</span>
+                            ) : null}
+                          </>
                         )}
                       </div>
-                      <div className={styles.requestEventsSecondaryText}>{row.model}</div>
+                      <div
+                        className={styles.requestEventsSecondaryText}
+                        title={row.model !== '-' ? row.model : undefined}
+                      >
+                        {row.model}
+                      </div>
                     </td>
                     <td
                       className={styles.requestEventsEndpointCell}
@@ -1366,7 +1397,11 @@ export function RequestEventsDetailsCard({
                 <span className={styles.requestEventsFailureMetaLabel}>
                   {t('usage_stats.request_events_failure_log_model')}
                 </span>
-                <span className={styles.requestEventsFailureMetaValue}>{selectedFailureRow.model}</span>
+                <span className={styles.requestEventsFailureMetaValue}>
+                  {selectedFailureRow.modelAlias
+                    ? `${selectedFailureRow.modelAlias} · ${selectedFailureRow.model}`
+                    : selectedFailureRow.model}
+                </span>
               </div>
             </div>
 

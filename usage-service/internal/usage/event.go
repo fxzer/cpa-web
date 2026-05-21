@@ -18,6 +18,7 @@ type Event struct {
 	Timestamp            string `json:"timestamp"`
 	Provider             string `json:"provider,omitempty"`
 	Model                string `json:"model"`
+	Alias                string `json:"alias,omitempty"`
 	Endpoint             string `json:"endpoint,omitempty"`
 	Method               string `json:"method,omitempty"`
 	Path                 string `json:"path,omitempty"`
@@ -56,6 +57,7 @@ type Detail struct {
 	RequestID            string `json:"request_id,omitempty"`
 	Timestamp            string `json:"timestamp"`
 	Provider             string `json:"provider,omitempty"`
+	Alias                string `json:"alias,omitempty"`
 	Source               string `json:"source"`
 	AuthIndex            string `json:"auth_index,omitempty"`
 	AuthType             string `json:"auth_type,omitempty"`
@@ -140,6 +142,7 @@ func NormalizeRaw(raw []byte) (Event, error) {
 		Timestamp:            timestamp,
 		Provider:             readString(record, "provider", "type", "auth_type", "authType"),
 		Model:                readString(record, "model", "model_name", "modelName"),
+		Alias:                readString(record, "alias"),
 		Endpoint:             endpoint,
 		Method:               method,
 		Path:                 path,
@@ -204,6 +207,7 @@ func BuildPayload(events []Event) Payload {
 			RequestID:            event.RequestID,
 			Timestamp:            event.Timestamp,
 			Provider:             event.Provider,
+			Alias:                event.Alias,
 			Source:               event.Source,
 			AuthIndex:            event.AuthIndex,
 			AuthType:             event.AuthType,
@@ -399,6 +403,18 @@ func buildEventHash(event Event) string {
 		parts = append(parts, strconv.FormatInt(*event.LatencyMS, 10))
 	}
 	return hashString(strings.Join(parts, "|"))
+}
+
+func AliasFromRawJSON(rawJSON string) string {
+	trimmed := strings.TrimSpace(rawJSON)
+	if trimmed == "" {
+		return ""
+	}
+	var record map[string]any
+	if err := json.Unmarshal([]byte(trimmed), &record); err != nil {
+		return ""
+	}
+	return readString(record, "alias")
 }
 
 func maskSource(value string) string {

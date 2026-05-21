@@ -787,6 +787,9 @@ func (s *Store) RecentEvents(ctx context.Context, limit int) ([]usage.Event, err
 		}
 		event.RawJSON = rawJSON.String
 		event.Failed = failed != 0
+		if event.Alias == "" {
+			event.Alias = usage.AliasFromRawJSON(event.RawJSON)
+		}
 		if latency.Valid {
 			value := latency.Int64
 			event.LatencyMS = &value
