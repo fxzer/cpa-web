@@ -194,8 +194,13 @@ export function AiProvidersPage() {
       confirmText: t('common.confirm'),
       onConfirm: async () => {
         try {
-          await providersApi.deleteGeminiKey(getPrimaryApiKey(entry), entry.baseUrl);
           const next = geminiKeys.filter((_, idx) => idx !== index);
+          const apiKey = getPrimaryApiKey(entry);
+          if (apiKey) {
+            await providersApi.deleteGeminiKey(apiKey, entry.baseUrl, index);
+          } else {
+            await providersApi.saveGeminiKeys(next);
+          }
           setGeminiKeys(next);
           updateConfigValue('gemini-api-key', next);
           clearCache('gemini-api-key');
@@ -358,16 +363,24 @@ export function AiProvidersPage() {
       confirmText: t('common.confirm'),
       onConfirm: async () => {
         try {
+          const next = source.filter((_, idx) => idx !== index);
+          const apiKey = getPrimaryApiKey(entry);
           if (type === 'codex') {
-            await providersApi.deleteCodexConfig(getPrimaryApiKey(entry), entry.baseUrl);
-            const next = codexConfigs.filter((_, idx) => idx !== index);
+            if (apiKey) {
+              await providersApi.deleteCodexConfig(apiKey, entry.baseUrl, index);
+            } else {
+              await providersApi.saveCodexConfigs(next);
+            }
             setCodexConfigs(next);
             updateConfigValue('codex-api-key', next);
             clearCache('codex-api-key');
             showNotification(t('notification.codex_config_deleted'), 'success');
           } else {
-            await providersApi.deleteClaudeConfig(getPrimaryApiKey(entry), entry.baseUrl);
-            const next = claudeConfigs.filter((_, idx) => idx !== index);
+            if (apiKey) {
+              await providersApi.deleteClaudeConfig(apiKey, entry.baseUrl, index);
+            } else {
+              await providersApi.saveClaudeConfigs(next);
+            }
             setClaudeConfigs(next);
             updateConfigValue('claude-api-key', next);
             clearCache('claude-api-key');
@@ -391,8 +404,13 @@ export function AiProvidersPage() {
       confirmText: t('common.confirm'),
       onConfirm: async () => {
         try {
-          await providersApi.deleteVertexConfig(getPrimaryApiKey(entry), entry.baseUrl);
           const next = vertexConfigs.filter((_, idx) => idx !== index);
+          const apiKey = getPrimaryApiKey(entry);
+          if (apiKey) {
+            await providersApi.deleteVertexConfig(apiKey, entry.baseUrl, index);
+          } else {
+            await providersApi.saveVertexConfigs(next);
+          }
           setVertexConfigs(next);
           updateConfigValue('vertex-api-key', next);
           clearCache('vertex-api-key');

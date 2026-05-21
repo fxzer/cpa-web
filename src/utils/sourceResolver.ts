@@ -1,5 +1,11 @@
-import type { GeminiKeyConfig, OpenAIProviderConfig, ProviderKeyConfig } from '@/types';
+import type { ApiKeyEntry, GeminiKeyConfig, OpenAIProviderConfig, ProviderKeyConfig } from '@/types';
 import type { CredentialInfo, SourceInfo } from '@/types/sourceInfo';
+import {
+  buildProviderOverviewLabel,
+  buildProviderRequestLabel,
+  getPrimaryApiKey,
+  getProviderApiKeyEntries,
+} from '@/components/providers/utils';
 import { buildCandidateUsageSourceIds, normalizeAuthIndex } from '@/utils/usage';
 
 export interface SourceInfoMapInput {
@@ -10,12 +16,22 @@ export interface SourceInfoMapInput {
   openaiCompatibility?: OpenAIProviderConfig[];
 }
 
-type SourceInfoEntry = Required<Pick<SourceInfo, 'displayName' | 'type' | 'identityKey'>>;
+type SourceInfoEntry = Required<Pick<SourceInfo, 'displayName' | 'type' | 'identityKey'>> &
+  Pick<SourceInfo, 'requestDisplayName'>;
 
 export interface SourceInfoMap {
   byAuthIndex: Map<string, SourceInfoEntry | null>;
   bySource: Map<string, SourceInfoEntry | null>;
 }
+
+type ProviderConfigItem = {
+  apiKey?: string;
+  prefix?: string;
+  name?: string;
+  baseUrl?: string;
+  authIndex?: string;
+  apiKeyEntries?: ApiKeyEntry[];
+};
 
 const buildProviderIdentityKey = (type: string, index: number) => `${type}:${index}`;
 
@@ -48,6 +64,28 @@ const formatRawSourceDisplayName = (source: string) => {
   return source.startsWith('t:') ? source.slice(2) : source;
 };
 
+const collectProviderAuthIndices = (item: ProviderConfigItem): Array<unknown> => {
+  const authIndices: Array<unknown> = [item.authIndex];
+  getProviderApiKeyEntries(item).forEach((entry) => {
+    authIndices.push(entry.authIndex);
+  });
+  return authIndices;
+};
+
+const buildProviderSourceCandidates = (item: ProviderConfigItem): string[] => {
+  const candidates = new Set<string>();
+  buildCandidateUsageSourceIds({
+    apiKey: getPrimaryApiKey(item) || item.apiKey,
+    prefix: item.prefix,
+  }).forEach((candidate) => candidates.add(candidate));
+  getProviderApiKeyEntries(item).forEach((entry) => {
+    buildCandidateUsageSourceIds({ apiKey: entry.apiKey, prefix: item.prefix }).forEach((candidate) =>
+      candidates.add(candidate)
+    );
+  });
+  return Array.from(candidates);
+};
+
 export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
   const byAuthIndex = new Map<string, SourceInfoEntry | null>();
   const bySource = new Map<string, SourceInfoEntry | null>();
@@ -67,7 +105,7 @@ export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
   };
 
   const providers: Array<{
-    items: Array<{ apiKey?: string; prefix?: string; authIndex?: string }>;
+    items: ProviderConfigItem[];
     type: string;
     label: string;
   }> = [
@@ -79,36 +117,31 @@ export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
 
   providers.forEach(({ items, type, label }) => {
     items.forEach((item, index) => {
+      const fallback = `${label} #${index + 1}`;
       registerProvider(
         {
-          displayName: item.prefix?.trim() || `${label} #${index + 1}`,
+          displayName: buildProviderOverviewLabel(item, fallback),
+          requestDisplayName: buildProviderRequestLabel(item, fallback),
           type,
           identityKey: buildProviderIdentityKey(type, index),
         },
-        [item.authIndex],
-        buildCandidateUsageSourceIds({ apiKey: item.apiKey, prefix: item.prefix })
+        collectProviderAuthIndices(item),
+        buildProviderSourceCandidates(item)
       );
     });
   });
 
   (input.openaiCompatibility || []).forEach((provider, providerIndex) => {
-    const candidates = new Set<string>();
-    const authIndices: Array<unknown> = [provider.authIndex];
-
-    buildCandidateUsageSourceIds({ prefix: provider.prefix }).forEach((id) => candidates.add(id));
-    (provider.apiKeyEntries || []).forEach((entry) => {
-      authIndices.push(entry.authIndex);
-      buildCandidateUsageSourceIds({ apiKey: entry.apiKey }).forEach((id) => candidates.add(id));
-    });
-
+    const fallback = `OpenAI #${providerIndex + 1}`;
     registerProvider(
       {
-        displayName: provider.prefix?.trim() || provider.name || `OpenAI #${providerIndex + 1}`,
+        displayName: buildProviderOverviewLabel(provider, fallback),
+        requestDisplayName: buildProviderRequestLabel(provider, fallback),
         type: 'openai',
         identityKey: buildProviderIdentityKey('openai', providerIndex),
       },
-      authIndices,
-      candidates
+      collectProviderAuthIndices(provider),
+      buildProviderSourceCandidates(provider)
     );
   });
 

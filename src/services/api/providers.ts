@@ -28,11 +28,17 @@ const extractArrayPayload = (data: unknown, key: string): unknown[] => {
   return Array.isArray(candidate) ? candidate : [];
 };
 
-const buildProviderDeleteQuery = (apiKey: string, baseUrl?: string) => {
+const buildProviderDeleteQuery = (apiKey: string, baseUrl?: string, index?: number) => {
   const params = new URLSearchParams();
-  params.set('api-key', apiKey.trim());
-  params.set('base-url', (baseUrl ?? '').trim());
-  return `?${params.toString()}`;
+  const trimmedKey = apiKey.trim();
+  if (trimmedKey) {
+    params.set('api-key', trimmedKey);
+    params.set('base-url', (baseUrl ?? '').trim());
+  } else if (index !== undefined && index >= 0) {
+    params.set('index', String(index));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : '';
 };
 
 const serializeModelAliases = (models?: ModelAlias[]) =>
@@ -71,6 +77,7 @@ const serializeProviderKey = (config: ProviderKeyConfig) => {
     'api-key-entries': serializeProviderKeyEntries(config.apiKeyEntries),
   };
   if (config.priority !== undefined) payload.priority = config.priority;
+  if (config.name?.trim()) payload.name = config.name.trim();
   if (config.prefix?.trim()) payload.prefix = config.prefix.trim();
   if (config.baseUrl) payload['base-url'] = config.baseUrl;
   if (config.websockets !== undefined) payload.websockets = config.websockets;
@@ -113,6 +120,7 @@ const serializeVertexKey = (config: ProviderKeyConfig) => {
     'api-key-entries': serializeProviderKeyEntries(config.apiKeyEntries),
   };
   if (config.priority !== undefined) payload.priority = config.priority;
+  if (config.name?.trim()) payload.name = config.name.trim();
   if (config.prefix?.trim()) payload.prefix = config.prefix.trim();
   if (config.baseUrl) payload['base-url'] = config.baseUrl;
   const headers = serializeHeaders(config.headers);
@@ -130,6 +138,7 @@ const serializeGeminiKey = (config: GeminiKeyConfig) => {
     'api-key-entries': serializeProviderKeyEntries(config.apiKeyEntries),
   };
   if (config.priority !== undefined) payload.priority = config.priority;
+  if (config.name?.trim()) payload.name = config.name.trim();
   if (config.prefix?.trim()) payload.prefix = config.prefix.trim();
   if (config.baseUrl) payload['base-url'] = config.baseUrl;
   const headers = serializeHeaders(config.headers);
@@ -174,8 +183,8 @@ export const providersApi = {
   updateGeminiKey: (index: number, value: GeminiKeyConfig) =>
     apiClient.patch('/gemini-api-key', { index, value: serializeGeminiKey(value) }),
 
-  deleteGeminiKey: (apiKey: string, baseUrl?: string) =>
-    apiClient.delete(`/gemini-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
+  deleteGeminiKey: (apiKey: string, baseUrl?: string, index?: number) =>
+    apiClient.delete(`/gemini-api-key${buildProviderDeleteQuery(apiKey, baseUrl, index)}`),
 
   async getCodexConfigs(): Promise<ProviderKeyConfig[]> {
     const data = await apiClient.get('/codex-api-key');
@@ -189,8 +198,8 @@ export const providersApi = {
   updateCodexConfig: (index: number, value: ProviderKeyConfig) =>
     apiClient.patch('/codex-api-key', { index, value: serializeProviderKey(value) }),
 
-  deleteCodexConfig: (apiKey: string, baseUrl?: string) =>
-    apiClient.delete(`/codex-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
+  deleteCodexConfig: (apiKey: string, baseUrl?: string, index?: number) =>
+    apiClient.delete(`/codex-api-key${buildProviderDeleteQuery(apiKey, baseUrl, index)}`),
 
   async getClaudeConfigs(): Promise<ProviderKeyConfig[]> {
     const data = await apiClient.get('/claude-api-key');
@@ -204,8 +213,8 @@ export const providersApi = {
   updateClaudeConfig: (index: number, value: ProviderKeyConfig) =>
     apiClient.patch('/claude-api-key', { index, value: serializeProviderKey(value) }),
 
-  deleteClaudeConfig: (apiKey: string, baseUrl?: string) =>
-    apiClient.delete(`/claude-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
+  deleteClaudeConfig: (apiKey: string, baseUrl?: string, index?: number) =>
+    apiClient.delete(`/claude-api-key${buildProviderDeleteQuery(apiKey, baseUrl, index)}`),
 
   async getVertexConfigs(): Promise<ProviderKeyConfig[]> {
     const data = await apiClient.get('/vertex-api-key');
@@ -219,8 +228,8 @@ export const providersApi = {
   updateVertexConfig: (index: number, value: ProviderKeyConfig) =>
     apiClient.patch('/vertex-api-key', { index, value: serializeVertexKey(value) }),
 
-  deleteVertexConfig: (apiKey: string, baseUrl?: string) =>
-    apiClient.delete(`/vertex-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
+  deleteVertexConfig: (apiKey: string, baseUrl?: string, index?: number) =>
+    apiClient.delete(`/vertex-api-key${buildProviderDeleteQuery(apiKey, baseUrl, index)}`),
 
   async getOpenAIProviders(): Promise<OpenAIProviderConfig[]> {
     const data = await apiClient.get('/openai-compatibility');

@@ -60,14 +60,33 @@ export const getPrimaryApiKey = (config: { apiKeyEntries?: ApiKeyEntry[] }): str
   return entry?.apiKey?.trim() ?? '';
 };
 
-export function buildProviderOverviewLabel(
-  item: { prefix?: string; apiKey?: string; apiKeyEntries?: ApiKeyEntry[]; baseUrl?: string; name?: string },
-  fallback: string
-): string {
+type ProviderLabelInput = {
+  prefix?: string;
+  apiKey?: string;
+  apiKeyEntries?: ApiKeyEntry[];
+  baseUrl?: string;
+  name?: string;
+};
+
+/** 提供商列表卡片等场景：prefix 优先（路由标识更直观） */
+export function buildProviderOverviewLabel(item: ProviderLabelInput, fallback: string): string {
   const prefix = String(item.prefix ?? '').trim();
   if (prefix) return prefix;
   const name = String(item.name ?? '').trim();
   if (name) return name;
+  const apiKey = getPrimaryApiKey(item) || String(item.apiKey ?? '').trim();
+  if (apiKey) return maskApiKey(apiKey);
+  const baseUrl = String(item.baseUrl ?? '').trim();
+  if (baseUrl) return baseUrl;
+  return fallback;
+}
+
+/** 请求明细「供应商 / 模型」列：name 优先（展示名更直观） */
+export function buildProviderRequestLabel(item: ProviderLabelInput, fallback: string): string {
+  const name = String(item.name ?? '').trim();
+  if (name) return name;
+  const prefix = String(item.prefix ?? '').trim();
+  if (prefix) return prefix;
   const apiKey = getPrimaryApiKey(item) || String(item.apiKey ?? '').trim();
   if (apiKey) return maskApiKey(apiKey);
   const baseUrl = String(item.baseUrl ?? '').trim();

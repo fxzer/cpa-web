@@ -83,6 +83,7 @@ export function ProviderColumn({
 interface SourceColumnProps {
   providerNodes: ProviderNode[];
   collapsedProviders: Set<string>;
+  providerGroupHeights?: Record<string, number>;
   sourceRefs: RefObject<Map<string, HTMLDivElement>>;
   getProviderColor: (provider: string) => string;
   selectedSourceId?: string | null;
@@ -102,6 +103,7 @@ interface SourceColumnProps {
 export function SourceColumn({
   providerNodes,
   collapsedProviders,
+  providerGroupHeights = {},
   sourceRefs,
   getProviderColor,
   selectedSourceId,
@@ -127,45 +129,54 @@ export function SourceColumn({
       }}
     >
       <div className={styles.columnHeader}>{label}</div>
-      {providerNodes.flatMap(({ provider, sources }) => {
-        if (collapsedProviders.has(provider)) return [];
-        return sources.map((source) => (
+      {providerNodes.map(({ provider, sources }) => {
+        if (collapsedProviders.has(provider)) return null;
+        const groupHeight = providerGroupHeights[provider];
+        return (
           <div
-            key={source.id}
-            ref={(el) => {
-              if (el) sourceRefs.current?.set(source.id, el);
-              else sourceRefs.current?.delete(source.id);
-            }}
-            className={`${styles.item} ${styles.sourceItem} ${
-              draggedSource?.id === source.id ? styles.dragging : ''
-            } ${dropTargetSource === source.id ? styles.dropTarget : ''} ${
-              selectedSourceId === source.id ? styles.selected : ''
-            }`}
-            onClick={() => onSelectSource?.(source)}
-            draggable={draggable}
-            onDragStart={(e) => onDragStart(e, source)}
-            onDragEnd={onDragEnd}
-            onDragOver={(e) => onDragOver(e, source)}
-            onDragLeave={onDragLeave}
-            onDrop={(e) => onDrop(e, source)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onContextMenu(e, 'source', source.id);
-            }}
+            key={`source-group-${provider}`}
+            className={styles.sourceGroup}
+            style={groupHeight ? { minHeight: groupHeight } : undefined}
           >
-            <span className={styles.itemName} title={source.name}>
-              {source.name}
-            </span>
-            <div
-              className={styles.dot}
-              style={{
-                background: getProviderColor(source.provider),
-                opacity: source.aliases.length > 0 ? 1 : 0.3
-              }}
-            />
+            {sources.map((source) => (
+              <div
+                key={source.id}
+                ref={(el) => {
+                  if (el) sourceRefs.current?.set(source.id, el);
+                  else sourceRefs.current?.delete(source.id);
+                }}
+                className={`${styles.item} ${styles.sourceItem} ${
+                  draggedSource?.id === source.id ? styles.dragging : ''
+                } ${dropTargetSource === source.id ? styles.dropTarget : ''} ${
+                  selectedSourceId === source.id ? styles.selected : ''
+                }`}
+                onClick={() => onSelectSource?.(source)}
+                draggable={draggable}
+                onDragStart={(e) => onDragStart(e, source)}
+                onDragEnd={onDragEnd}
+                onDragOver={(e) => onDragOver(e, source)}
+                onDragLeave={onDragLeave}
+                onDrop={(e) => onDrop(e, source)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onContextMenu(e, 'source', source.id);
+                }}
+              >
+                <span className={styles.itemName} title={source.name}>
+                  {source.name}
+                </span>
+                <div
+                  className={styles.dot}
+                  style={{
+                    background: getProviderColor(source.provider),
+                    opacity: source.aliases.length > 0 ? 1 : 0.3
+                  }}
+                />
+              </div>
+            ))}
           </div>
-        ));
+        );
       })}
     </div>
   );

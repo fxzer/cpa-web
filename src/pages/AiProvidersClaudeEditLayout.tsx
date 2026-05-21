@@ -14,6 +14,7 @@ import {
   areNormalizedApiKeyEntriesEqual,
   buildApiKeyEntry,
   excludedModelsToText,
+  getPrimaryApiKey,
   normalizeApiKeyEntriesForBaseline,
   parseExcludedModels,
   serializeApiKeyEntriesForSave,
@@ -50,6 +51,7 @@ export type ClaudeEditOutletContext = {
 const buildEmptyForm = (): ProviderFormState => ({
   apiKeyEntries: [buildApiKeyEntry()],
   priority: undefined,
+  name: '',
   prefix: '',
   baseUrl: '',
   headers: [],
@@ -101,6 +103,7 @@ const buildClaudeBaseline = (form: ProviderFormState): ClaudeEditBaseline => ({
   apiKeyEntries: normalizeApiKeyEntriesForBaseline(form.apiKeyEntries),
   priority:
     form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
+  name: String(form.name ?? '').trim(),
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
   headers: normalizeHeaderEntries(form.headers),
@@ -327,6 +330,7 @@ export function AiProvidersClaudeEditLayout() {
     baseline !== null &&
     (isApiKeyEntriesDirty ||
       baseline.priority !== normalizedPriority ||
+      baseline.name !== String(form.name ?? '').trim() ||
       baseline.prefix !== String(form.prefix ?? '').trim() ||
       baseline.baseUrl !== String(form.baseUrl ?? '').trim() ||
       isHeadersDirty ||
@@ -416,11 +420,17 @@ export function AiProvidersClaudeEditLayout() {
       !disableControls && !saving && !resolvedLoading && !invalidIndexParam && !invalidIndex;
     if (!canSave) return;
 
+    if (!getPrimaryApiKey(form)) {
+      showNotification(t('ai_providers.api_key_required'), 'error');
+      return;
+    }
+
     setSaving(true);
     try {
       const payload: ProviderKeyConfig = {
         apiKeyEntries: serializeApiKeyEntriesForSave(form.apiKeyEntries),
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
+        name: form.name?.trim() || undefined,
         prefix: form.prefix?.trim() || undefined,
         baseUrl: (form.baseUrl ?? '').trim() || undefined,
         headers: buildHeaderObject(form.headers),

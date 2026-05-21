@@ -18,11 +18,13 @@ import {
   buildConfiguredCredentialLookup,
   buildCredentialDisplay,
   resolveConfiguredCredential,
+  resolveProviderModelColumnDisplay,
 } from '@/utils/credentialResolver';
 import { buildSourceInfoMap, resolveSourceDisplay } from '@/utils/sourceResolver';
 import { parseTimestampMs } from '@/utils/timestamp';
 import {
   collectUsageDetailsWithEndpoint,
+  computeCacheHitRatio,
   extractFirstByteLatencyMs,
   extractGenerationMs,
   extractTotalTokens,
@@ -49,6 +51,8 @@ type RequestEventRow = {
   timestampLabel: string;
   requestId: string;
   provider: string;
+  providerTag: string;
+  providerDisplayName: string;
   model: string;
   endpoint: string;
   endpointMethod: string;
@@ -60,6 +64,7 @@ type RequestEventRow = {
   authIndex: string;
   authType: string;
   account: string;
+  credentialBadge: string;
   authLabel: string;
   authFile: string;
   resolvedApiKey: string;
@@ -221,6 +226,14 @@ const formatEndpointHeadline = (method: string, path: string): string => {
   const pathText = path.trim() || '-';
   const methodText = method.trim();
   return methodText ? `${methodText} ${pathText}` : pathText;
+};
+
+const formatEndpointSubline = (headline: string, endpoint: string): string | null => {
+  const normalizedHeadline = headline.trim();
+  const normalizedEndpoint = endpoint.trim();
+  if (!normalizedEndpoint || normalizedEndpoint === '-') return null;
+  if (normalizedEndpoint.toLowerCase() === normalizedHeadline.toLowerCase()) return null;
+  return normalizedEndpoint;
 };
 
 const encodeCsv = (value: string | number): string => {
@@ -394,6 +407,11 @@ export function RequestEventsDetailsCard({
       ? Math.max(0, Math.ceil((nextRefreshAtMs - countdownNowMs) / 1000))
       : null;
 
+  const openaiProviderNames = useMemo(
+    () => openaiProviders.map((item) => item.name).filter(Boolean),
+    [openaiProviders]
+  );
+
   const rows = useMemo<RequestEventRow[]>(() => {
     const details = collectUsageDetailsWithEndpoint(usage);
 
@@ -405,7 +423,7 @@ export function RequestEventsDetailsCard({
           : parseTimestampMs(timestamp);
       const date = Number.isNaN(timestampMs) ? null : new Date(timestampMs);
       const requestId = firstText(detail.request_id, detail.id);
-      const provider = firstText(detail.provider, detail.auth_provider_snapshot) || '-';
+      const usageProvider = firstText(detail.provider, detail.auth_provider_snapshot);
       const endpoint = firstText(detail.__endpoint) || '-';
       const endpointMethod = firstText(detail.__endpointMethod);
       const endpointPath = firstText(detail.__endpointPath) || endpoint;
@@ -439,15 +457,26 @@ export function RequestEventsDetailsCard({
         apiKeyHash,
         source: sourceRaw,
       });
+      const authIndexKey = normalizeAuthIndex(authIndexRaw);
+      const authFileInfo = authIndexKey ? authFileMap.get(authIndexKey) : undefined;
       const credentialDisplay = buildCredentialDisplay({
-        provider,
-        authProviderSnapshot: firstText(detail.auth_provider_snapshot),
         accountSnapshot: firstText(detail.account_snapshot),
         authLabelSnapshot: firstText(detail.auth_label_snapshot),
         authFileSnapshot: firstText(detail.auth_file_snapshot),
+        authIndex,
+        authType,
+        source,
         resolvedCredential,
       });
-      const account = credentialDisplay.headline;
+      const providerColumn = resolveProviderModelColumnDisplay({
+        usageProvider,
+        resolvedCredential,
+        sourceType: sourceInfo.type,
+        sourceIdentityKey: sourceInfo.identityKey,
+        authFileType: authFileInfo?.type,
+        openaiProviderNames,
+        sourceDisplayName: sourceInfo.requestDisplayName,
+      });
       const firstByteLatencyMs = extractFirstByteLatencyMs(detail);
       const generationMs = extractGenerationMs(detail);
       const latencyMs =
@@ -458,7 +487,7 @@ export function RequestEventsDetailsCard({
       const thinking = detail.thinking ?? null;
       const thinkingEffort = normalizeThinkingText(detail.thinking_effort);
       const thinkingLabel = thinkingEffort || formatThinkingLabel(thinking);
-      const cacheHitRatio = inputTokens > 0 ? cachedTokens / inputTokens : null;
+      const cacheHitRatio = computeCacheHitRatio(inputTokens, cachedTokens);
 
       return {
         id: backendId || `${timestamp}-${model}-${sourceKey}-${authIndex}-${index}`,
@@ -466,7 +495,9 @@ export function RequestEventsDetailsCard({
         timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
         timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
         requestId,
-        provider,
+        provider: providerColumn.headline,
+        providerTag: providerColumn.tag,
+        providerDisplayName: providerColumn.displayName,
         model,
         endpoint,
         endpointMethod,
@@ -477,7 +508,8 @@ export function RequestEventsDetailsCard({
         sourceType,
         authIndex,
         authType,
-        account,
+        account: credentialDisplay.headline,
+        credentialBadge: credentialDisplay.badge,
         authLabel: firstText(detail.auth_label_snapshot) || '-',
         authFile: firstText(detail.auth_file_snapshot) || '-',
         resolvedApiKey: credentialDisplay.resolvedApiKey,
@@ -534,7 +566,7 @@ export function RequestEventsDetailsCard({
         source: buildDisambiguatedSourceLabel(row),
       }))
       .sort((a, b) => b.timestampMs - a.timestampMs);
-  }, [authFileMap, credentialLookup, i18n.language, sourceInfoMap, usage]);
+  }, [authFileMap, credentialLookup, i18n.language, openaiProviderNames, sourceInfoMap, usage]);
 
   const timeRangeOptions = useMemo(
     () =>
@@ -682,6 +714,8 @@ export function RequestEventsDetailsCard({
           [
             row.requestId,
             row.provider,
+            row.providerTag,
+            row.providerDisplayName,
             row.model,
             row.endpoint,
             row.endpointMethod,
@@ -1093,7 +1127,11 @@ export function RequestEventsDetailsCard({
                 </tr>
               </thead>
               <tbody>
-                {renderedRows.map((row) => (
+                {renderedRows.map((row) => {
+                  const endpointHeadline = formatEndpointHeadline(row.endpointMethod, row.endpointPath);
+                  const endpointSubline = formatEndpointSubline(endpointHeadline, row.endpoint);
+
+                  return (
                   <tr key={row.id}>
                     <td title={row.timestamp} className={styles.requestEventsTimeResultCell}>
                       <div className={styles.requestEventsPrimaryText}>{row.timestampLabel}</div>
@@ -1121,7 +1159,23 @@ export function RequestEventsDetailsCard({
                       </div>
                     </td>
                     <td className={styles.requestEventsProviderModelCell}>
-                      <div className={styles.requestEventsPrimaryText}>{row.provider}</div>
+                      <div
+                        className={styles.requestEventsPrimaryText}
+                        title={row.provider !== '-' ? row.provider : undefined}
+                      >
+                        {row.providerTag ? (
+                          <>
+                            <span className={styles.requestEventsProviderTag}>{row.providerTag}</span>
+                            {row.providerDisplayName ? (
+                              <span className={styles.requestEventsProviderName}>
+                                {row.providerDisplayName}
+                              </span>
+                            ) : null}
+                          </>
+                        ) : (
+                          row.providerDisplayName || row.provider
+                        )}
+                      </div>
                       <div className={styles.requestEventsSecondaryText}>{row.model}</div>
                     </td>
                     <td
@@ -1129,9 +1183,11 @@ export function RequestEventsDetailsCard({
                       title={[row.endpoint, row.requestId].filter(Boolean).join(' · ')}
                     >
                       <div className={styles.requestEventsEndpointLine}>
-                        {formatEndpointHeadline(row.endpointMethod, row.endpointPath)}
+                        {endpointHeadline}
                       </div>
-                      <div className={styles.requestEventsEndpointSubline}>{row.endpoint}</div>
+                      {endpointSubline ? (
+                        <div className={styles.requestEventsEndpointSubline}>{endpointSubline}</div>
+                      ) : null}
                       <div className={styles.requestEventsRequestLine}>
                         <span className={styles.requestEventsRequestIdText}>
                           {row.requestId || '-'}
@@ -1152,11 +1208,14 @@ export function RequestEventsDetailsCard({
                       </div>
                     </td>
                     <td className={styles.requestEventsCredentialCell}>
-                      <div className={styles.requestEventsPrimaryText} title={row.account}>
+                      <div
+                        className={styles.requestEventsPrimaryText}
+                        title={[row.account, row.credentialBadge].filter(Boolean).join(' · ') || undefined}
+                      >
                         {row.account}
-                        {row.sourceType && (
-                          <span className={styles.credentialType}>{row.sourceType}</span>
-                        )}
+                        {row.credentialBadge ? (
+                          <span className={styles.credentialType}>{row.credentialBadge}</span>
+                        ) : null}
                       </div>
                       <div
                         className={styles.requestEventsSecondaryText}
@@ -1174,40 +1233,54 @@ export function RequestEventsDetailsCard({
                           {row.totalTokens.toLocaleString()}
                         </span>
                       </div>
-                      <div className={styles.requestEventsMetricGrid}>
-                        <span>
-                          <span className={styles.requestEventsMetricLabel}>
+                      <div className={styles.requestEventsTokenPair}>
+                        <span
+                          className={`${styles.requestEventsTokenChip} ${styles.requestEventsTokenChipIn}`}
+                          title={t('usage_stats.request_events_input_short')}
+                        >
+                          <span className={styles.requestEventsTokenChipLabel}>
                             {t('usage_stats.request_events_input_short')}
                           </span>
-                          <span className={styles.requestEventsMetricValue}>
+                          <span className={styles.requestEventsTokenChipValue}>
                             {row.inputTokens.toLocaleString()}
                           </span>
                         </span>
-                        <span>
-                          <span className={styles.requestEventsMetricLabel}>
+                        <span
+                          className={`${styles.requestEventsTokenChip} ${styles.requestEventsTokenChipOut}`}
+                          title={t('usage_stats.request_events_output_short')}
+                        >
+                          <span className={styles.requestEventsTokenChipLabel}>
                             {t('usage_stats.request_events_output_short')}
                           </span>
-                          <span className={styles.requestEventsMetricValue}>
+                          <span className={styles.requestEventsTokenChipValue}>
                             {row.outputTokens.toLocaleString()}
                           </span>
                         </span>
-                        <span>
-                          <span className={styles.requestEventsMetricLabel}>
-                            {t('usage_stats.request_events_cached_short')}
-                          </span>
-                          <span className={styles.requestEventsMetricValue}>
-                            {row.cachedTokens.toLocaleString()}
-                          </span>
-                        </span>
-                        <span>
-                          <span className={styles.requestEventsMetricLabel}>
-                            {t('usage_stats.request_events_reasoning_short')}
-                          </span>
-                          <span className={styles.requestEventsMetricValue}>
-                            {row.reasoningTokens.toLocaleString()}
-                          </span>
-                        </span>
                       </div>
+                      {(row.cachedTokens > 0 || row.reasoningTokens > 0) && (
+                        <div className={styles.requestEventsMetricGrid}>
+                          {row.cachedTokens > 0 && (
+                            <span>
+                              <span className={styles.requestEventsMetricLabel}>
+                                {t('usage_stats.request_events_cached_short')}
+                              </span>
+                              <span className={styles.requestEventsMetricValue}>
+                                {row.cachedTokens.toLocaleString()}
+                              </span>
+                            </span>
+                          )}
+                          {row.reasoningTokens > 0 && (
+                            <span>
+                              <span className={styles.requestEventsMetricLabel}>
+                                {t('usage_stats.request_events_reasoning_short')}
+                              </span>
+                              <span className={styles.requestEventsMetricValue}>
+                                {row.reasoningTokens.toLocaleString()}
+                              </span>
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <div className={styles.requestEventsInlineBadges}>
                         {row.thinkingLabel !== '-' && (
                           <span
@@ -1264,7 +1337,8 @@ export function RequestEventsDetailsCard({
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -1,5 +1,9 @@
 import type { ApiKeyEntry, GeminiKeyConfig, OpenAIProviderConfig, ProviderKeyConfig } from '@/types';
-import { getProviderApiKeyEntries } from '@/components/providers/utils';
+import {
+  buildProviderOverviewLabel,
+  buildProviderRequestLabel,
+  getProviderApiKeyEntries,
+} from '@/components/providers/utils';
 import { sha256Hex } from '@/utils/apiKeyHash';
 import {
   buildCandidateUsageSourceIds,
@@ -11,6 +15,8 @@ import {
 export interface ConfiguredCredential {
   apiKey: string;
   providerLabel: string;
+  /** 请求明细「供应商 / 模型」列：name → prefix 降级 */
+  requestLabel: string;
   providerType: 'openai' | 'gemini' | 'codex' | 'claude' | 'vertex';
 }
 
@@ -81,6 +87,7 @@ export function buildConfiguredCredentialLookup(input: SourceInfoMapInput): Conf
     entries: ApiKeyEntry[],
     type: ConfiguredCredential['providerType'],
     providerLabel: string,
+    requestLabel: string,
     prefix?: string
   ) => {
     entries.forEach((entry) => {
@@ -91,6 +98,7 @@ export function buildConfiguredCredentialLookup(input: SourceInfoMapInput): Conf
         {
           apiKey,
           providerLabel,
+          requestLabel,
           providerType: type,
         },
         entry.authIndex,
@@ -100,45 +108,55 @@ export function buildConfiguredCredentialLookup(input: SourceInfoMapInput): Conf
   };
 
   const providerGroups: Array<{
-    items: Array<{ apiKeyEntries?: ApiKeyEntry[]; authIndex?: string; prefix?: string }>;
+    items: Array<{
+      apiKeyEntries?: ApiKeyEntry[];
+      authIndex?: string;
+      prefix?: string;
+      name?: string;
+      baseUrl?: string;
+    }>;
     type: ConfiguredCredential['providerType'];
-    label: (item: { prefix?: string }, index: number) => string;
+    fallbackLabel: (index: number) => string;
   }> = [
     {
       items: input.geminiApiKeys || [],
       type: 'gemini',
-      label: (_item, index) => `Gemini #${index + 1}`,
+      fallbackLabel: (index) => `Gemini #${index + 1}`,
     },
     {
       items: input.claudeApiKeys || [],
       type: 'claude',
-      label: (_item, index) => `Claude #${index + 1}`,
+      fallbackLabel: (index) => `Claude #${index + 1}`,
     },
     {
       items: input.codexApiKeys || [],
       type: 'codex',
-      label: (_item, index) => `Codex #${index + 1}`,
+      fallbackLabel: (index) => `Codex #${index + 1}`,
     },
     {
       items: input.vertexApiKeys || [],
       type: 'vertex',
-      label: (_item, index) => `Vertex #${index + 1}`,
+      fallbackLabel: (index) => `Vertex #${index + 1}`,
     },
   ];
 
-  providerGroups.forEach(({ items, type, label }) => {
+  providerGroups.forEach(({ items, type, fallbackLabel }) => {
     items.forEach((item, index) => {
+      const fallback = fallbackLabel(index);
       registerProviderKeyEntries(
         getProviderApiKeyEntries(item),
         type,
-        item.prefix?.trim() || label(item, index),
+        buildProviderOverviewLabel(item, fallback),
+        buildProviderRequestLabel(item, fallback),
         item.prefix
       );
     });
   });
 
-  (input.openaiCompatibility || []).forEach((provider) => {
-    const providerLabel = provider.name?.trim() || 'OpenAI';
+  (input.openaiCompatibility || []).forEach((provider, index) => {
+    const fallback = `OpenAI #${index + 1}`;
+    const providerLabel = buildProviderOverviewLabel(provider, fallback);
+    const requestLabel = buildProviderRequestLabel(provider, fallback);
     (provider.apiKeyEntries || []).forEach((entry) => {
       const apiKey = entry.apiKey?.trim();
       if (!apiKey) return;
@@ -147,6 +165,7 @@ export function buildConfiguredCredentialLookup(input: SourceInfoMapInput): Conf
         {
           apiKey,
           providerLabel,
+          requestLabel,
           providerType: 'openai',
         },
         entry.authIndex,
@@ -224,48 +243,159 @@ const firstText = (...values: Array<unknown>): string => {
   return '';
 };
 
+export interface ProviderModelColumnDisplay {
+  tag: string;
+  displayName: string;
+  headline: string;
+}
+
+/** 与 AI 提供商配置页分段器 id 对齐 */
+const AI_PROVIDER_CHANNEL_IDS = new Set([
+  'openai',
+  'gemini',
+  'codex',
+  'claude',
+  'vertex',
+  'ampcode',
+]);
+
+const parseChannelFromIdentityKey = (identityKey?: string): string => {
+  const key = String(identityKey ?? '').trim();
+  if (!key || key.startsWith('auth:') || key.startsWith('source:')) return '';
+  const [channel] = key.split(':');
+  return channel?.trim().toLowerCase() ?? '';
+};
+
+const resolveOpenAICompatChannelByName = (
+  usageProvider: string,
+  openaiProviderNames?: string[]
+): string => {
+  const normalized = usageProvider.trim().toLowerCase();
+  if (!normalized) return '';
+  if (openaiProviderNames?.some((name) => name.trim().toLowerCase() === normalized)) {
+    return 'openai';
+  }
+  return '';
+};
+
+/** 请求明细「供应商 / 模型」列上行：tag 对齐 AI 提供商 / 认证文件分段器 channel */
+export function resolveProviderModelColumnDisplay(input: {
+  usageProvider?: string;
+  resolvedCredential?: ConfiguredCredential | null;
+  sourceType?: string;
+  sourceIdentityKey?: string;
+  authFileType?: string;
+  openaiProviderNames?: string[];
+  sourceDisplayName?: string;
+}): ProviderModelColumnDisplay {
+  const usageProvider = firstText(input.usageProvider).toLowerCase();
+
+  let channelTag = firstText(
+    input.resolvedCredential?.providerType,
+    input.sourceType,
+    input.authFileType,
+    parseChannelFromIdentityKey(input.sourceIdentityKey)
+  ).toLowerCase();
+
+  if (!channelTag && usageProvider) {
+    channelTag =
+      resolveOpenAICompatChannelByName(usageProvider, input.openaiProviderNames) ||
+      (AI_PROVIDER_CHANNEL_IDS.has(usageProvider) ? usageProvider : '');
+  }
+
+  const displayName = firstText(input.resolvedCredential?.requestLabel, input.sourceDisplayName);
+  const normalizedName = displayName.trim();
+  const showName =
+    Boolean(normalizedName) &&
+    (!channelTag || normalizedName.toLowerCase() !== channelTag) &&
+    !input.openaiProviderNames?.some((name) => name.trim().toLowerCase() === normalizedName.toLowerCase());
+
+  let headline = '-';
+  if (channelTag && showName) {
+    headline = `${channelTag} / ${normalizedName}`;
+  } else if (channelTag) {
+    headline = channelTag;
+  } else if (normalizedName) {
+    headline = normalizedName;
+  }
+
+  return {
+    tag: channelTag,
+    displayName: showName ? normalizedName : '',
+    headline,
+  };
+}
+
 export interface CredentialDisplay {
   headline: string;
   subtitle: string;
+  badge: string;
   resolvedApiKey: string;
 }
 
+const formatCredentialAuthTypeBadge = (authType: string): string => {
+  const normalized = authType.trim().toLowerCase();
+  if (!normalized || normalized === '-') return '';
+  if (normalized === 'apikey' || normalized === 'api_key') return 'API Key';
+  return authType.trim();
+};
+
+const shortAuthIndex = (authIndex: string): string => {
+  const trimmed = authIndex.trim();
+  if (!trimmed || trimmed === '-') return '';
+  return trimmed.length > 16 ? `${trimmed.slice(0, 12)}…` : trimmed;
+};
+
 /** Build human-readable credential column text for request detail rows. */
 export function buildCredentialDisplay(input: {
-  provider?: string;
-  authProviderSnapshot?: string;
   accountSnapshot?: string;
   authLabelSnapshot?: string;
   authFileSnapshot?: string;
+  authIndex?: string;
+  authType?: string;
+  source?: string;
   resolvedCredential?: ConfiguredCredential | null;
 }): CredentialDisplay {
-  const vendor = firstText(input.authProviderSnapshot, input.provider);
   const authLabel = firstText(input.authLabelSnapshot);
   const authFile = firstText(input.authFileSnapshot);
   const accountSnapshot = firstText(input.accountSnapshot);
+  const source = firstText(input.source);
+  const authIndex = firstText(input.authIndex);
+  const badge = formatCredentialAuthTypeBadge(firstText(input.authType));
   const resolvedApiKey = input.resolvedCredential?.apiKey?.trim() || '';
+
+  const credentialIdentity = firstText(authLabel, accountSnapshot, authFile, source);
+  const fallbackHeadline = firstText(badge, shortAuthIndex(authIndex));
 
   if (resolvedApiKey) {
     return {
-      headline: vendor || input.resolvedCredential?.providerLabel || '-',
+      headline: credentialIdentity || fallbackHeadline || '-',
       subtitle: resolvedApiKey,
+      badge,
       resolvedApiKey,
     };
   }
 
-  const oauthIdentity = authLabel || authFile || accountSnapshot;
+  const oauthIdentity = firstText(authLabel, accountSnapshot, authFile);
   if (oauthIdentity) {
-    const parts = [vendor, oauthIdentity].filter(Boolean);
+    const subtitle =
+      authFile && authFile !== oauthIdentity
+        ? authFile
+        : source && source !== oauthIdentity
+          ? source
+          : '';
     return {
-      headline: parts.join(' · ') || oauthIdentity,
-      subtitle: authFile && authFile !== oauthIdentity ? authFile : '',
+      headline: oauthIdentity,
+      subtitle,
+      badge,
       resolvedApiKey: '',
     };
   }
 
   return {
-    headline: vendor || '-',
+    headline: firstText(source, fallbackHeadline) || '-',
     subtitle: '',
+    badge,
     resolvedApiKey: '',
   };
 }

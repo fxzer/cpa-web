@@ -18,6 +18,7 @@ import {
   areNormalizedApiKeyEntriesEqual,
   buildApiKeyEntry,
   excludedModelsToText,
+  getPrimaryApiKey,
   normalizeApiKeyEntriesForBaseline,
   parseExcludedModels,
   serializeApiKeyEntriesForSave,
@@ -32,6 +33,7 @@ type LocationState = { fromAiProviders?: boolean } | null;
 
 const buildEmptyForm = (): VertexFormState => ({
   apiKeyEntries: [buildApiKeyEntry()],
+  name: '',
   prefix: '',
   baseUrl: '',
   headers: [],
@@ -59,6 +61,7 @@ const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) 
 type VertexFormBaseline = {
   apiKeyEntries: ReturnType<typeof normalizeApiKeyEntriesForBaseline>;
   priority: number | null;
+  name: string;
   prefix: string;
   baseUrl: string;
   headers: ReturnType<typeof normalizeHeaderEntries>;
@@ -70,6 +73,7 @@ const buildVertexBaseline = (form: VertexFormState): VertexFormBaseline => ({
   apiKeyEntries: normalizeApiKeyEntriesForBaseline(form.apiKeyEntries),
   priority:
     form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
+  name: String(form.name ?? '').trim(),
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
   headers: normalizeHeaderEntries(form.headers),
@@ -227,6 +231,7 @@ export function AiProvidersVertexEditPage() {
   const isDirty =
     isApiKeyEntriesDirty ||
     baseline.priority !== normalizedPriority ||
+    baseline.name !== String(form.name ?? '').trim() ||
     baseline.prefix !== String(form.prefix ?? '').trim() ||
     baseline.baseUrl !== String(form.baseUrl ?? '').trim() ||
     isHeadersDirty ||
@@ -250,6 +255,11 @@ export function AiProvidersVertexEditPage() {
   const handleSave = useCallback(async () => {
     if (!canSave) return;
 
+    if (!getPrimaryApiKey(form)) {
+      showNotification(t('ai_providers.api_key_required'), 'error');
+      return;
+    }
+
     const trimmedBaseUrl = (form.baseUrl ?? '').trim();
     const baseUrl = trimmedBaseUrl || undefined;
 
@@ -262,6 +272,7 @@ export function AiProvidersVertexEditPage() {
           form.priority !== undefined && Number.isFinite(form.priority)
             ? Math.trunc(form.priority)
             : undefined,
+        name: form.name?.trim() || undefined,
         prefix: form.prefix?.trim() || undefined,
         baseUrl,
         headers: buildHeaderObject(form.headers),
@@ -353,6 +364,13 @@ export function AiProvidersVertexEditPage() {
           <>
             <div className={styles.openaiEditForm}>
               <div className={styles.providerEditTopGrid}>
+                <Input
+                  label={t('ai_providers.provider_name_label')}
+                  value={form.name ?? ''}
+                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                  hint={t('ai_providers.provider_name_hint')}
+                  disabled={disableControls || saving}
+                />
                 <Input
                   label={t('ai_providers.prefix_label')}
                   placeholder={t('ai_providers.prefix_placeholder')}

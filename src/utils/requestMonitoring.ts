@@ -90,11 +90,12 @@ const buildCredentialHeadline = (
     source: firstText(detail.source),
   });
   const display = buildCredentialDisplay({
-    provider: firstText(detail.provider),
-    authProviderSnapshot: firstText(detail.auth_provider_snapshot),
     accountSnapshot: firstText(detail.account_snapshot),
     authLabelSnapshot: firstText(detail.auth_label_snapshot),
     authFileSnapshot: firstText(detail.auth_file_snapshot),
+    authIndex: normalizeAuthIndex(detail.auth_index) ?? '',
+    authType: firstText(detail.auth_type),
+    source: displaySource(firstText(detail.source)),
     resolvedCredential,
   });
   return {

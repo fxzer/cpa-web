@@ -528,7 +528,7 @@
 
   th,
   td {
-    padding: 10px 12px;
+    padding: 8px 12px;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
   }
@@ -1165,12 +1165,12 @@
 }
 
 .requestEventsTable {
-  min-width: 1180px;
+  min-width: 1282px;
   table-layout: fixed;
 }
 
 .requestEventsTimeResultCol {
-  width: 128px;
+  width: 180px;
 }
 
 .requestEventsProviderModelCol {
@@ -1178,7 +1178,7 @@
 }
 
 .requestEventsEndpointRequestCol {
-  width: 240px;
+  width: 200px;
 }
 
 .requestEventsCredentialCol {
@@ -1186,11 +1186,11 @@
 }
 
 .requestEventsUsageCol {
-  width: 210px;
+  width: 280px;
 }
 
 .requestEventsPerformanceCol {
-  width: 150px;
+  width: 170px;
 }
 
 .requestEventsEndpointCell {
@@ -1228,6 +1228,26 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.requestEventsProviderTag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: $radius-full;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  vertical-align: middle;
+  text-transform: lowercase;
+}
+
+.requestEventsProviderName {
+  vertical-align: middle;
+  font-weight: 650;
 }
 
 .requestEventsSecondaryText {
@@ -1448,6 +1468,7 @@
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
+  padding: 0 4px;
   color: var(--text-primary);
 }
 
@@ -1467,10 +1488,57 @@
   white-space: nowrap;
 }
 
+.requestEventsTokenPair {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.requestEventsTokenChip {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  padding: 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.requestEventsTokenChipLabel {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.requestEventsTokenChipValue {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.requestEventsTokenChipIn {
+  color: var(--cache-hit-badge-text);
+  background: var(--cache-hit-badge-bg);
+}
+
+.requestEventsTokenChipOut {
+  color: var(--success-color, #16a34a);
+  background: color-mix(in srgb, var(--success-color, #16a34a) 12%, var(--bg-primary));
+}
+
 .requestEventsMetricGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 10px;
+  gap: 4px 10px;
+  margin-top: 6px;
+  padding: 0 4px;
 
   > span {
     display: flex;
@@ -1485,6 +1553,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding: 0 4px;
 
   > span {
     display: flex;

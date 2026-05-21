@@ -276,7 +276,8 @@ const normalizeUsageTokens = (value: unknown): UsageDetail['tokens'] => {
   const reasoningTokens = toNonNegativeNumber(tokens.reasoning_tokens) ?? 0;
   const cachedTokens = Math.max(
     toNonNegativeNumber(tokens.cached_tokens) ?? 0,
-    toNonNegativeNumber(tokens.cache_tokens) ?? 0
+    toNonNegativeNumber(tokens.cache_tokens) ?? 0,
+    toNonNegativeNumber(tokens.cache_read_tokens) ?? 0
   );
   const totalTokens =
     toNonNegativeNumber(tokens.total_tokens) ??
@@ -291,6 +292,23 @@ const normalizeUsageTokens = (value: unknown): UsageDetail['tokens'] => {
     total_tokens: totalTokens,
   };
 };
+
+/**
+ * 缓存命中率：OpenAI/Gemini 中 cached 是 input 的子集；Claude 中 input 仅计未缓存部分，cached 需与 input 相加后再算比例。
+ */
+export function computeCacheHitRatio(inputTokens: number, cachedTokens: number): number | null {
+  const input = Math.max(inputTokens, 0);
+  const cached = Math.max(cachedTokens, 0);
+  if (cached <= 0) return null;
+
+  if (input > 0 && cached <= input) {
+    return Math.min(cached / input, 1);
+  }
+
+  const totalInput = input + cached;
+  if (totalInput <= 0) return null;
+  return Math.min(cached / totalInput, 1);
+}
 
 const normalizeUsageRecordDetail = (
   detailRaw: unknown,

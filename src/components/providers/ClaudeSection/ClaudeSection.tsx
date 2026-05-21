@@ -107,6 +107,9 @@ export function ClaudeSection({
               : undefined
           }
           actionsDisabled={actionsDisabled}
+          listClassName={styles.openaiProviderList}
+          rowClassName={styles.openaiProviderCard}
+          metaClassName={styles.openaiProviderMeta}
           getRowDisabled={(item) => hasDisableAllModelsRule(item.excludedModels)}
           renderExtraActions={(item, index) => (
             <ToggleSwitch
@@ -116,7 +119,7 @@ export function ClaudeSection({
               onChange={(value) => void onToggle(index, value)}
             />
           )}
-          actionsClassName={styles.providerCardActions}
+          actionsClassName={styles.openaiProviderActions}
           renderContent={(item, index) => {
             const stats = getProviderKeyConfigRecentStats('claude', item, usageByProvider);
             const headerEntries = Object.entries(item.headers || {});
@@ -130,7 +133,10 @@ export function ClaudeSection({
               <Fragment>
                 <div className={styles.providerCardHeaderRow}>
                   <div className={`item-title ${styles.providerCardTitle}`}>
-                    {t('ai_providers.claude_item_title')}
+                    {buildProviderOverviewLabel(
+                      item,
+                      `${t('ai_providers.claude_item_title')} #${index + 1}`
+                    )}
                   </div>
                   <div className={styles.cardStats}>
                     <span className={`${styles.statPill} ${styles.statSuccess}`}>

@@ -313,6 +313,13 @@ export function AiProvidersClaudeEditPage() {
           <div className={styles.openaiEditForm}>
             <div className={styles.providerEditTopGrid}>
               <Input
+                label={t('ai_providers.provider_name_label')}
+                value={form.name ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                hint={t('ai_providers.provider_name_hint')}
+                disabled={saving || disableControls || isTesting}
+              />
+              <Input
                 label={t('ai_providers.priority_label')}
                 hint={t('ai_providers.priority_hint')}
                 type="number"

@@ -28,6 +28,7 @@ export type ClaudeEditBaseline = {
     headers: Array<{ key: string; value: string }>;
   }>;
   priority: number | null;
+  name: string;
   prefix: string;
   baseUrl: string;
   headers: Array<{ key: string; value: string }>;
@@ -74,6 +75,7 @@ const resolveAction = <T,>(action: SetStateAction<T>, prev: T): T =>
 
 const buildEmptyForm = (): ProviderFormState => ({
   apiKeyEntries: [buildApiKeyEntry()],
+  name: '',
   prefix: '',
   baseUrl: '',
   headers: [],

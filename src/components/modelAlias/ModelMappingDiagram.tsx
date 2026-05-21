@@ -2,6 +2,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffec
 import { useTranslation } from 'react-i18next';
 import type { OAuthModelAliasEntry } from '@/types';
 import { useThemeStore } from '@/stores';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { AliasColumn, ProviderColumn, SourceColumn } from './ModelMappingDiagramColumns';
 import { DiagramContextMenu } from './ModelMappingDiagramContextMenu';
 import {
@@ -32,6 +33,9 @@ export interface ModelMappingDiagramProps {
   onDeleteProvider?: (provider: string) => void;
   className?: string;
 }
+
+const MODAL_SCALE_IN_ANIMATION = 'modal-scale-in';
+const MODAL_LAYOUT_FALLBACK_MS = 380;
 
 const PROVIDER_COLORS = [
   '#8b8680', '#10b981', '#f59e0b', '#c65746',
@@ -73,7 +77,9 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
   }, []);
   
   const containerRef = useRef<HTMLDivElement>(null);
+  const connectionsRef = useRef<SVGSVGElement>(null);
   const [lines, setLines] = useState<DiagramLine[]>([]);
+  const [layoutReady, setLayoutReady] = useState(false);
   const [draggedSource, setDraggedSource] = useState<SourceNode | null>(null);
   const [draggedAlias, setDraggedAlias] = useState<string | null>(null);
   const [dropTargetAlias, setDropTargetAlias] = useState<string | null>(null);
@@ -197,14 +203,29 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
   // Calculate lines: provider→source, source→alias (when expanded); midpoint + linkData for source→alias
   const updateLines = useCallback(() => {
     if (!containerRef.current) return;
-    const containerRect = containerRef.current.getBoundingClientRect();
+    const container = containerRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const svgWidth = Math.max(container.scrollWidth, containerRect.width);
+    const svgHeight = Math.max(container.scrollHeight, containerRect.height);
+
+    if (connectionsRef.current) {
+      connectionsRef.current.setAttribute('width', String(Math.ceil(svgWidth)));
+      connectionsRef.current.setAttribute('height', String(Math.ceil(svgHeight)));
+      connectionsRef.current.style.width = `${svgWidth}px`;
+      connectionsRef.current.style.height = `${svgHeight}px`;
+    }
+
     const newLines: { path: string; color: string; id: string }[] = [];
     const nextProviderGroupHeights: Record<string, number> = {};
 
-    const bezier = (
+    const connectionPath = (
       x1: number, y1: number,
       x2: number, y2: number
     ) => {
+      if (Math.abs(y1 - y2) < 1.5) {
+        const y = (y1 + y2) / 2;
+        return `M ${x1} ${y} L ${x2} ${y}`;
+      }
       const cpx1 = x1 + (x2 - x1) * 0.5;
       const cpx2 = x2 - (x2 - x1) * 0.5;
       return `M ${x1} ${y1} C ${cpx1} ${y1}, ${cpx2} ${y2}, ${x2} ${y2}`;
@@ -239,7 +260,7 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
         const sy = sourceRect.top + sourceRect.height / 2 - containerRect.top;
         newLines.push({
           id: `provider-${provider}-source-${source.id}`,
-          path: bezier(px, py, sx, sy),
+          path: connectionPath(px, py, sx, sy),
           color
         });
       });
@@ -263,7 +284,7 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
           
           newLines.push({
             id: `${source.id}-${aliasEntry.alias}`,
-            path: bezier(x1, y1, x2, y2),
+            path: connectionPath(x1, y1, x2, y2),
             color
           });
         });
@@ -294,14 +315,77 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
   );
 
   useLayoutEffect(() => {
-    // updateLines is called after layout is calculated, ensuring elements are in place.
-    const raf = requestAnimationFrame(updateLines);
-    window.addEventListener('resize', updateLines);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', updateLines);
+    let cancelled = false;
+    const scheduleUpdate = () => {
+      if (!cancelled) updateLines();
     };
-  }, [updateLines, aliasNodes]);
+
+    scheduleUpdate();
+    const raf1 = requestAnimationFrame(scheduleUpdate);
+    const raf2 = requestAnimationFrame(() => requestAnimationFrame(scheduleUpdate));
+
+    window.addEventListener('resize', scheduleUpdate);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      window.removeEventListener('resize', scheduleUpdate);
+    };
+  }, [updateLines, aliasNodes, providerNodes]);
+
+  useEffect(() => {
+    setLayoutReady(false);
+
+    let cancelled = false;
+    let fallbackTimer: number | undefined;
+
+    const revealDiagram = () => {
+      if (cancelled) return;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          updateLines();
+          setLayoutReady(true);
+        });
+      });
+    };
+
+    const modal = containerRef.current?.closest('.modal');
+    const handleAnimationEnd = (event: Event) => {
+      const animationEvent = event as AnimationEvent;
+      if (
+        modal &&
+        animationEvent.target === modal &&
+        animationEvent.animationName === MODAL_SCALE_IN_ANIMATION
+      ) {
+        if (fallbackTimer !== undefined) {
+          window.clearTimeout(fallbackTimer);
+          fallbackTimer = undefined;
+        }
+        revealDiagram();
+      }
+    };
+
+    if (modal) {
+      modal.addEventListener('animationend', handleAnimationEnd);
+      fallbackTimer = window.setTimeout(revealDiagram, MODAL_LAYOUT_FALLBACK_MS);
+    } else {
+      fallbackTimer = window.setTimeout(revealDiagram, 0);
+    }
+
+    return () => {
+      cancelled = true;
+      if (fallbackTimer !== undefined) {
+        window.clearTimeout(fallbackTimer);
+      }
+      modal?.removeEventListener('animationend', handleAnimationEnd);
+    };
+  }, [updateLines, aliasNodes, providerNodes]);
+
+  useLayoutEffect(() => {
+    if (!layoutReady) return;
+    updateLines();
+  }, [layoutReady, updateLines]);
 
   useLayoutEffect(() => {
     const raf = requestAnimationFrame(updateLines);
@@ -309,11 +393,27 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
   }, [providerGroupHeights, updateLines]);
 
   useEffect(() => {
-    if (!containerRef.current || typeof ResizeObserver === 'undefined') return;
+    if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(() => updateLines());
-    observer.observe(containerRef.current);
+    const observed = new Set<Element>();
+
+    const observeElement = (element: Element | null | undefined) => {
+      if (!element || observed.has(element)) return;
+      observer.observe(element);
+      observed.add(element);
+    };
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+      observed.add(containerRef.current);
+    }
+
+    providerRefs.current.forEach(observeElement);
+    sourceRefs.current.forEach(observeElement);
+    aliasRefs.current.forEach(observeElement);
+
     return () => observer.disconnect();
-  }, [updateLines]);
+  }, [updateLines, providerNodes, aliasNodes, providerGroupHeights, collapsedProviders]);
 
   // Drag and Drop handlers
   // 1. Source -> Alias
@@ -523,25 +623,36 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
         <div className={styles.tapHint}>{t('oauth_model_alias.diagram_tap_hint')}</div>
       )}
       <div className={styles.tierHint}>{t('oauth_model_alias.diagram_overview_hint')}</div>
-      <div
-        className={styles.container}
-        ref={containerRef}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleContextMenu(e, 'background');
-        }}
-      >
-        <svg className={styles.connections}>
-          {lines.map((line) => (
-            <path
-              key={line.id}
-              d={line.path}
-              stroke={line.color}
-              strokeOpacity={isDark ? 0.4 : 0.3}
-            />
-          ))}
-        </svg>
+      <div className={styles.diagramShell}>
+        {!layoutReady && (
+          <div className={styles.layoutOverlay} aria-busy="true" aria-live="polite">
+            <div className={styles.layoutLoadingBox}>
+              <LoadingSpinner size={24} />
+              <span>{t('common.loading')}</span>
+            </div>
+          </div>
+        )}
+        <div
+          className={`${styles.container} ${layoutReady ? styles.containerReady : styles.containerPending}`}
+          ref={containerRef}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleContextMenu(e, 'background');
+          }}
+        >
+          {layoutReady && (
+            <svg className={styles.connections} ref={connectionsRef}>
+              {lines.map((line) => (
+                <path
+                  key={line.id}
+                  d={line.path}
+                  stroke={line.color}
+                  strokeOpacity={isDark ? 0.4 : 0.3}
+                />
+              ))}
+            </svg>
+          )}
 
         <ProviderColumn
           providerNodes={providerNodes}
@@ -558,6 +669,7 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
         <SourceColumn
           providerNodes={providerNodes}
           collapsedProviders={collapsedProviders}
+          providerGroupHeights={providerGroupHeights}
           sourceRefs={sourceRefs}
           getProviderColor={getProviderColor}
           selectedSourceId={enableTapLinking ? tapSourceId : null}
@@ -595,6 +707,7 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
           onContextMenu={(e, type, data) => handleContextMenu(e, type, data)}
           label={t('oauth_model_alias.diagram_aliases')}
         />
+      </div>
       </div>
 
       <DiagramContextMenu
