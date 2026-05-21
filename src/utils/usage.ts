@@ -679,6 +679,8 @@ const MASKED_TOKEN_HINT_REGEX = /^[^\s]{1,24}(\*{2,}|\.{3}|…)[^\s]{1,24}$/;
 
 const keyFingerprintCache = new Map<string, string>();
 
+export const computeUsageSourceKeyFingerprint = (value: string): string => fnv1a64Hex(value);
+
 const fnv1a64Hex = (value: string): string => {
   const cached = keyFingerprintCache.get(value);
   if (cached) return cached;

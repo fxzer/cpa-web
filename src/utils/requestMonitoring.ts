@@ -1,4 +1,10 @@
 import {
+  buildConfiguredCredentialLookup,
+  buildCredentialDisplay,
+  resolveConfiguredCredential,
+  type SourceInfoMapInput,
+} from './credentialResolver';
+import {
   collectUsageDetailsWithEndpoint,
   extractTotalTokens,
   normalizeAuthIndex,
@@ -24,6 +30,8 @@ export interface RequestMonitoringRow {
   account: string;
   authLabel: string;
   authFile: string;
+  resolvedApiKey: string;
+  credentialSubtitle: string;
   source: string;
   apiKeyHash: string;
   apiKeyHashShort: string;
@@ -71,19 +79,29 @@ const shortHash = (hash: string): string => {
   return normalized.length > 16 ? `${normalized.slice(0, 12)}...` : normalized;
 };
 
-/** 凭证列主标题：优先「上游供应商 · 账户/标签」，否则用 key 指纹或 source 展示 */
-const buildCredentialHeadline = (detail: UsageDetailWithEndpoint): string => {
-  const vendor = firstText(detail.auth_provider_snapshot, detail.provider);
-  const human = firstText(detail.account_snapshot, detail.auth_label_snapshot);
-  const apiKeyHash = firstText(detail.api_key_hash);
-  const hashShort = shortHash(apiKeyHash);
-  const sourceFallback = displaySource(firstText(detail.source));
-  const keyIdentity = human || hashShort || sourceFallback;
-  const parts: string[] = [];
-  if (vendor) parts.push(vendor);
-  if (keyIdentity) parts.push(keyIdentity);
-  const joined = parts.join(' · ');
-  return joined || EMPTY_LABEL;
+/** 凭证列主标题：优先展示供应商名；副标题由 buildCredentialDisplay 生成 */
+const buildCredentialHeadline = (
+  detail: UsageDetailWithEndpoint,
+  credentialLookup: ReturnType<typeof buildConfiguredCredentialLookup>
+): { account: string; resolvedApiKey: string; credentialSubtitle: string } => {
+  const resolvedCredential = resolveConfiguredCredential(credentialLookup, {
+    authIndex: detail.auth_index,
+    apiKeyHash: firstText(detail.api_key_hash),
+    source: firstText(detail.source),
+  });
+  const display = buildCredentialDisplay({
+    provider: firstText(detail.provider),
+    authProviderSnapshot: firstText(detail.auth_provider_snapshot),
+    accountSnapshot: firstText(detail.account_snapshot),
+    authLabelSnapshot: firstText(detail.auth_label_snapshot),
+    authFileSnapshot: firstText(detail.auth_file_snapshot),
+    resolvedCredential,
+  });
+  return {
+    account: display.headline,
+    resolvedApiKey: display.resolvedApiKey,
+    credentialSubtitle: display.subtitle,
+  };
 };
 
 const formatTimestamp = (timestampMs: number, fallback: string): string => {
@@ -106,14 +124,20 @@ const buildRowSearchText = (row: RequestMonitoringRow): string =>
     row.account,
     row.authLabel,
     row.authFile,
+    row.resolvedApiKey,
+    row.credentialSubtitle,
     row.source,
     row.apiKeyHash,
   ]
     .join(' ')
     .toLowerCase();
 
-export const buildRequestMonitoringRows = (usagePayload: unknown): RequestMonitoringRow[] => {
+export const buildRequestMonitoringRows = (
+  usagePayload: unknown,
+  credentialConfig?: SourceInfoMapInput
+): RequestMonitoringRow[] => {
   const details = collectUsageDetailsWithEndpoint(usagePayload);
+  const credentialLookup = buildConfiguredCredentialLookup(credentialConfig ?? {});
 
   return details
     .map((detail: UsageDetailWithEndpoint, index): RequestMonitoringRow => {
@@ -122,7 +146,8 @@ export const buildRequestMonitoringRows = (usagePayload: unknown): RequestMonito
       const authIndex = normalizeAuthIndex(detail.auth_index) ?? '';
       const apiKeyHash = firstText(detail.api_key_hash);
       const source = displaySource(firstText(detail.source));
-      const account = buildCredentialHeadline(detail);
+      const credential = buildCredentialHeadline(detail, credentialLookup);
+      const account = credential.account;
       const latencyMs =
         typeof detail.latency_ms === 'number' && Number.isFinite(detail.latency_ms)
           ? detail.latency_ms
@@ -148,6 +173,8 @@ export const buildRequestMonitoringRows = (usagePayload: unknown): RequestMonito
         account: account || EMPTY_LABEL,
         authLabel: firstText(detail.auth_label_snapshot) || EMPTY_LABEL,
         authFile: firstText(detail.auth_file_snapshot) || EMPTY_LABEL,
+        resolvedApiKey: credential.resolvedApiKey || EMPTY_LABEL,
+        credentialSubtitle: credential.credentialSubtitle || EMPTY_LABEL,
         source: source || EMPTY_LABEL,
         apiKeyHash,
         apiKeyHashShort: shortHash(apiKeyHash) || EMPTY_LABEL,

@@ -18,7 +18,16 @@ import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/u
 import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
 import type { ModelInfo } from '@/utils/models';
 import { entriesToModels, modelsToEntries } from '@/components/ui/modelInputListUtils';
-import { excludedModelsToText, parseExcludedModels } from '@/components/providers/utils';
+import { ProviderApiKeyEntriesEditor } from '@/components/providers/ProviderApiKeyEntriesEditor';
+import {
+  areNormalizedApiKeyEntriesEqual,
+  buildApiKeyEntry,
+  excludedModelsToText,
+  getPrimaryApiKey,
+  normalizeApiKeyEntriesForBaseline,
+  parseExcludedModels,
+  serializeApiKeyEntriesForSave,
+} from '@/components/providers/utils';
 import type { GeminiFormState } from '@/components/providers';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
 import styles from './AiProvidersPage.module.scss';
@@ -26,11 +35,10 @@ import styles from './AiProvidersPage.module.scss';
 type LocationState = { fromAiProviders?: boolean } | null;
 
 const buildEmptyForm = (): GeminiFormState => ({
-  apiKey: '',
+  apiKeyEntries: [buildApiKeyEntry()],
   priority: undefined,
   prefix: '',
   baseUrl: '',
-  proxyUrl: '',
   headers: [],
   modelEntries: [{ name: '', alias: '' }],
   excludedModels: [],
@@ -62,23 +70,21 @@ const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) 
   }, []);
 
 type GeminiFormBaseline = {
-  apiKey: string;
+  apiKeyEntries: ReturnType<typeof normalizeApiKeyEntriesForBaseline>;
   priority: number | null;
   prefix: string;
   baseUrl: string;
-  proxyUrl: string;
   headers: ReturnType<typeof normalizeHeaderEntries>;
   models: ReturnType<typeof normalizeModelEntries>;
   excludedModels: string[];
 };
 
 const buildGeminiBaseline = (form: GeminiFormState): GeminiFormBaseline => ({
-  apiKey: String(form.apiKey ?? '').trim(),
+  apiKeyEntries: normalizeApiKeyEntriesForBaseline(form.apiKeyEntries),
   priority:
     form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
-  proxyUrl: String(form.proxyUrl ?? '').trim(),
   headers: normalizeHeaderEntries(form.headers),
   models: normalizeModelEntries(form.modelEntries),
   excludedModels: parseExcludedModels(form.excludedText ?? ''),
@@ -184,6 +190,7 @@ export function AiProvidersGeminiEditPage() {
       const { headers, models, ...rest } = initialData;
       const nextForm: GeminiFormState = {
         ...rest,
+        apiKeyEntries: rest.apiKeyEntries?.length ? rest.apiKeyEntries : [buildApiKeyEntry()],
         headers: headersToEntries(headers),
         modelEntries: modelsToEntries(models).map((entry) => ({
           ...entry,
@@ -268,7 +275,7 @@ export function AiProvidersGeminiEditPage() {
     try {
       const list = await modelsApi.fetchGeminiModelsViaApiCall(
         form.baseUrl ?? '',
-        form.apiKey.trim() || undefined,
+        getPrimaryApiKey(form) || undefined,
         headerObject
       );
       if (modelDiscoveryRequestIdRef.current !== requestId) return;
@@ -285,7 +292,7 @@ export function AiProvidersGeminiEditPage() {
       );
       const shouldAttachDiag = message.toLowerCase().includes('api key') || message.includes('401');
       const diag = shouldAttachDiag
-        ? ` [diag: apiKeyField=${form.apiKey.trim() ? 'yes' : 'no'}, customXGoogApiKey=${
+        ? ` [diag: apiKeyField=${getPrimaryApiKey(form) ? 'yes' : 'no'}, customXGoogApiKey=${
             hasCustomXGoogApiKey ? 'yes' : 'no'
           }, customAuthorization=${hasAuthorization ? 'yes' : 'no'}]`
         : '';
@@ -295,7 +302,7 @@ export function AiProvidersGeminiEditPage() {
         setModelDiscoveryFetching(false);
       }
     }
-  }, [form.apiKey, form.baseUrl, form.headers, t]);
+  }, [form.apiKeyEntries, form.baseUrl, form.headers, t]);
 
   useEffect(() => {
     if (!modelDiscoveryOpen) {
@@ -319,7 +326,7 @@ export function AiProvidersGeminiEditPage() {
     const hasAuthorization = Object.keys(headerObject).some(
       (key) => key.toLowerCase() === 'authorization'
     );
-    const hasApiKeyField = Boolean(form.apiKey.trim());
+    const hasApiKeyField = Boolean(getPrimaryApiKey(form));
     const canAutoFetch = hasApiKeyField || hasCustomXGoogApiKey || hasAuthorization;
 
     if (!canAutoFetch) return;
@@ -328,12 +335,12 @@ export function AiProvidersGeminiEditPage() {
       .sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase()))
       .map(([key, value]) => `${key}:${value}`)
       .join('|');
-    const signature = `${nextEndpoint}||${form.apiKey.trim()}||${headerSignature}`;
+    const signature = `${nextEndpoint}||${getPrimaryApiKey(form)}||${headerSignature}`;
     if (autoFetchSignatureRef.current === signature) return;
     autoFetchSignatureRef.current = signature;
 
     void fetchGeminiModelDiscovery();
-  }, [fetchGeminiModelDiscovery, form.apiKey, form.baseUrl, form.headers, modelDiscoveryOpen]);
+  }, [fetchGeminiModelDiscovery, form.apiKeyEntries, form.baseUrl, form.headers, modelDiscoveryOpen]);
 
   useEffect(() => {
     const availableNames = new Set(discoveredModels.map((model) => model.name));
@@ -411,12 +418,19 @@ export function AiProvidersGeminiEditPage() {
     () => !areStringArraysEqual(baseline.excludedModels, normalizedExcludedModels),
     [baseline.excludedModels, normalizedExcludedModels]
   );
+  const normalizedApiKeyEntries = useMemo(
+    () => normalizeApiKeyEntriesForBaseline(form.apiKeyEntries),
+    [form.apiKeyEntries]
+  );
+  const isApiKeyEntriesDirty = useMemo(
+    () => !areNormalizedApiKeyEntriesEqual(baseline.apiKeyEntries, normalizedApiKeyEntries),
+    [baseline.apiKeyEntries, normalizedApiKeyEntries]
+  );
   const isDirty =
-    baseline.apiKey !== form.apiKey.trim() ||
+    isApiKeyEntriesDirty ||
     baseline.priority !== normalizedPriority ||
     baseline.prefix !== String(form.prefix ?? '').trim() ||
     baseline.baseUrl !== String(form.baseUrl ?? '').trim() ||
-    baseline.proxyUrl !== String(form.proxyUrl ?? '').trim() ||
     isHeadersDirty ||
     isModelsDirty ||
     isExcludedModelsDirty;
@@ -447,11 +461,10 @@ export function AiProvidersGeminiEditPage() {
       }));
 
       const payload: GeminiKeyConfig = {
-        apiKey: form.apiKey.trim(),
+        apiKeyEntries: serializeApiKeyEntriesForSave(form.apiKeyEntries),
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
         prefix: form.prefix?.trim() || undefined,
         baseUrl: form.baseUrl?.trim() || undefined,
-        proxyUrl: form.proxyUrl?.trim() || undefined,
         headers: buildHeaderObject(form.headers),
         models: entriesToModels(normalizedModelEntries),
         excludedModels: parseExcludedModels(form.excludedText),
@@ -542,13 +555,6 @@ export function AiProvidersGeminiEditPage() {
             <div className={styles.openaiEditForm}>
             <div className={styles.providerEditTopGrid}>
               <Input
-                label={t('ai_providers.gemini_add_modal_key_label')}
-                placeholder={t('ai_providers.gemini_add_modal_key_placeholder')}
-                value={form.apiKey}
-                onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
-                disabled={disableControls || saving}
-              />
-              <Input
                 label={t('ai_providers.priority_label')}
                 hint={t('ai_providers.priority_hint')}
                 type="number"
@@ -579,12 +585,16 @@ export function AiProvidersGeminiEditPage() {
                 onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
                 disabled={disableControls || saving}
               />
-              <Input
-                label={t('ai_providers.gemini_add_modal_proxy_label')}
-                placeholder={t('ai_providers.gemini_add_modal_proxy_placeholder')}
-                value={form.proxyUrl ?? ''}
-                onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
+            </div>
+            <div className={styles.keyEntriesSection}>
+              <div className={styles.keyEntriesHeader}>
+                <label className={styles.keyEntriesLabel}>{t('ai_providers.gemini_add_modal_key_label')}</label>
+                <span className={styles.keyEntriesHint}>{t('ai_providers.provider_keys_hint')}</span>
+              </div>
+              <ProviderApiKeyEntriesEditor
+                entries={form.apiKeyEntries}
                 disabled={disableControls || saving}
+                onChange={(apiKeyEntries) => setForm((prev) => ({ ...prev, apiKeyEntries }))}
               />
             </div>
             <HeaderInputList

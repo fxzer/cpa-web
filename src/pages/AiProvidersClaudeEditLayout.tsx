@@ -10,7 +10,14 @@ import type { ModelInfo } from '@/utils/models';
 import type { ModelEntry, ProviderFormState } from '@/components/providers/types';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
 import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
-import { excludedModelsToText, parseExcludedModels } from '@/components/providers/utils';
+import {
+  areNormalizedApiKeyEntriesEqual,
+  buildApiKeyEntry,
+  excludedModelsToText,
+  normalizeApiKeyEntriesForBaseline,
+  parseExcludedModels,
+  serializeApiKeyEntriesForSave,
+} from '@/components/providers/utils';
 import { modelsToEntries } from '@/components/ui/modelInputListUtils';
 import type { ClaudeEditBaseline } from '@/stores/useClaudeEditDraftStore';
 
@@ -41,11 +48,10 @@ export type ClaudeEditOutletContext = {
 };
 
 const buildEmptyForm = (): ProviderFormState => ({
-  apiKey: '',
+  apiKeyEntries: [buildApiKeyEntry()],
   priority: undefined,
   prefix: '',
   baseUrl: '',
-  proxyUrl: '',
   headers: [],
   models: [],
   excludedModels: [],
@@ -92,12 +98,11 @@ const normalizeCloakConfig = (cloak: ProviderFormState['cloak']) => {
 };
 
 const buildClaudeBaseline = (form: ProviderFormState): ClaudeEditBaseline => ({
-  apiKey: String(form.apiKey ?? '').trim(),
+  apiKeyEntries: normalizeApiKeyEntriesForBaseline(form.apiKeyEntries),
   priority:
     form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
-  proxyUrl: String(form.proxyUrl ?? '').trim(),
   headers: normalizeHeaderEntries(form.headers),
   models: normalizeClaudeModelEntries(form.modelEntries),
   excludedModels: parseExcludedModels(form.excludedText ?? ''),
@@ -247,6 +252,9 @@ export function AiProvidersClaudeEditLayout() {
     if (initialData) {
       const seededForm: ProviderFormState = {
         ...initialData,
+        apiKeyEntries: initialData.apiKeyEntries?.length
+          ? initialData.apiKeyEntries
+          : [buildApiKeyEntry()],
         headers: headersToEntries(initialData.headers),
         modelEntries: modelsToEntries(initialData.models),
         excludedText: excludedModelsToText(initialData.excludedModels),
@@ -285,6 +293,10 @@ export function AiProvidersClaudeEditLayout() {
     [form.excludedText]
   );
   const normalizedCloak = useMemo(() => normalizeCloakConfig(form.cloak), [form.cloak]);
+  const normalizedApiKeyEntries = useMemo(
+    () => normalizeApiKeyEntriesForBaseline(form.apiKeyEntries),
+    [form.apiKeyEntries]
+  );
   const normalizedPriority = useMemo(() => {
     return form.priority !== undefined && Number.isFinite(form.priority)
       ? Math.trunc(form.priority)
@@ -306,14 +318,17 @@ export function AiProvidersClaudeEditLayout() {
     if (!baseline) return false;
     return !areCloakConfigsEqual(baseline.cloak, normalizedCloak);
   }, [baseline, normalizedCloak]);
+  const isApiKeyEntriesDirty = useMemo(() => {
+    if (!baseline) return false;
+    return !areNormalizedApiKeyEntriesEqual(baseline.apiKeyEntries, normalizedApiKeyEntries);
+  }, [baseline, normalizedApiKeyEntries]);
   const isDirty =
     Boolean(draft?.initialized) &&
     baseline !== null &&
-    (baseline.apiKey !== form.apiKey.trim() ||
+    (isApiKeyEntriesDirty ||
       baseline.priority !== normalizedPriority ||
       baseline.prefix !== String(form.prefix ?? '').trim() ||
       baseline.baseUrl !== String(form.baseUrl ?? '').trim() ||
-      baseline.proxyUrl !== String(form.proxyUrl ?? '').trim() ||
       isHeadersDirty ||
       isModelsDirty ||
       isExcludedModelsDirty ||
@@ -404,11 +419,10 @@ export function AiProvidersClaudeEditLayout() {
     setSaving(true);
     try {
       const payload: ProviderKeyConfig = {
-        apiKey: form.apiKey.trim(),
+        apiKeyEntries: serializeApiKeyEntriesForSave(form.apiKeyEntries),
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
         prefix: form.prefix?.trim() || undefined,
         baseUrl: (form.baseUrl ?? '').trim() || undefined,
-        proxyUrl: form.proxyUrl?.trim() || undefined,
         headers: buildHeaderObject(form.headers),
         models: form.modelEntries
           .map((entry) => {

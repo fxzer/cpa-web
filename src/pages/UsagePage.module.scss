@@ -1182,7 +1182,7 @@
 }
 
 .requestEventsCredentialCol {
-  width: 230px;
+  width: 360px;
 }
 
 .requestEventsUsageCol {
@@ -1193,13 +1193,21 @@
   width: 150px;
 }
 
-.requestEventsEndpointCell,
-.requestEventsCredentialCell {
+.requestEventsEndpointCell {
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
   font-size: 12px;
   word-break: break-all;
+}
+
+.requestEventsCredentialCell {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: 12px;
+  max-width: 340px;
+  overflow: hidden;
 }
 
 .requestEventsTimeResultCell,
@@ -1229,6 +1237,26 @@
   line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.requestEventsCredentialKeyLine {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  align-items: baseline;
+}
+
+.requestEventsCredentialKeyStart {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.requestEventsCredentialKeyEnd {
+  flex-shrink: 0;
   white-space: nowrap;
 }
 

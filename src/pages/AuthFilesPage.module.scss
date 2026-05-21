@@ -660,6 +660,11 @@
     transform: translateY(-1px);
     box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.15);
     border-color: color-mix(in srgb, var(--primary-color) 28%, var(--border-color));
+
+    .cardSelection {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
 }
 
@@ -667,8 +672,20 @@
   border-color: color-mix(in srgb, var(--primary-color) 60%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 30%, transparent);
 
+  .cardSelection {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   &:hover {
     border-color: color-mix(in srgb, var(--primary-color) 60%, transparent);
+  }
+}
+
+.fileCard:focus-within {
+  .cardSelection {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
@@ -684,7 +701,6 @@
     opacity: 0.72;
   }
 
-  .cardSelection,
   .cardActions {
     opacity: 1;
   }
@@ -708,13 +724,16 @@
     gap: 8px;
   }
 
-  .cardSelection {
-    margin-top: 6px;
+  .providerAvatarWrap {
+    width: 34px;
+    height: 34px;
   }
 
   .providerAvatar {
-    width: 34px;
-    height: 34px;
+    border-radius: 8px;
+  }
+
+  .cardSelection {
     border-radius: 8px;
   }
 
@@ -818,14 +837,39 @@
   gap: 10px;
 }
 
+.providerAvatarWrap {
+  position: relative;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+}
+
 .cardSelection {
-  flex-shrink: 0;
-  margin-top: 8px;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+  border-radius: 10px;
+  --glass-blur: 8px;
+  background: color-mix(in srgb, var(--bg-primary) 22%, transparent);
+  backdrop-filter: var(--glass-backdrop-filter);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter);
+  transition: opacity 0.15s ease;
+
+  @media (hover: none) {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .providerAvatar {
-  width: 40px;
-  height: 40px;
+  width: 100%;
+  height: 100%;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -927,10 +971,19 @@
 
 .cardMeta {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 14px;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
   padding: 0 2px;
+  box-sizing: border-box;
+}
+
+.cardMetaRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
 }
 
 .cardMetaCompact {

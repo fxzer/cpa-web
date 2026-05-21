@@ -16,6 +16,8 @@ import {
   type StatusBarData,
 } from '@/utils/recentRequests';
 import { maskApiKey } from '@/utils/format';
+import { areKeyValueEntriesEqual } from '@/utils/compare';
+import { buildHeaderObject, headersToEntries } from '@/utils/headers';
 import type { AmpcodeFormState, AmpcodeUpstreamApiKeyEntry, ModelEntry } from './types';
 
 export const DISABLE_ALL_MODELS_RULE = '*';
@@ -50,15 +52,23 @@ export const parseExcludedModels = parseTextList;
 export const excludedModelsToText = (models?: string[]) =>
   Array.isArray(models) ? models.join('\n') : '';
 
+export const getProviderApiKeyEntries = (config: { apiKeyEntries?: ApiKeyEntry[] }): ApiKeyEntry[] =>
+  Array.isArray(config.apiKeyEntries) ? config.apiKeyEntries : [];
+
+export const getPrimaryApiKey = (config: { apiKeyEntries?: ApiKeyEntry[] }): string => {
+  const entry = getProviderApiKeyEntries(config).find((item) => String(item.apiKey ?? '').trim());
+  return entry?.apiKey?.trim() ?? '';
+};
+
 export function buildProviderOverviewLabel(
-  item: { prefix?: string; apiKey?: string; baseUrl?: string; name?: string },
+  item: { prefix?: string; apiKey?: string; apiKeyEntries?: ApiKeyEntry[]; baseUrl?: string; name?: string },
   fallback: string
 ): string {
   const prefix = String(item.prefix ?? '').trim();
   if (prefix) return prefix;
   const name = String(item.name ?? '').trim();
   if (name) return name;
-  const apiKey = String(item.apiKey ?? '').trim();
+  const apiKey = getPrimaryApiKey(item) || String(item.apiKey ?? '').trim();
   if (apiKey) return maskApiKey(apiKey);
   const baseUrl = String(item.baseUrl ?? '').trim();
   if (baseUrl) return baseUrl;
@@ -195,6 +205,56 @@ export function getProviderRecentStatusData(
   );
 }
 
+export function collectProviderKeyConfigRecentBuckets(
+  provider: string,
+  config: { apiKeyEntries?: ApiKeyEntry[]; baseUrl?: string },
+  usageByProvider: ProviderRecentUsageMap
+): RecentRequestBucket[] {
+  const entries = getProviderApiKeyEntries(config);
+  if (!entries.length) {
+    return [];
+  }
+
+  const groups = entries.map((entry) =>
+    getProviderRecentBuckets(usageByProvider, provider, entry.apiKey, config.baseUrl)
+  );
+
+  return mergeRecentRequestBucketGroups(groups);
+}
+
+export function getProviderKeyConfigRecentStats(
+  provider: string,
+  config: { apiKeyEntries?: ApiKeyEntry[]; baseUrl?: string },
+  usageByProvider: ProviderRecentUsageMap
+): { success: number; failure: number } {
+  return getProviderApiKeyEntries(config).reduce(
+    (total, entry) => {
+      const usageEntry = getProviderRecentUsageEntry(
+        usageByProvider,
+        provider,
+        entry.apiKey,
+        config.baseUrl
+      );
+
+      return {
+        success: total.success + usageEntry.success,
+        failure: total.failure + usageEntry.failed,
+      };
+    },
+    { success: 0, failure: 0 }
+  );
+}
+
+export function getProviderKeyConfigRecentStatusData(
+  provider: string,
+  config: { apiKeyEntries?: ApiKeyEntry[]; baseUrl?: string },
+  usageByProvider: ProviderRecentUsageMap
+): StatusBarData {
+  return statusBarDataFromRecentRequests(
+    collectProviderKeyConfigRecentBuckets(provider, config, usageByProvider)
+  );
+}
+
 export function collectOpenAIProviderRecentBuckets(
   provider: OpenAIProviderConfig,
   usageByProvider: ProviderRecentUsageMap
@@ -258,9 +318,8 @@ export function getOpenAIProviderRecentStatusData(
 export const getProviderConfigKey = (
   config: {
     authIndex?: unknown;
-    apiKey?: string;
     baseUrl?: string;
-    proxyUrl?: string;
+    prefix?: string;
   },
   index: number
 ): string => {
@@ -268,7 +327,15 @@ export const getProviderConfigKey = (
   if (authIndexKey) {
     return authIndexKey;
   }
-  return `${config.apiKey ?? ''}::${config.baseUrl ?? ''}::${config.proxyUrl ?? ''}::${index}`;
+  return `${config.baseUrl ?? ''}::${config.prefix ?? ''}::${index}`;
+};
+
+export const getProviderApiKeyEntryKey = (entry: ApiKeyEntry, index: number): string => {
+  const authIndexKey = normalizeRecentRequestAuthIndex(entry.authIndex);
+  if (authIndexKey) {
+    return authIndexKey;
+  }
+  return `${entry.apiKey}::${entry.proxyUrl ?? ''}::${index}`;
 };
 
 export const getOpenAIProviderKey = (provider: OpenAIProviderConfig, index: number): string => {
@@ -292,6 +359,56 @@ export const buildApiKeyEntry = (input?: Partial<ApiKeyEntry>): ApiKeyEntry => (
   proxyUrl: input?.proxyUrl ?? '',
   headers: input?.headers ?? {},
 });
+
+const normalizeKeyHeaders = (headers?: Record<string, string>) => {
+  if (!headers || !Object.keys(headers).length) return [];
+  return headersToEntries(headers)
+    .filter((entry) => entry.key || entry.value)
+    .sort((a, b) => {
+      const byKey = a.key.toLowerCase().localeCompare(b.key.toLowerCase());
+      if (byKey !== 0) return byKey;
+      return a.value.localeCompare(b.value);
+    });
+};
+
+export const normalizeApiKeyEntriesForBaseline = (entries: ApiKeyEntry[]) =>
+  (entries ?? []).reduce<
+    Array<{
+      apiKey: string;
+      proxyUrl: string;
+      headers: Array<{ key: string; value: string }>;
+    }>
+  >((acc, entry) => {
+    const apiKey = String(entry?.apiKey ?? '').trim();
+    const proxyUrl = String(entry?.proxyUrl ?? '').trim();
+    const headers = normalizeKeyHeaders(entry?.headers);
+    if (!apiKey && !proxyUrl && headers.length === 0) return acc;
+    acc.push({ apiKey, proxyUrl, headers });
+    return acc;
+  }, []);
+
+export const areNormalizedApiKeyEntriesEqual = (
+  a: ReturnType<typeof normalizeApiKeyEntriesForBaseline>,
+  b: ReturnType<typeof normalizeApiKeyEntriesForBaseline>
+) => {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    const left = a[i];
+    const right = b[i];
+    if (!left || !right) return false;
+    if (left.apiKey !== right.apiKey || left.proxyUrl !== right.proxyUrl) return false;
+    if (!areKeyValueEntriesEqual(left.headers, right.headers)) return false;
+  }
+  return true;
+};
+
+export const serializeApiKeyEntriesForSave = (entries: ApiKeyEntry[]): ApiKeyEntry[] =>
+  normalizeApiKeyEntriesForBaseline(entries).map((entry) => ({
+    apiKey: entry.apiKey,
+    proxyUrl: entry.proxyUrl || undefined,
+    headers: buildHeaderObject(entry.headers),
+  }));
 
 export const ampcodeMappingsToEntries = (mappings?: AmpcodeModelMapping[]): ModelEntry[] => {
   if (!Array.isArray(mappings) || mappings.length === 0) {

@@ -14,6 +14,11 @@ import { useNotificationStore } from '@/stores/useNotificationStore';
 import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from '@/types';
 import type { AuthFileItem } from '@/types/authFile';
 import type { CredentialInfo } from '@/types/sourceInfo';
+import {
+  buildConfiguredCredentialLookup,
+  buildCredentialDisplay,
+  resolveConfiguredCredential,
+} from '@/utils/credentialResolver';
 import { buildSourceInfoMap, resolveSourceDisplay } from '@/utils/sourceResolver';
 import { parseTimestampMs } from '@/utils/timestamp';
 import {
@@ -29,6 +34,7 @@ import {
 } from '@/utils/usage';
 import { REQUEST_EVENTS_TIME_RANGE_OPTIONS } from '@/utils/usageTimeRange';
 import { downloadBlob } from '@/utils/download';
+import { splitMiddleEllipsisParts } from '@/utils/format';
 import styles from '@/pages/UsagePage.module.scss';
 
 const ALL_FILTER = '__all__';
@@ -56,6 +62,8 @@ type RequestEventRow = {
   account: string;
   authLabel: string;
   authFile: string;
+  resolvedApiKey: string;
+  credentialSubtitle: string;
   apiKeyHash: string;
   apiKeyHashShort: string;
   failed: boolean;
@@ -130,56 +138,39 @@ const firstText = (...values: Array<unknown>): string => {
   return '';
 };
 
-const displaySource = (source: string): string => {
-  if (!source) return '';
-  if (source.startsWith('m:') || source.startsWith('t:')) {
-    return source.slice(2);
-  }
-  if (source.startsWith('k:')) {
-    return `hash ${source.slice(2, 14)}`;
-  }
-  return source;
-};
-
 const shortHash = (hash: string): string => {
   const normalized = hash.trim().toLowerCase();
   if (!normalized) return '';
   return normalized.length > 16 ? `${normalized.slice(0, 12)}...` : normalized;
 };
 
-const buildCredentialHeadline = (detail: {
-  auth_provider_snapshot?: string;
-  provider?: string;
-  account_snapshot?: string;
-  auth_label_snapshot?: string;
-  api_key_hash?: string;
-  source?: string;
-}): string => {
-  const vendor = firstText(detail.auth_provider_snapshot, detail.provider);
-  const human = firstText(detail.account_snapshot, detail.auth_label_snapshot);
-  const apiKeyHash = firstText(detail.api_key_hash);
-  const hashShort = shortHash(apiKeyHash);
-  const sourceFallback = displaySource(firstText(detail.source));
-  const keyIdentity = human || hashShort || sourceFallback;
-  const parts: string[] = [];
-  if (vendor) parts.push(vendor);
-  if (keyIdentity) parts.push(keyIdentity);
-  return parts.join(' · ') || '-';
+const formatCredentialKeyLine = (row: Pick<RequestEventRow, 'credentialSubtitle' | 'authFile' | 'authLabel'>): string => {
+  if (row.credentialSubtitle) return row.credentialSubtitle;
+  if (row.authFile && row.authFile !== '-') return row.authFile;
+  if (row.authLabel && row.authLabel !== '-') return row.authLabel;
+  return '-';
 };
 
-const formatCredentialKeyLine = (
-  row: Pick<RequestEventRow, 'authType' | 'authIndex' | 'apiKeyHashShort'>
-): string => {
-  const type = row.authType && row.authType !== '-' ? row.authType : '';
-  const idx = row.authIndex && row.authIndex !== '-' ? row.authIndex : '';
-  const hash = row.apiKeyHashShort && row.apiKeyHashShort !== '-' ? row.apiKeyHashShort : '';
-  let tail = '';
-  if (idx && hash) tail = `#${idx}-${hash}`;
-  else if (idx) tail = `#${idx}`;
-  else if (hash) tail = hash;
-  else tail = '-';
-  if (type) return `${type} ${tail}`;
-  return tail;
+const renderCredentialSubtitle = (
+  row: Pick<RequestEventRow, 'credentialSubtitle' | 'authFile' | 'authLabel' | 'resolvedApiKey'>,
+  styles: Record<string, string>
+) => {
+  const text = formatCredentialKeyLine(row);
+  if (!text || text === '-') return '-';
+
+  if (row.resolvedApiKey) {
+    const parts = splitMiddleEllipsisParts(text);
+    if (parts) {
+      return (
+        <span className={styles.requestEventsCredentialKeyLine} title={text}>
+          <span className={styles.requestEventsCredentialKeyStart}>{parts.head}</span>
+          <span className={styles.requestEventsCredentialKeyEnd}>{parts.tail}</span>
+        </span>
+      );
+    }
+  }
+
+  return text;
 };
 
 const normalizeCustomAutoRefreshSeconds = (value: unknown): number => {
@@ -327,6 +318,18 @@ export function RequestEventsDetailsCard({
     [claudeConfigs, codexConfigs, geminiKeys, openaiProviders, vertexConfigs]
   );
 
+  const credentialLookup = useMemo(
+    () =>
+      buildConfiguredCredentialLookup({
+        geminiApiKeys: geminiKeys,
+        claudeApiKeys: claudeConfigs,
+        codexApiKeys: codexConfigs,
+        vertexApiKeys: vertexConfigs,
+        openaiCompatibility: openaiProviders,
+      }),
+    [claudeConfigs, codexConfigs, geminiKeys, openaiProviders, vertexConfigs]
+  );
+
   const autoRefreshOptions = useMemo(
     () => [
       { value: AUTO_REFRESH_OFF, label: t('monitoring_center.auto_refresh_off') },
@@ -431,7 +434,20 @@ export function RequestEventsDetailsCard({
       const backendId = typeof detail.id === 'string' && detail.id.trim() ? detail.id.trim() : '';
       const apiKeyHash = firstText(detail.api_key_hash);
       const authType = firstText(detail.auth_type) || '-';
-      const account = buildCredentialHeadline(detail);
+      const resolvedCredential = resolveConfiguredCredential(credentialLookup, {
+        authIndex: authIndexRaw,
+        apiKeyHash,
+        source: sourceRaw,
+      });
+      const credentialDisplay = buildCredentialDisplay({
+        provider,
+        authProviderSnapshot: firstText(detail.auth_provider_snapshot),
+        accountSnapshot: firstText(detail.account_snapshot),
+        authLabelSnapshot: firstText(detail.auth_label_snapshot),
+        authFileSnapshot: firstText(detail.auth_file_snapshot),
+        resolvedCredential,
+      });
+      const account = credentialDisplay.headline;
       const firstByteLatencyMs = extractFirstByteLatencyMs(detail);
       const generationMs = extractGenerationMs(detail);
       const latencyMs =
@@ -464,6 +480,8 @@ export function RequestEventsDetailsCard({
         account,
         authLabel: firstText(detail.auth_label_snapshot) || '-',
         authFile: firstText(detail.auth_file_snapshot) || '-',
+        resolvedApiKey: credentialDisplay.resolvedApiKey,
+        credentialSubtitle: credentialDisplay.subtitle,
         apiKeyHash,
         apiKeyHashShort: shortHash(apiKeyHash) || '-',
         failed: detail.failed === true,
@@ -516,7 +534,7 @@ export function RequestEventsDetailsCard({
         source: buildDisambiguatedSourceLabel(row),
       }))
       .sort((a, b) => b.timestampMs - a.timestampMs);
-  }, [authFileMap, i18n.language, sourceInfoMap, usage]);
+  }, [authFileMap, credentialLookup, i18n.language, sourceInfoMap, usage]);
 
   const timeRangeOptions = useMemo(
     () =>
@@ -585,8 +603,9 @@ export function RequestEventsDetailsCard({
     const optionMap = new Map<string, string>();
     timeFilteredRows.forEach((row) => {
       if (!row.apiKeyHash) return;
+      const label = row.resolvedApiKey || row.apiKeyHashShort;
       if (!optionMap.has(row.apiKeyHash)) {
-        optionMap.set(row.apiKeyHash, row.apiKeyHashShort);
+        optionMap.set(row.apiKeyHash, label);
       }
     });
 
@@ -672,6 +691,8 @@ export function RequestEventsDetailsCard({
             row.authType,
             row.authLabel,
             row.authFile,
+            row.resolvedApiKey,
+            row.credentialSubtitle,
             row.source,
             row.sourceRaw,
             row.apiKeyHash,
@@ -740,6 +761,7 @@ export function RequestEventsDetailsCard({
       'source',
       'source_raw',
       'credential',
+      'credential_api_key',
       'auth_type',
       'auth_index',
       'api_key_hash',
@@ -764,6 +786,7 @@ export function RequestEventsDetailsCard({
         row.source,
         row.sourceRaw,
         row.account,
+        row.resolvedApiKey,
         row.authType,
         row.authIndex,
         row.apiKeyHash,
@@ -807,6 +830,7 @@ export function RequestEventsDetailsCard({
       source: row.source,
       source_raw: row.sourceRaw,
       credential: row.account,
+      credential_api_key: row.resolvedApiKey || undefined,
       auth_type: row.authType,
       auth_index: row.authIndex,
       api_key_hash: row.apiKeyHash,
@@ -1136,9 +1160,9 @@ export function RequestEventsDetailsCard({
                       </div>
                       <div
                         className={styles.requestEventsSecondaryText}
-                        title={`${formatCredentialKeyLine(row)} · ${row.source}`}
+                        title={formatCredentialKeyLine(row)}
                       >
-                        {formatCredentialKeyLine(row)}
+                        {renderCredentialSubtitle(row, styles)}
                       </div>
                     </td>
                     <td className={styles.requestEventsUsageCell}>

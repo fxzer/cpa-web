@@ -10,6 +10,7 @@
 
 import type { SetStateAction } from 'react';
 import { create } from 'zustand';
+import { buildApiKeyEntry } from '@/components/providers/utils';
 import type { ProviderFormState } from '@/components/providers/types';
 
 export type ClaudeTestStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -21,11 +22,14 @@ export type ClaudeCloakBaseline = {
 } | null;
 
 export type ClaudeEditBaseline = {
-  apiKey: string;
+  apiKeyEntries: Array<{
+    apiKey: string;
+    proxyUrl: string;
+    headers: Array<{ key: string; value: string }>;
+  }>;
   priority: number | null;
   prefix: string;
   baseUrl: string;
-  proxyUrl: string;
   headers: Array<{ key: string; value: string }>;
   models: Array<{ name: string; alias: string }>;
   excludedModels: string[];
@@ -69,10 +73,9 @@ const resolveAction = <T,>(action: SetStateAction<T>, prev: T): T =>
   typeof action === 'function' ? (action as (previous: T) => T)(prev) : action;
 
 const buildEmptyForm = (): ProviderFormState => ({
-  apiKey: '',
+  apiKeyEntries: [buildApiKeyEntry()],
   prefix: '',
   baseUrl: '',
-  proxyUrl: '',
   headers: [],
   models: [],
   excludedModels: [],

@@ -5,8 +5,8 @@ import { Card } from '@/components/ui/Card';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import iconGemini from '@/assets/icons/gemini.svg';
 import type { GeminiKeyConfig } from '@/types';
-import { maskApiKey } from '@/utils/format';
 import { statusBarDataFromRecentRequests } from '@/utils/recentRequests';
+import { ProviderConfigApiKeyEntriesList } from '../ProviderConfigApiKeyEntriesList';
 import styles from '@/pages/AiProvidersPage.module.scss';
 import { ProviderList } from '../ProviderList';
 import { ProviderModelsPreview } from '../ProviderModelsPreview';
@@ -14,9 +14,9 @@ import { CopyableUrlValue } from '../CopyableUrlValue';
 import { ProviderSectionCardTitle } from '../ProviderSectionCardTitle';
 import { ProviderStatusBar } from '../ProviderStatusBar';
 import {
+  collectProviderKeyConfigRecentBuckets,
   getProviderConfigKey,
-  getProviderRecentBuckets,
-  getProviderTotalStats,
+  getProviderKeyConfigRecentStats,
   hasDisableAllModelsRule,
   buildProviderOverviewLabel,
   type ProviderRecentUsageMap,
@@ -57,12 +57,12 @@ export function GeminiSection({
     const cache = new Map<string, ReturnType<typeof statusBarDataFromRecentRequests>>();
 
     configs.forEach((config, index) => {
-      if (!config.apiKey) return;
+      
       const configKey = getProviderConfigKey(config, index);
       cache.set(
         configKey,
         statusBarDataFromRecentRequests(
-          getProviderRecentBuckets(usageByProvider, 'gemini', config.apiKey, config.baseUrl)
+          collectProviderKeyConfigRecentBuckets('gemini', config, usageByProvider)
         )
       );
     });
@@ -119,12 +119,7 @@ export function GeminiSection({
           )}
           actionsClassName={styles.providerCardActions}
           renderContent={(item, index) => {
-            const stats = getProviderTotalStats(
-              usageByProvider,
-              'gemini',
-              item.apiKey,
-              item.baseUrl
-            );
+            const stats = getProviderKeyConfigRecentStats('gemini', item, usageByProvider);
             const headerEntries = Object.entries(item.headers || {});
             const configDisabled = hasDisableAllModelsRule(item.excludedModels);
             const excludedModels = item.excludedModels ?? [];
@@ -147,10 +142,12 @@ export function GeminiSection({
                     </span>
                   </div>
                 </div>
-                <div className={styles.fieldRow}>
-                  <span className={styles.fieldLabel}>{t('common.api_key')}:</span>
-                  <span className={styles.fieldValue}>{maskApiKey(item.apiKey)}</span>
-                </div>
+                <ProviderConfigApiKeyEntriesList
+                  provider="gemini"
+                  baseUrl={item.baseUrl}
+                  entries={item.apiKeyEntries}
+                  usageByProvider={usageByProvider}
+                />
                 {item.priority !== undefined && (
                   <div className={styles.fieldRow}>
                     <span className={styles.fieldLabel}>{t('common.priority')}:</span>
@@ -167,12 +164,6 @@ export function GeminiSection({
                   <div className={styles.fieldRow}>
                     <span className={styles.fieldLabel}>{t('common.base_url')}:</span>
                     <CopyableUrlValue value={item.baseUrl} />
-                  </div>
-                )}
-                {item.proxyUrl && (
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>{t('common.proxy_url')}:</span>
-                    <span className={styles.fieldValue}>{item.proxyUrl}</span>
                   </div>
                 )}
                 {headerEntries.length > 0 && (

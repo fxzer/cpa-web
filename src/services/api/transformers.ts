@@ -123,14 +123,23 @@ const normalizeApiKeyEntry = (entry: unknown): ApiKeyEntry | null => {
   return result;
 };
 
+const normalizeProviderApiKeyEntries = (record: Record<string, unknown> | null): ApiKeyEntry[] => {
+  if (!record) return [];
+  if (Array.isArray(record['api-key-entries'])) {
+    return record['api-key-entries']
+      .map((entry) => normalizeApiKeyEntry(entry))
+      .filter(Boolean) as ApiKeyEntry[];
+  }
+  return [];
+};
+
 const normalizeProviderKeyConfig = (item: unknown): ProviderKeyConfig | null => {
   if (item === undefined || item === null) return null;
   const record = isRecord(item) ? item : null;
-  const apiKey = record?.['api-key'] ?? record?.apiKey ?? (typeof item === 'string' ? item : '');
-  const trimmed = String(apiKey || '').trim();
-  if (!trimmed) return null;
+  const apiKeyEntries = normalizeProviderApiKeyEntries(record);
+  if (!apiKeyEntries.length) return null;
 
-  const config: ProviderKeyConfig = { apiKey: trimmed };
+  const config: ProviderKeyConfig = { apiKeyEntries };
   const priority = record?.priority ?? record?.['priority'];
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') {
     const parsed = Number(priority);
@@ -141,11 +150,9 @@ const normalizeProviderKeyConfig = (item: unknown): ProviderKeyConfig | null => 
   const prefix = normalizePrefix(record?.prefix ?? record?.['prefix']);
   if (prefix) config.prefix = prefix;
   const baseUrl = record ? record['base-url'] ?? record.baseUrl : undefined;
-  const proxyUrl = record ? record['proxy-url'] ?? record.proxyUrl : undefined;
   if (baseUrl) config.baseUrl = String(baseUrl);
   const websockets = normalizeBoolean(record?.websockets ?? record?.['websockets']);
   if (websockets !== undefined) config.websockets = websockets;
-  if (proxyUrl) config.proxyUrl = String(proxyUrl);
   const headers = normalizeHeaders(record?.headers);
   if (headers) config.headers = headers;
   const models = normalizeModelAliases(record?.models);
@@ -192,14 +199,10 @@ const normalizeProviderKeyConfig = (item: unknown): ProviderKeyConfig | null => 
 const normalizeGeminiKeyConfig = (item: unknown): GeminiKeyConfig | null => {
   if (item === undefined || item === null) return null;
   const record = isRecord(item) ? item : null;
-  let apiKey = record?.['api-key'] ?? record?.apiKey;
-  if (!apiKey && typeof item === 'string') {
-    apiKey = item;
-  }
-  const trimmed = String(apiKey || '').trim();
-  if (!trimmed) return null;
+  const apiKeyEntries = normalizeProviderApiKeyEntries(record);
+  if (!apiKeyEntries.length) return null;
 
-  const config: GeminiKeyConfig = { apiKey: trimmed };
+  const config: GeminiKeyConfig = { apiKeyEntries };
   const priority = record?.priority ?? record?.['priority'];
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') {
     const parsed = Number(priority);
@@ -211,8 +214,6 @@ const normalizeGeminiKeyConfig = (item: unknown): GeminiKeyConfig | null => {
   if (prefix) config.prefix = prefix;
   const baseUrl = record ? record['base-url'] ?? record.baseUrl ?? record['base_url'] : undefined;
   if (baseUrl) config.baseUrl = String(baseUrl);
-  const proxyUrl = record ? record['proxy-url'] ?? record.proxyUrl ?? record['proxy_url'] : undefined;
-  if (proxyUrl) config.proxyUrl = String(proxyUrl);
   const models = normalizeModelAliases(record?.models);
   if (models.length) config.models = models;
   const headers = normalizeHeaders(record?.headers);

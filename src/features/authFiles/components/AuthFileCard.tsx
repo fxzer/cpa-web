@@ -130,31 +130,35 @@ export function AuthFileCard(props: AuthFileCardProps) {
       <div className={styles.fileCardLayout}>
         <div className={styles.fileCardMain}>
           <div className={styles.cardHeader}>
-            {!isRuntimeOnly && (
-              <SelectionCheckbox
-                checked={selected}
-                onChange={() => onToggleSelect(file.name)}
-                className={styles.cardSelection}
-                aria-label={
-                  selected ? t('auth_files.batch_deselect') : t('auth_files.batch_select_all')
-                }
-                title={selected ? t('auth_files.batch_deselect') : t('auth_files.batch_select_all')}
-              />
-            )}
-            <div
-              className={styles.providerAvatar}
-              style={{
-                backgroundColor: typeColor.bg,
-                color: typeColor.text,
-                ...(typeColor.border ? { border: typeColor.border } : {}),
-              }}
-            >
-              {providerIcon ? (
-                <img src={providerIcon} alt="" className={styles.providerAvatarImage} />
-              ) : (
-                <span className={styles.providerAvatarFallback}>
-                  {typeLabel.slice(0, 1).toUpperCase()}
-                </span>
+            <div className={styles.providerAvatarWrap}>
+              <div
+                className={styles.providerAvatar}
+                style={{
+                  backgroundColor: typeColor.bg,
+                  color: typeColor.text,
+                  ...(typeColor.border ? { border: typeColor.border } : {}),
+                }}
+              >
+                {providerIcon ? (
+                  <img src={providerIcon} alt="" className={styles.providerAvatarImage} />
+                ) : (
+                  <span className={styles.providerAvatarFallback}>
+                    {typeLabel.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              {!isRuntimeOnly && (
+                <SelectionCheckbox
+                  checked={selected}
+                  onChange={() => onToggleSelect(file.name)}
+                  className={styles.cardSelection}
+                  ariaLabel={
+                    selected ? t('auth_files.batch_deselect') : t('auth_files.batch_select_all')
+                  }
+                  title={
+                    selected ? t('auth_files.batch_deselect') : t('auth_files.batch_select_all')
+                  }
+                />
               )}
             </div>
             <div className={styles.cardHeaderContent}>
@@ -193,15 +197,17 @@ export function AuthFileCard(props: AuthFileCardProps) {
           </div>
 
           <div className={`${styles.cardMeta} ${compact ? styles.cardMetaCompact : ''}`}>
-            <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>{t('auth_files.file_size')}</span>
-              <span className={styles.metaValue}>
-                {file.size ? formatFileSize(file.size) : '-'}
-              </span>
-            </div>
-            <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>{t('auth_files.file_modified')}</span>
-              <span className={styles.metaValue}>{formatModified(file)}</span>
+            <div className={styles.cardMetaRow}>
+              <div className={styles.metaItem}>
+                <span className={styles.metaLabel}>{t('auth_files.file_size')}</span>
+                <span className={styles.metaValue}>
+                  {file.size ? formatFileSize(file.size) : '-'}
+                </span>
+              </div>
+              <div className={styles.metaItem}>
+                <span className={styles.metaLabel}>{t('auth_files.file_modified')}</span>
+                <span className={styles.metaValue}>{formatModified(file)}</span>
+              </div>
             </div>
             {priorityValue !== undefined && (
               <div className={`${styles.metaItem} ${styles.priorityBadge}`}>

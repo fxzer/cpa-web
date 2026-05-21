@@ -14,7 +14,6 @@ import type { AnimationPlaybackControlsWithThen } from 'motion-dom';
 import { useInterval } from '@/hooks/useInterval';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -737,71 +736,69 @@ export function AuthFilesPage() {
         </div>
       </div>
 
-      <Card>
-        {error && <div className={styles.errorBox}>{error}</div>}
+      {error && <div className={styles.errorBox}>{error}</div>}
 
-        {loading ? (
-          <div className={styles.hint}>{t('common.loading')}</div>
-        ) : pageItems.length === 0 ? (
-          <EmptyState
-            title={t('auth_files.search_empty_title')}
-            description={t('auth_files.search_empty_desc')}
-          />
-        ) : (
-          <div
-            className={`${styles.fileGrid} ${quotaFilterType ? styles.fileGridQuotaManaged : ''} ${compactMode ? styles.fileGridCompact : ''}`}
+      {loading ? (
+        <div className={styles.hint}>{t('common.loading')}</div>
+      ) : pageItems.length === 0 ? (
+        <EmptyState
+          title={t('auth_files.search_empty_title')}
+          description={t('auth_files.search_empty_desc')}
+        />
+      ) : (
+        <div
+          className={`${styles.fileGrid} ${quotaFilterType ? styles.fileGridQuotaManaged : ''} ${compactMode ? styles.fileGridCompact : ''}`}
+        >
+          {pageItems.map((file) => (
+            <AuthFileCard
+              key={file.name}
+              file={file}
+              compact={compactMode}
+              selected={selectedFiles.has(file.name)}
+              resolvedTheme={resolvedTheme}
+              disableControls={disableControls}
+              deleting={deleting}
+              statusUpdating={statusUpdating}
+              quotaFilterType={quotaFilterType}
+              statusBarCache={statusBarCache}
+              onShowModels={showModels}
+              onDownload={handleDownload}
+              onOpenPrefixProxyEditor={openPrefixProxyEditor}
+              onDelete={handleDelete}
+              onToggleStatus={handleStatusToggle}
+              onToggleSelect={toggleSelect}
+            />
+          ))}
+        </div>
+      )}
+
+      {!loading && sorted.length > pageSize && (
+        <div className={styles.pagination}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage <= 1}
           >
-            {pageItems.map((file) => (
-              <AuthFileCard
-                key={file.name}
-                file={file}
-                compact={compactMode}
-                selected={selectedFiles.has(file.name)}
-                resolvedTheme={resolvedTheme}
-                disableControls={disableControls}
-                deleting={deleting}
-                statusUpdating={statusUpdating}
-                quotaFilterType={quotaFilterType}
-                statusBarCache={statusBarCache}
-                onShowModels={showModels}
-                onDownload={handleDownload}
-                onOpenPrefixProxyEditor={openPrefixProxyEditor}
-                onDelete={handleDelete}
-                onToggleStatus={handleStatusToggle}
-                onToggleSelect={toggleSelect}
-              />
-            ))}
+            {t('auth_files.pagination_prev')}
+          </Button>
+          <div className={styles.pageInfo}>
+            {t('auth_files.pagination_info', {
+              current: currentPage,
+              total: totalPages,
+              count: sorted.length,
+            })}
           </div>
-        )}
-
-        {!loading && sorted.length > pageSize && (
-          <div className={styles.pagination}>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage <= 1}
-            >
-              {t('auth_files.pagination_prev')}
-            </Button>
-            <div className={styles.pageInfo}>
-              {t('auth_files.pagination_info', {
-                current: currentPage,
-                total: totalPages,
-                count: sorted.length,
-              })}
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage >= totalPages}
-            >
-              {t('auth_files.pagination_next')}
-            </Button>
-          </div>
-        )}
-      </Card>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
+          >
+            {t('auth_files.pagination_next')}
+          </Button>
+        </div>
+      )}
 
       <OAuthAliasOverviewModal
         open={aliasOverviewOpen}

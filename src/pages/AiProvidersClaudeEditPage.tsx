@@ -13,7 +13,12 @@ import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
 import { apiCallApi, getApiCallErrorMessage } from '@/services/api';
 import { useNotificationStore } from '@/stores';
 import { buildHeaderObject } from '@/utils/headers';
-import { buildClaudeMessagesEndpoint, parseTextList } from '@/components/providers/utils';
+import { ProviderApiKeyEntriesEditor } from '@/components/providers/ProviderApiKeyEntriesEditor';
+import {
+  buildClaudeMessagesEndpoint,
+  getPrimaryApiKey,
+  parseTextList,
+} from '@/components/providers/utils';
 import type { ClaudeEditOutletContext } from './AiProvidersClaudeEditLayout';
 import styles from './AiProvidersPage.module.scss';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
@@ -130,14 +135,17 @@ export function AiProvidersClaudeEditPage() {
     const modelsSignature = form.modelEntries
       .map((entry) => `${entry.name.trim()}:${entry.alias.trim()}`)
       .join('|');
+    const keysSignature = form.apiKeyEntries
+      .map((entry) => `${entry.apiKey?.trim() ?? ''}|${entry.proxyUrl?.trim() ?? ''}`)
+      .join(';');
     return [
-      form.apiKey.trim(),
+      keysSignature,
       form.baseUrl?.trim() ?? '',
       testModel.trim(),
       headersSignature,
       modelsSignature,
     ].join('||');
-  }, [form.apiKey, form.baseUrl, form.headers, form.modelEntries, testModel]);
+  }, [form.apiKeyEntries, form.baseUrl, form.headers, form.modelEntries, testModel]);
 
   const previousConnectivityConfigRef = useRef(connectivityConfigSignature);
 
@@ -167,7 +175,7 @@ export function AiProvidersClaudeEditPage() {
     }
 
     const customHeaders = buildHeaderObject(form.headers);
-    const apiKey = form.apiKey.trim();
+    const apiKey = getPrimaryApiKey(form);
     const hasApiKeyHeader = hasHeader(customHeaders, 'x-api-key');
     const apiKeyFromAuthorization = resolveBearerTokenFromAuthorization(customHeaders);
     const resolvedApiKey = apiKey || apiKeyFromAuthorization;
@@ -253,7 +261,7 @@ export function AiProvidersClaudeEditPage() {
     }
   }, [
     availableModels,
-    form.apiKey,
+    form.apiKeyEntries,
     form.baseUrl,
     form.headers,
     isTesting,
@@ -305,12 +313,6 @@ export function AiProvidersClaudeEditPage() {
           <div className={styles.openaiEditForm}>
             <div className={styles.providerEditTopGrid}>
               <Input
-                label={t('ai_providers.claude_add_modal_key_label')}
-                value={form.apiKey}
-                onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
-                disabled={saving || disableControls || isTesting}
-              />
-              <Input
                 label={t('ai_providers.priority_label')}
                 hint={t('ai_providers.priority_hint')}
                 type="number"
@@ -340,11 +342,20 @@ export function AiProvidersClaudeEditPage() {
                 onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
                 disabled={saving || disableControls || isTesting}
               />
-              <Input
-                label={t('ai_providers.claude_add_modal_proxy_label')}
-                value={form.proxyUrl ?? ''}
-                onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
+            </div>
+            <div className={styles.keyEntriesSection}>
+              <div className={styles.keyEntriesHeader}>
+                <label className={styles.keyEntriesLabel}>{t('ai_providers.claude_add_modal_key_label')}</label>
+                <span className={styles.keyEntriesHint}>{t('ai_providers.provider_keys_hint')}</span>
+              </div>
+              <ProviderApiKeyEntriesEditor
+                entries={form.apiKeyEntries}
                 disabled={saving || disableControls || isTesting}
+                onChange={(apiKeyEntries) => {
+                  setForm((prev) => ({ ...prev, apiKeyEntries }));
+                  setTestStatus('idle');
+                  setTestMessage('');
+                }}
               />
             </div>
             <HeaderInputList

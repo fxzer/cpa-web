@@ -32,6 +32,22 @@ export function maskApiKey(key: string): string {
   return `${start}${masked}${end}`;
 }
 
+/** 将过长文本拆成「可省略头部 + 固定尾部」，便于在窄列中保留前缀与后缀 */
+export function splitMiddleEllipsisParts(
+  value: string,
+  suffixLength = 10,
+  minLength = 26
+): { head: string; tail: string } | null {
+  const trimmed = String(value || '').trim();
+  if (!trimmed || trimmed.length < minLength) return null;
+
+  const tailLen = Math.min(Math.max(suffixLength, 6), trimmed.length - 8);
+  return {
+    head: trimmed.slice(0, trimmed.length - tailLen),
+    tail: trimmed.slice(-tailLen),
+  };
+}
+
 /**
  * 格式化文件大小
  */

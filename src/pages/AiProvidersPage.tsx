@@ -13,6 +13,7 @@ import {
 } from '@/components/providers';
 import type { ProviderAliasOverviewRequest } from '@/components/providers/types';
 import {
+  getPrimaryApiKey,
   withDisableAllModelsRule,
   withoutDisableAllModelsRule,
 } from '@/components/providers/utils';
@@ -193,7 +194,7 @@ export function AiProvidersPage() {
       confirmText: t('common.confirm'),
       onConfirm: async () => {
         try {
-          await providersApi.deleteGeminiKey(entry.apiKey, entry.baseUrl);
+          await providersApi.deleteGeminiKey(getPrimaryApiKey(entry), entry.baseUrl);
           const next = geminiKeys.filter((_, idx) => idx !== index);
           setGeminiKeys(next);
           updateConfigValue('gemini-api-key', next);
@@ -216,7 +217,7 @@ export function AiProvidersPage() {
       const current = geminiKeys[index];
       if (!current) return;
 
-      const switchingKey = `${provider}:${current.apiKey}`;
+      const switchingKey = `${provider}:${getPrimaryApiKey(current)}`;
       setConfigSwitchingKey(switchingKey);
 
       const previousList = geminiKeys;
@@ -257,7 +258,7 @@ export function AiProvidersPage() {
     const current = source[index];
     if (!current) return;
 
-    const switchingKey = `${provider}:${current.apiKey}`;
+    const switchingKey = `${provider}:${getPrimaryApiKey(current)}`;
     setConfigSwitchingKey(switchingKey);
 
     const previousList = source;
@@ -358,14 +359,14 @@ export function AiProvidersPage() {
       onConfirm: async () => {
         try {
           if (type === 'codex') {
-            await providersApi.deleteCodexConfig(entry.apiKey, entry.baseUrl);
+            await providersApi.deleteCodexConfig(getPrimaryApiKey(entry), entry.baseUrl);
             const next = codexConfigs.filter((_, idx) => idx !== index);
             setCodexConfigs(next);
             updateConfigValue('codex-api-key', next);
             clearCache('codex-api-key');
             showNotification(t('notification.codex_config_deleted'), 'success');
           } else {
-            await providersApi.deleteClaudeConfig(entry.apiKey, entry.baseUrl);
+            await providersApi.deleteClaudeConfig(getPrimaryApiKey(entry), entry.baseUrl);
             const next = claudeConfigs.filter((_, idx) => idx !== index);
             setClaudeConfigs(next);
             updateConfigValue('claude-api-key', next);
@@ -390,7 +391,7 @@ export function AiProvidersPage() {
       confirmText: t('common.confirm'),
       onConfirm: async () => {
         try {
-          await providersApi.deleteVertexConfig(entry.apiKey, entry.baseUrl);
+          await providersApi.deleteVertexConfig(getPrimaryApiKey(entry), entry.baseUrl);
           const next = vertexConfigs.filter((_, idx) => idx !== index);
           setVertexConfigs(next);
           updateConfigValue('vertex-api-key', next);

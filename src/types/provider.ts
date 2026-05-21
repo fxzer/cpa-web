@@ -24,11 +24,10 @@ export interface CloakConfig {
 }
 
 export interface GeminiKeyConfig {
-  apiKey: string;
+  apiKeyEntries: ApiKeyEntry[];
   priority?: number;
   prefix?: string;
   baseUrl?: string;
-  proxyUrl?: string;
   models?: ModelAlias[];
   headers?: Record<string, string>;
   excludedModels?: string[];
@@ -36,12 +35,11 @@ export interface GeminiKeyConfig {
 }
 
 export interface ProviderKeyConfig {
-  apiKey: string;
+  apiKeyEntries: ApiKeyEntry[];
   priority?: number;
   prefix?: string;
   baseUrl?: string;
   websockets?: boolean;
-  proxyUrl?: string;
   headers?: Record<string, string>;
   models?: ModelAlias[];
   excludedModels?: string[];
