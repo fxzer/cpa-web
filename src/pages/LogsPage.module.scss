@@ -13,11 +13,26 @@
   }
 }
 
+.pageTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  margin-bottom: $spacing-lg;
+
+  @include mobile {
+    align-items: stretch;
+  }
+}
+
 .pageTitle {
   font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 $spacing-lg 0;
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .tabBar {
@@ -25,12 +40,12 @@
   align-items: center;
   gap: 4px;
   padding: 4px;
-  margin-bottom: $spacing-lg;
   border-radius: 999px;
   background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
   border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
   width: fit-content;
   max-width: 100%;
+  flex-shrink: 0;
   overflow-x: auto;
   scrollbar-width: none;
 
@@ -753,7 +768,7 @@
   border-radius: $radius-md;
   flex: 1 1 auto;
   min-height: 280px;
-  max-height: calc(100vh - 320px);
+  max-height: calc(100vh - 232px);
   height: auto;
   overflow: auto;
   resize: vertical;
@@ -1072,13 +1087,12 @@
 }
 
 @media (max-height: 820px) {
-  .pageTitle {
-    font-size: 24px;
+  .pageTitleRow {
     margin-bottom: $spacing-md;
   }
 
-  .tabBar {
-    margin-bottom: $spacing-md;
+  .pageTitle {
+    font-size: 24px;
   }
 
   .tabItem {
@@ -1116,13 +1130,12 @@
 }
 
 @media (max-height: 600px) {
-  .pageTitle {
-    font-size: 20px;
+  .pageTitleRow {
     margin-bottom: $spacing-sm;
   }
 
-  .tabBar {
-    margin-bottom: $spacing-sm;
+  .pageTitle {
+    font-size: 20px;
   }
 
   .tabItem {

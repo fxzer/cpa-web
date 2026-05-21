@@ -479,23 +479,25 @@ export function LogsPage() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.pageTitle}>{t('logs.title')}</h1>
+      <div className={styles.pageTitleRow}>
+        <h1 className={styles.pageTitle}>{t('logs.title')}</h1>
 
-      <div className={styles.tabBar}>
-        <button
-          type="button"
-          className={`${styles.tabItem} ${activeTab === 'logs' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('logs')}
-        >
-          {t('logs.log_content')}
-        </button>
-        <button
-          type="button"
-          className={`${styles.tabItem} ${activeTab === 'errors' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('errors')}
-        >
-          {t('logs.error_logs_modal_title')}
-        </button>
+        <div className={styles.tabBar}>
+          <button
+            type="button"
+            className={`${styles.tabItem} ${activeTab === 'logs' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('logs')}
+          >
+            {t('logs.log_content')}
+          </button>
+          <button
+            type="button"
+            className={`${styles.tabItem} ${activeTab === 'errors' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('errors')}
+          >
+            {t('logs.error_logs_modal_title')}
+          </button>
+        </div>
       </div>
 
       <div className={styles.content}>
