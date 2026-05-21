@@ -1020,23 +1020,24 @@ $openai-toolbar-control-height: 36px;
 .statusBar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  width: 100%;
   margin-top: 8px;
   padding: 8px 0;
-  max-width: 280px;
 }
 
 .statusBlocks {
   display: flex;
   gap: 2px;
-  flex: 1;
-  min-width: 180px;
+  flex: 1 1 0;
+  min-width: 0;
+  margin-right: 8px;
   position: relative;
 }
 
 .statusBlockWrapper {
-  flex: 1;
-  min-width: 6px;
+  flex: 1 1 0;
+  min-width: 0;
   position: relative;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -1153,11 +1154,14 @@ $openai-toolbar-control-height: 36px;
 .statusRate {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-end;
+  flex: 0 0 7ch;
+  width: 7ch;
   font-size: 12px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  padding: 4px 8px;
+  padding: 4px 0;
   border-radius: 6px;
   background: var(--bg-tertiary);
 }
@@ -1181,10 +1185,6 @@ $openai-toolbar-control-height: 36px;
   .statusTooltip {
     font-size: 12px;
     padding: 8px 12px;
-  }
-
-  .statusBlocks {
-    min-width: 140px;
   }
 }
 
@@ -1547,10 +1547,28 @@ $openai-toolbar-control-height: 36px;
   border-radius: $radius-md;
 }
 
+// 无状态列（Claude / Codex / Vertex 等仅删除操作的密钥表）
+.keyTableShellNoStatus {
+  .keyTableHeader,
+  .keyTableRow {
+    grid-template-columns: 46px minmax(280px, 1.5fr) minmax(180px, 1fr) minmax(100px, auto);
+    min-width: 720px;
+  }
+}
+
+// 含批量测试 / 单密钥测试按钮的密钥表
+.keyTableShellWithTesting {
+  .keyTableHeader,
+  .keyTableRow {
+    grid-template-columns: 46px 56px minmax(200px, 1.25fr) minmax(180px, 0.95fr) minmax(360px, 1.2fr);
+    min-width: 900px;
+  }
+}
+
 // 表头
 .keyTableHeader {
   display: grid;
-  grid-template-columns: 46px 56px minmax(200px, 1.25fr) minmax(180px, 0.95fr) minmax(300px, 1.2fr);
+  grid-template-columns: 46px 56px minmax(200px, 1.25fr) minmax(180px, 0.95fr) minmax(360px, 1.2fr);
   gap: $spacing-sm;
   min-width: 900px;
   padding: 10px $spacing-md;
@@ -1569,7 +1587,7 @@ $openai-toolbar-control-height: 36px;
 // 数据行
 .keyTableRow {
   display: grid;
-  grid-template-columns: 46px 56px minmax(200px, 1.25fr) minmax(180px, 0.95fr) minmax(300px, 1.2fr);
+  grid-template-columns: 46px 56px minmax(200px, 1.25fr) minmax(180px, 0.95fr) minmax(360px, 1.2fr);
   gap: $spacing-sm;
   min-width: 900px;
   padding: 10px $spacing-md;
@@ -1600,6 +1618,8 @@ $openai-toolbar-control-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: default;
+  user-select: none;
 
   svg {
     display: block;

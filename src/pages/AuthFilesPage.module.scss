@@ -1174,12 +1174,11 @@
 }
 
 .statusPanelCompact .statusBlockWrapper {
-  min-width: 5px;
+  min-width: 0;
 }
 
 .statusPanelCompact .statusRate {
-  margin-left: auto;
-  padding: 5px 7px;
+  padding: 5px 0;
   font-size: 12px;
 }
 
@@ -1198,7 +1197,7 @@
 .statusBar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
   width: 100%;
   min-width: 0;
   padding: 0;
@@ -1213,14 +1212,15 @@
 .statusBlocks {
   display: flex;
   gap: 3px;
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
+  margin-right: 8px;
   position: relative;
 }
 
 .statusBlockWrapper {
-  flex: 1;
-  min-width: 5px;
+  flex: 1 1 0;
+  min-width: 0;
   position: relative;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -1335,14 +1335,16 @@
 .statusRate {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-end;
+  flex: 0 0 7ch;
+  width: 7ch;
   font-size: 12px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  padding: 6px 10px;
+  padding: 6px 0;
   border-radius: 999px;
   background: var(--bg-tertiary);
-  flex-shrink: 0;
 }
 
 .statusRateHigh {

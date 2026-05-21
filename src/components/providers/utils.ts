@@ -145,6 +145,41 @@ export const buildClaudeMessagesEndpoint = (baseUrl: string): string => {
   return `${trimmed}/v1/messages`;
 };
 
+const DEFAULT_GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com';
+
+export const normalizeGeminiBaseUrl = (baseUrl: string): string => {
+  let trimmed = String(baseUrl || '').trim();
+  if (!trimmed) {
+    return DEFAULT_GEMINI_BASE_URL;
+  }
+  trimmed = trimmed.replace(/\/?v0\/management\/?$/i, '');
+  trimmed = trimmed.replace(/\/+$/g, '');
+  if (!/^https?:\/\//i.test(trimmed)) {
+    trimmed = `http://${trimmed}`;
+  }
+  return trimmed;
+};
+
+export const stripGeminiModelResourceName = (value: string): string => {
+  return String(value ?? '')
+    .trim()
+    .replace(/^\/?models\//i, '');
+};
+
+export const buildGeminiModelsEndpoint = (baseUrl: string): string => {
+  let trimmed = normalizeGeminiBaseUrl(baseUrl).replace(/\/+$/g, '');
+  trimmed = trimmed.replace(/\/v1beta\/models$/i, '');
+  trimmed = trimmed.replace(/\/v1beta(?:\/.*)?$/i, '');
+  return `${trimmed}/v1beta/models`;
+};
+
+export const buildGeminiGenerateContentEndpoint = (baseUrl: string, modelName: string): string => {
+  const trimmed = normalizeGeminiBaseUrl(baseUrl).replace(/\/+$/g, '');
+  const model = stripGeminiModelResourceName(modelName);
+  if (!trimmed || !model) return '';
+  return `${trimmed}/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+};
+
 export type ProviderRecentUsageMap = Map<string, Map<string, RecentRequestUsageEntry>>;
 
 const EMPTY_RECENT_USAGE_ENTRY: RecentRequestUsageEntry = {

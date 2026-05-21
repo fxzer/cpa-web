@@ -13,92 +13,50 @@
   );
 }
 
-.pageHeader {
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) auto;
-  gap: 24px;
-  align-items: end;
-  padding: clamp(22px, 3vw, 30px);
-  border-radius: 30px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
-  background:
-    radial-gradient(
-      circle at top right,
-      color-mix(in srgb, var(--primary-color) 14%, transparent),
-      transparent 34%
-    ),
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--bg-primary) 94%, transparent),
-      color-mix(in srgb, var(--bg-secondary) 96%, transparent)
-    );
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0 auto auto 0;
-    width: min(260px, 48vw);
-    height: min(260px, 48vw);
-    background: radial-gradient(
-      circle,
-      color-mix(in srgb, var(--primary-color) 12%, transparent),
-      transparent 70%
-    );
-    pointer-events: none;
-    opacity: 0.7;
-  }
-
-  @include mobile {
-    grid-template-columns: minmax(0, 1fr);
-    align-items: stretch;
-    gap: 16px;
-  }
+.pageTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  padding-bottom: 24px;
 }
 
-.pageHeaderCopy {
-  position: relative;
+.pageHeader {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: $spacing-sm;
+  flex: 1 1 auto;
   min-width: 0;
-}
-
-.pageEyebrow {
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .pageTitle {
   margin: 0;
+  font-size: 28px;
+  font-weight: 700;
   color: var(--text-primary);
-  font-size: clamp(32px, 4vw, 52px);
-  line-height: 0.95;
-  letter-spacing: -0.04em;
 }
 
 .description {
   margin: 0;
   max-width: 46rem;
   color: var(--text-secondary);
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
-.pageMeta {
-  position: relative;
+.headerActions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: flex-end;
   gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
   min-width: 0;
 
   @include mobile {
-    align-items: stretch;
+    width: 100%;
+    justify-content: space-between;
   }
 }
 
@@ -106,19 +64,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  padding: 0 14px;
+  height: 46px;
+  padding: 0 12px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
   background: color-mix(in srgb, var(--bg-primary) 86%, transparent);
   color: var(--text-primary);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
+  white-space: nowrap;
   text-align: center;
-
-  @include mobile {
-    width: 100%;
-  }
+  box-sizing: border-box;
 }
 
 .tabBar {
@@ -133,24 +89,26 @@
   max-width: 100%;
   overflow-x: auto;
   scrollbar-width: none;
+  flex-shrink: 0;
 
   &::-webkit-scrollbar {
     display: none;
   }
 
   @include mobile {
-    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 }
 
 .tabItem {
   @include button-reset;
-  padding: 10px 16px;
+  padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid transparent;
   color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
   transition:
     color 0.15s ease,
@@ -179,7 +137,6 @@
   padding: 0;
   border-radius: 0;
   border: none;
-  background: color-mix(in srgb, var(--bg-primary) 74%, transparent);
 
   @include mobile {
     padding: 0;
@@ -487,7 +444,6 @@
 }
 
 @media (max-width: 380px) {
-  .pageHeader,
   .workspaceShell {
     padding: 14px;
   }

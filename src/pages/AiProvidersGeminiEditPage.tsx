@@ -7,14 +7,16 @@ import { Input } from '@/components/ui/Input';
 import { HeaderInputList } from '@/components/ui/HeaderInputList';
 import { ModelInputList } from '@/components/ui/ModelInputList';
 import { Modal } from '@/components/ui/Modal';
+import { Select } from '@/components/ui/Select';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
-import { modelsApi, providersApi } from '@/services/api';
+import { apiCallApi, getApiCallErrorMessage, modelsApi, providersApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
+import type { KeyTestStatus } from '@/stores/useOpenAIEditDraftStore';
 import type { GeminiKeyConfig } from '@/types';
-import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
+import { buildHeaderObject, hasHeader, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
 import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
 import type { ModelInfo } from '@/utils/models';
 import { entriesToModels, modelsToEntries } from '@/components/ui/modelInputListUtils';
@@ -22,6 +24,7 @@ import { ProviderApiKeyEntriesEditor } from '@/components/providers/ProviderApiK
 import {
   areNormalizedApiKeyEntriesEqual,
   buildApiKeyEntry,
+  buildGeminiGenerateContentEndpoint,
   excludedModelsToText,
   getPrimaryApiKey,
   normalizeApiKeyEntriesForBaseline,
@@ -29,10 +32,30 @@ import {
   serializeApiKeyEntriesForSave,
 } from '@/components/providers/utils';
 import type { GeminiFormState } from '@/components/providers';
+import {
+  GeminiBatchModelTestModal,
+  type GeminiBatchModelTestRowResult,
+} from './GeminiBatchModelTestModal';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
 import styles from './AiProvidersPage.module.scss';
 
 type LocationState = { fromAiProviders?: boolean } | null;
+
+const GEMINI_TEST_TIMEOUT_MS = 30_000;
+
+const getErrorMessage = (err: unknown) => {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return '';
+};
+
+const createIdleKeyTestStatuses = (count: number): KeyTestStatus[] =>
+  Array.from({ length: Math.max(count, 1) }, () => ({ status: 'idle', message: '' }));
+
+type KeyTestResult = {
+  ok: boolean;
+  message?: string;
+};
 
 const buildEmptyForm = (): GeminiFormState => ({
   apiKeyEntries: [buildApiKeyEntry()],
@@ -124,6 +147,19 @@ export function AiProvidersGeminiEditPage() {
   const autoFetchSignatureRef = useRef<string>('');
   const modelDiscoveryRequestIdRef = useRef(0);
 
+  const [isTestingKeys, setIsTestingKeys] = useState(false);
+  const [testModel, setTestModel] = useState('');
+  const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [testMessage, setTestMessage] = useState('');
+  const [keyTestStatuses, setKeyTestStatuses] = useState<KeyTestStatus[]>(() =>
+    createIdleKeyTestStatuses(1)
+  );
+  const [batchTestModalOpen, setBatchTestModalOpen] = useState(false);
+  const [batchTestKeyIndex, setBatchTestKeyIndex] = useState<number | null>(null);
+  const [batchModelTestByKey, setBatchModelTestByKey] = useState<
+    Record<number, Record<string, GeminiBatchModelTestRowResult>>
+  >({});
+
   const hasIndexParam = typeof params.index === 'string';
   const editIndex = useMemo(() => parseIndexParam(params.index), [params.index]);
   const invalidIndexParam = hasIndexParam && editIndex === null;
@@ -210,7 +246,339 @@ export function AiProvidersGeminiEditPage() {
     setBaseline(buildGeminiBaseline(nextForm));
   }, [initialData, loading]);
 
-  const canSave = !disableControls && !saving && !loading && !invalidIndexParam && !invalidIndex;
+  const hasConfiguredModels = form.modelEntries.some((entry) => entry.name.trim());
+  const hasTestableKeys = form.apiKeyEntries.some((entry) => entry.apiKey?.trim());
+  const availableModels = useMemo(
+    () =>
+      form.modelEntries
+        .map((entry) => entry.name.trim())
+        .filter((name, index, list) => name && list.indexOf(name) === index),
+    [form.modelEntries]
+  );
+  const modelSelectOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return form.modelEntries.reduce<Array<{ value: string; label: string }>>((acc, entry) => {
+      const name = entry.name.trim();
+      if (!name || seen.has(name)) return acc;
+      seen.add(name);
+      const alias = entry.alias.trim();
+      acc.push({
+        value: name,
+        label: alias && alias !== name ? `${name} (${alias})` : name,
+      });
+      return acc;
+    }, []);
+  }, [form.modelEntries]);
+
+  const resetKeyTestStatuses = useCallback((count: number) => {
+    setKeyTestStatuses(createIdleKeyTestStatuses(count));
+  }, []);
+
+  const setKeyTestStatus = useCallback((keyIndex: number, status: KeyTestStatus) => {
+    setKeyTestStatuses((prev) => {
+      const next = [...prev];
+      while (next.length <= keyIndex) {
+        next.push({ status: 'idle', message: '' });
+      }
+      next[keyIndex] = status;
+      return next;
+    });
+  }, []);
+
+  const connectivityConfigSignature = useMemo(() => {
+    const headersSignature = form.headers
+      .map((entry) => `${entry.key.trim()}:${entry.value.trim()}`)
+      .join('|');
+    const modelsSignature = form.modelEntries
+      .map((entry) => `${entry.name.trim()}:${entry.alias.trim()}`)
+      .join('|');
+    return [form.baseUrl?.trim() ?? '', testModel.trim(), headersSignature, modelsSignature].join('||');
+  }, [form.baseUrl, form.headers, form.modelEntries, testModel]);
+  const previousConnectivityConfigRef = useRef(connectivityConfigSignature);
+
+  useEffect(() => {
+    if (previousConnectivityConfigRef.current === connectivityConfigSignature) {
+      return;
+    }
+    previousConnectivityConfigRef.current = connectivityConfigSignature;
+    resetKeyTestStatuses(form.apiKeyEntries.length);
+    setTestStatus('idle');
+    setTestMessage('');
+    setBatchModelTestByKey({});
+  }, [connectivityConfigSignature, form.apiKeyEntries.length, resetKeyTestStatuses]);
+
+  const apiKeysSignature = useMemo(
+    () => form.apiKeyEntries.map((entry) => `${entry.apiKey ?? ''}|${entry.proxyUrl ?? ''}`).join(';'),
+    [form.apiKeyEntries]
+  );
+
+  useEffect(() => {
+    setBatchModelTestByKey({});
+  }, [apiKeysSignature]);
+
+  const handleBatchTestComplete = useCallback(
+    ({
+      keyIndex: ki,
+      results,
+    }: {
+      keyIndex: number;
+      results: Record<string, GeminiBatchModelTestRowResult>;
+    }) => {
+      setBatchModelTestByKey((prev) => ({
+        ...prev,
+        [ki]: { ...(prev[ki] ?? {}), ...results },
+      }));
+      showNotification(
+        t('ai_providers.openai_batch_model_test_done', { count: Object.keys(results).length }),
+        'success'
+      );
+    },
+    [showNotification, t]
+  );
+
+  const openBatchModelTest = useCallback(
+    (keyIdx: number) => {
+      if (!form.baseUrl?.trim()) {
+        showNotification(t('notification.openai_test_url_required'), 'error');
+        return;
+      }
+      if (!form.apiKeyEntries[keyIdx]?.apiKey?.trim()) {
+        showNotification(t('notification.openai_test_key_required'), 'error');
+        return;
+      }
+      setBatchTestKeyIndex(keyIdx);
+      setBatchTestModalOpen(true);
+    },
+    [form.apiKeyEntries, form.baseUrl, showNotification, t]
+  );
+
+  const renderBatchModelRowStatus = useCallback(
+    (rowModelName: string) => {
+      const n = rowModelName.trim();
+      if (!n) return null;
+      const lines: string[] = [];
+      let any = false;
+      let allOk = true;
+      let firstFailCode: number | undefined;
+      for (let ki = 0; ki < form.apiKeyEntries.length; ki += 1) {
+        const r = batchModelTestByKey[ki]?.[n];
+        if (!r) continue;
+        any = true;
+        if (!r.success) {
+          allOk = false;
+          if (r.statusCode != null && firstFailCode === undefined) {
+            firstFailCode = r.statusCode;
+          }
+        }
+        lines.push(
+          t('ai_providers.openai_batch_model_tooltip_line', {
+            keyIndex: ki + 1,
+            status: r.success ? t('ai_providers.openai_batch_status_ok') : t('ai_providers.openai_batch_status_fail'),
+            code: r.statusCode != null ? ` HTTP ${r.statusCode}` : '',
+            message: r.message ? ` ${r.message}` : '',
+          })
+        );
+      }
+      if (!any) return null;
+      const tagText = allOk
+        ? t('ai_providers.openai_batch_model_tag_ok')
+        : firstFailCode != null
+          ? `${t('ai_providers.openai_batch_model_tag_fail')} ${firstFailCode}`
+          : t('ai_providers.openai_batch_model_tag_fail');
+      return (
+        <div className={styles.modelBatchStatusRow}>
+          <span
+            className={`${styles.modelBatchTag} ${allOk ? styles.modelBatchTagOk : styles.modelBatchTagErr}`}
+            title={lines.join('\n')}
+          >
+            {tagText}
+          </span>
+        </div>
+      );
+    },
+    [batchModelTestByKey, form.apiKeyEntries.length, t]
+  );
+
+  const runSingleKeyTest = useCallback(
+    async (keyIndex: number): Promise<KeyTestResult> => {
+      const baseUrl = form.baseUrl?.trim() ?? '';
+      if (!baseUrl) {
+        const message = t('notification.openai_test_url_required');
+        showNotification(message, 'error');
+        return { ok: false, message };
+      }
+
+      const endpoint = buildGeminiGenerateContentEndpoint(
+        baseUrl,
+        testModel.trim() || availableModels[0] || ''
+      );
+      if (!endpoint) {
+        const message = t('notification.openai_test_model_required');
+        showNotification(message, 'error');
+        return { ok: false, message };
+      }
+
+      const keyEntry = form.apiKeyEntries[keyIndex];
+      if (!keyEntry?.apiKey?.trim()) {
+        const message = t('notification.openai_test_key_required');
+        setKeyTestStatus(keyIndex, { status: 'error', message });
+        return { ok: false, message };
+      }
+
+      const customHeaders = buildHeaderObject(form.headers);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...customHeaders,
+      };
+      if (!hasHeader(headers, 'x-goog-api-key')) {
+        headers['x-goog-api-key'] = keyEntry.apiKey.trim();
+      }
+
+      setKeyTestStatus(keyIndex, { status: 'loading', message: '' });
+
+      try {
+        const result = await apiCallApi.request(
+          {
+            method: 'POST',
+            url: endpoint,
+            header: Object.keys(headers).length ? headers : undefined,
+            data: JSON.stringify({
+              contents: [{ parts: [{ text: 'Hi' }] }],
+            }),
+          },
+          { timeout: GEMINI_TEST_TIMEOUT_MS }
+        );
+
+        if (result.statusCode < 200 || result.statusCode >= 300) {
+          throw new Error(getApiCallErrorMessage(result));
+        }
+
+        setKeyTestStatus(keyIndex, { status: 'success', message: '' });
+        return { ok: true };
+      } catch (err: unknown) {
+        const message = getErrorMessage(err);
+        const errorCode =
+          typeof err === 'object' && err !== null && 'code' in err
+            ? String((err as { code?: string }).code)
+            : '';
+        const isTimeout = errorCode === 'ECONNABORTED' || message.toLowerCase().includes('timeout');
+        const errorMessage = isTimeout
+          ? t('ai_providers.openai_test_timeout', { seconds: GEMINI_TEST_TIMEOUT_MS / 1000 })
+          : message;
+        setKeyTestStatus(keyIndex, { status: 'error', message: errorMessage });
+        return { ok: false, message: errorMessage };
+      }
+    },
+    [
+      availableModels,
+      form.apiKeyEntries,
+      form.baseUrl,
+      form.headers,
+      setKeyTestStatus,
+      showNotification,
+      t,
+      testModel,
+    ]
+  );
+
+  const testSingleKey = useCallback(
+    async (keyIndex: number): Promise<boolean> => {
+      if (isTestingKeys) return false;
+      setIsTestingKeys(true);
+      try {
+        const result = await runSingleKeyTest(keyIndex);
+        if (result.ok) {
+          showNotification(t('ai_providers.openai_test_single_success'), 'success');
+        } else if (result.message) {
+          showNotification(t('ai_providers.openai_test_single_failed'), 'error');
+        }
+        return result.ok;
+      } finally {
+        setIsTestingKeys(false);
+      }
+    },
+    [isTestingKeys, runSingleKeyTest, showNotification, t]
+  );
+
+  const testAllKeys = useCallback(async () => {
+    if (isTestingKeys) return;
+
+    const baseUrl = form.baseUrl?.trim() ?? '';
+    if (!baseUrl) {
+      const message = t('notification.openai_test_url_required');
+      setTestStatus('error');
+      setTestMessage(message);
+      showNotification(message, 'error');
+      return;
+    }
+
+    const modelName = testModel.trim() || availableModels[0] || '';
+    if (!modelName) {
+      const message = t('notification.openai_test_model_required');
+      setTestStatus('error');
+      setTestMessage(message);
+      showNotification(message, 'error');
+      return;
+    }
+
+    const validKeyIndexes = form.apiKeyEntries
+      .map((entry, index) => (entry.apiKey?.trim() ? index : -1))
+      .filter((index) => index >= 0);
+    if (validKeyIndexes.length === 0) {
+      const message = t('notification.openai_test_key_required');
+      setTestStatus('error');
+      setTestMessage(message);
+      showNotification(message, 'error');
+      return;
+    }
+
+    setIsTestingKeys(true);
+    setTestStatus('loading');
+    setTestMessage(t('ai_providers.openai_test_running'));
+    resetKeyTestStatuses(form.apiKeyEntries.length);
+
+    try {
+      const results = await Promise.all(validKeyIndexes.map((index) => runSingleKeyTest(index)));
+
+      const successCount = results.filter((result) => result.ok).length;
+      const failCount = validKeyIndexes.length - successCount;
+
+      if (failCount === 0) {
+        const message = t('ai_providers.openai_test_all_success', { count: successCount });
+        setTestStatus('success');
+        setTestMessage(message);
+        showNotification(message, 'success');
+      } else if (successCount === 0) {
+        const message = t('ai_providers.openai_test_all_failed', { count: failCount });
+        setTestStatus('error');
+        setTestMessage(message);
+        showNotification(message, 'error');
+      } else {
+        const message = t('ai_providers.openai_test_all_partial', {
+          success: successCount,
+          failed: failCount,
+        });
+        setTestStatus('error');
+        setTestMessage(message);
+        showNotification(message, 'warning');
+      }
+    } finally {
+      setIsTestingKeys(false);
+    }
+  }, [
+    availableModels,
+    form.apiKeyEntries,
+    form.baseUrl,
+    isTestingKeys,
+    resetKeyTestStatuses,
+    runSingleKeyTest,
+    showNotification,
+    t,
+    testModel,
+  ]);
+
+  const canSave =
+    !disableControls && !saving && !loading && !invalidIndexParam && !invalidIndex && !isTestingKeys;
 
   const discoveredModelsFiltered = useMemo(() => {
     const filter = modelDiscoverySearch.trim().toLowerCase();
@@ -610,7 +978,18 @@ export function AiProvidersGeminiEditPage() {
               <ProviderApiKeyEntriesEditor
                 entries={form.apiKeyEntries}
                 disabled={disableControls || saving}
-                onChange={(apiKeyEntries) => setForm((prev) => ({ ...prev, apiKeyEntries }))}
+                onChange={(apiKeyEntries) => {
+                  setForm((prev) => ({ ...prev, apiKeyEntries }));
+                  resetKeyTestStatuses(apiKeyEntries.length);
+                  setTestStatus('idle');
+                  setTestMessage('');
+                }}
+                keyTestStatuses={keyTestStatuses}
+                isTestingKeys={isTestingKeys}
+                hasConfiguredModels={hasConfiguredModels}
+                baseUrl={form.baseUrl ?? ''}
+                onBatchTest={openBatchModelTest}
+                onSingleTest={(index) => void testSingleKey(index)}
               />
             </div>
             <HeaderInputList
@@ -639,7 +1018,7 @@ export function AiProvidersGeminiEditPage() {
                         modelEntries: [...prev.modelEntries, { name: '', alias: '' }],
                       }))
                     }
-                    disabled={disableControls || saving}
+                    disabled={disableControls || saving || isTestingKeys}
                   >
                     {t('ai_providers.gemini_models_add_btn')}
                   </Button>
@@ -647,10 +1026,53 @@ export function AiProvidersGeminiEditPage() {
                     variant="secondary"
                     size="sm"
                     onClick={() => setModelDiscoveryOpen(true)}
-                    disabled={!canOpenModelDiscovery}
+                    disabled={!canOpenModelDiscovery || isTestingKeys}
                   >
                     {t('ai_providers.gemini_models_fetch_button')}
                   </Button>
+                  <div className={styles.modelToolbarTestCluster}>
+                    <Select
+                      value={testModel}
+                      options={modelSelectOptions}
+                      onChange={(value) => {
+                        setTestModel(value);
+                        setTestStatus('idle');
+                        setTestMessage('');
+                      }}
+                      placeholder={
+                        availableModels.length
+                          ? t('ai_providers.openai_test_select_placeholder')
+                          : t('ai_providers.openai_test_select_empty')
+                      }
+                      className={styles.openaiTestSelect}
+                      ariaLabel={t('ai_providers.openai_test_title')}
+                      disabled={
+                        disableControls ||
+                        saving ||
+                        isTestingKeys ||
+                        testStatus === 'loading' ||
+                        availableModels.length === 0
+                      }
+                    />
+                    <Button
+                      variant={testStatus === 'error' ? 'danger' : 'secondary'}
+                      size="sm"
+                      onClick={() => void testAllKeys()}
+                      loading={testStatus === 'loading'}
+                      disabled={
+                        disableControls ||
+                        saving ||
+                        isTestingKeys ||
+                        testStatus === 'loading' ||
+                        !hasConfiguredModels ||
+                        !hasTestableKeys
+                      }
+                      title={t('ai_providers.openai_test_all_hint')}
+                      className={styles.modelTestAllButton}
+                    >
+                      {t('ai_providers.openai_test_all_action')}
+                    </Button>
+                  </div>
                 </div>
               </div>
               <div className={styles.sectionHint}>{t('ai_providers.gemini_models_hint')}</div>
@@ -660,7 +1082,7 @@ export function AiProvidersGeminiEditPage() {
                 onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
                 namePlaceholder={t('common.model_name_placeholder')}
                 aliasPlaceholder={t('common.model_alias_placeholder')}
-                disabled={disableControls || saving}
+                disabled={disableControls || saving || isTestingKeys}
                 hideAddButton
                 className={styles.modelInputList}
                 rowClassName={styles.modelInputRow}
@@ -668,7 +1090,22 @@ export function AiProvidersGeminiEditPage() {
                 removeButtonClassName={styles.modelRowRemoveButton}
                 removeButtonTitle={t('common.delete')}
                 removeButtonAriaLabel={t('common.delete')}
+                renderAfterRow={(_idx, entry) => renderBatchModelRowStatus(entry.name)}
               />
+
+              {testMessage && (
+                <div
+                  className={`status-badge ${
+                    testStatus === 'error'
+                      ? 'error'
+                      : testStatus === 'success'
+                        ? 'success'
+                        : 'muted'
+                  }`}
+                >
+                  {testMessage}
+                </div>
+              )}
             </div>
 
             <div className="form-group">
@@ -828,6 +1265,17 @@ export function AiProvidersGeminiEditPage() {
                 )}
               </div>
             </Modal>
+
+            <GeminiBatchModelTestModal
+              open={batchTestModalOpen}
+              onClose={() => setBatchTestModalOpen(false)}
+              keyIndex={batchTestKeyIndex}
+              loading={loading}
+              saving={saving}
+              disableControls={disableControls}
+              form={form}
+              onBatchComplete={handleBatchTestComplete}
+            />
           </>
         )}
       </Card>

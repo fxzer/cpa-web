@@ -358,6 +358,12 @@ export function VisualConfigEditor({
       const parsed = Number.parseFloat(raw);
       return Math.max(Number.isFinite(parsed) ? parsed : 24, 16);
     };
+    const computeStickyMinTop = () => {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue('--header-height');
+      const parsed = Number.parseFloat(raw);
+      const headerHeight = Number.isFinite(parsed) ? parsed : 64;
+      return headerHeight + 12;
+    };
     let viewportPadding = computeViewportPadding();
 
     const contentScroller = document.querySelector('.content') as HTMLElement | null;
@@ -377,10 +383,9 @@ export function VisualConfigEditor({
       cachedFloatingHeight =
         floatingElement.getBoundingClientRect().height ||
         Math.min(cachedFloatingHeight, availableHeight);
-      const stickyTop = Math.max((viewportHeight - cachedFloatingHeight) / 2, viewportPadding);
+      const stickyMinTop = computeStickyMinTop();
       const maxTop = workspaceRect.bottom - cachedFloatingHeight;
-      const unclampedTop = Math.min(Math.max(anchorRect.top, stickyTop), maxTop);
-      const top = Math.max(unclampedTop, viewportPadding);
+      const top = Math.min(Math.max(anchorRect.top, stickyMinTop), maxTop);
       const left = Math.max(anchorRect.left, viewportPadding);
       const width = Math.max(
         Math.min(anchorRect.width, window.innerWidth - left - viewportPadding),
@@ -388,7 +393,8 @@ export function VisualConfigEditor({
       );
       const maxHeight = Math.max(viewportHeight - top - viewportPadding, 160);
       const isVisible =
-        workspaceRect.bottom > stickyTop + viewportPadding && anchorRect.top < viewportHeight;
+        workspaceRect.bottom > stickyMinTop + viewportPadding &&
+        workspaceRect.top < viewportHeight;
 
       floatingElement.style.transform = `translate3d(${left}px, ${top}px, 0)`;
       floatingElement.style.width = `${width}px`;

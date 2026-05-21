@@ -14,8 +14,8 @@ import { apiCallApi, getApiCallErrorMessage } from '@/services/api';
 import type { ApiKeyEntry } from '@/types';
 import { buildHeaderObject, hasHeader } from '@/utils/headers';
 import { buildApiKeyEntry, buildOpenAIChatCompletionsEndpoint } from '@/components/providers/utils';
+import { KeyTestStatusIcon } from '@/components/providers/KeyTestStatusIcon';
 import type { OpenAIEditOutletContext } from './AiProvidersOpenAIEditLayout';
-import type { KeyTestStatus } from '@/stores/useOpenAIEditDraftStore';
 import { OpenAIBatchModelTestModal, type OpenAIBatchModelTestRowResult } from './OpenAIBatchModelTestModal';
 import styles from './AiProvidersPage.module.scss';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
@@ -28,71 +28,10 @@ const getErrorMessage = (err: unknown) => {
   return '';
 };
 
-// Status icon components
-function StatusLoadingIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={styles.statusIconSpin}>
-      <circle cx="8" cy="8" r="7" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
-      <path
-        d="M8 1A7 7 0 0 1 8 15"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function StatusSuccessIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="8" fill="var(--success-color, #22c55e)" />
-      <path
-        d="M4.5 8L7 10.5L11.5 6"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function StatusErrorIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="8" fill="var(--danger-color, #c65746)" />
-      <path
-        d="M5 5L11 11M11 5L5 11"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function StatusIdleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="7" stroke="var(--text-tertiary, #9ca3af)" strokeWidth="2" />
-    </svg>
-  );
-}
-
-function StatusIcon({ status }: { status: KeyTestStatus['status'] }) {
-  switch (status) {
-    case 'loading':
-      return <StatusLoadingIcon />;
-    case 'success':
-      return <StatusSuccessIcon />;
-    case 'error':
-      return <StatusErrorIcon />;
-    default:
-      return <StatusIdleIcon />;
-  }
-}
+type KeyTestResult = {
+  ok: boolean;
+  message?: string;
+};
 
 export function AiProvidersOpenAIEditPage() {
   const { t } = useTranslation();
@@ -282,29 +221,33 @@ export function AiProvidersOpenAIEditPage() {
 
   // Test a single key by index
   const runSingleKeyTest = useCallback(
-    async (keyIndex: number): Promise<boolean> => {
+    async (keyIndex: number): Promise<KeyTestResult> => {
       const baseUrl = form.baseUrl.trim();
       if (!baseUrl) {
-        showNotification(t('notification.openai_test_url_required'), 'error');
-        return false;
+        const message = t('notification.openai_test_url_required');
+        showNotification(message, 'error');
+        return { ok: false, message };
       }
 
       const endpoint = buildOpenAIChatCompletionsEndpoint(baseUrl);
       if (!endpoint) {
-        showNotification(t('notification.openai_test_url_required'), 'error');
-        return false;
+        const message = t('notification.openai_test_url_required');
+        showNotification(message, 'error');
+        return { ok: false, message };
       }
 
       const keyEntry = form.apiKeyEntries[keyIndex];
       if (!keyEntry?.apiKey?.trim()) {
-        setDraftKeyTestStatus(keyIndex, { status: 'error', message: t('notification.openai_test_key_required') });
-        return false;
+        const message = t('notification.openai_test_key_required');
+        setDraftKeyTestStatus(keyIndex, { status: 'error', message });
+        return { ok: false, message };
       }
 
       const modelName = testModel.trim() || availableModels[0] || '';
       if (!modelName) {
-        showNotification(t('notification.openai_test_model_required'), 'error');
-        return false;
+        const message = t('notification.openai_test_model_required');
+        showNotification(message, 'error');
+        return { ok: false, message };
       }
 
       const customHeaders = buildHeaderObject(form.headers);
@@ -340,7 +283,7 @@ export function AiProvidersOpenAIEditPage() {
         }
 
         setDraftKeyTestStatus(keyIndex, { status: 'success', message: '' });
-        return true;
+        return { ok: true };
       } catch (err: unknown) {
         const message = getErrorMessage(err);
         const errorCode =
@@ -352,7 +295,7 @@ export function AiProvidersOpenAIEditPage() {
           ? t('ai_providers.openai_test_timeout', { seconds: OPENAI_TEST_TIMEOUT_MS / 1000 })
           : message;
         setDraftKeyTestStatus(keyIndex, { status: 'error', message: errorMessage });
-        return false;
+        return { ok: false, message: errorMessage };
       }
     },
     [form.baseUrl, form.apiKeyEntries, form.headers, testModel, availableModels, t, setDraftKeyTestStatus, showNotification]
@@ -363,12 +306,18 @@ export function AiProvidersOpenAIEditPage() {
       if (isTestingKeys) return false;
       setIsTestingKeys(true);
       try {
-        return await runSingleKeyTest(keyIndex);
+        const result = await runSingleKeyTest(keyIndex);
+        if (result.ok) {
+          showNotification(t('ai_providers.openai_test_single_success'), 'success');
+        } else if (result.message) {
+          showNotification(t('ai_providers.openai_test_single_failed'), 'error');
+        }
+        return result.ok;
       } finally {
         setIsTestingKeys(false);
       }
     },
-    [isTestingKeys, runSingleKeyTest]
+    [isTestingKeys, runSingleKeyTest, showNotification, t]
   );
 
   // Test all keys
@@ -421,7 +370,7 @@ export function AiProvidersOpenAIEditPage() {
     try {
       const results = await Promise.all(validKeyIndexes.map((index) => runSingleKeyTest(index)));
 
-      const successCount = results.filter(Boolean).length;
+      const successCount = results.filter((result) => result.ok).length;
       const failCount = validKeyIndexes.length - successCount;
 
       if (failCount === 0) {
@@ -512,8 +461,7 @@ export function AiProvidersOpenAIEditPage() {
             {t('ai_providers.openai_keys_add_btn')}
           </Button>
         </div>
-        <div className={styles.keyTableShell}>
-          {/* 表头 */}
+        <div className={`${styles.keyTableShell} ${styles.keyTableShellWithTesting}`}>
           <div className={styles.keyTableHeader}>
             <div className={styles.keyTableColIndex}>#</div>
             <div className={styles.keyTableColStatus}>{t('common.status')}</div>
@@ -522,25 +470,23 @@ export function AiProvidersOpenAIEditPage() {
             <div className={styles.keyTableColAction}>{t('common.action')}</div>
           </div>
 
-          {/* 数据行 */}
           {list.map((entry, index) => {
             const keyStatus = keyTestStatuses[index]?.status ?? 'idle';
             const canTestKey = Boolean(entry.apiKey?.trim()) && hasConfiguredModels;
+            const statusMessage = keyTestStatuses[index]?.message || '';
 
             return (
               <div key={index} className={styles.keyTableRow}>
-                {/* 序号 */}
                 <div className={styles.keyTableColIndex}>{index + 1}</div>
 
-                {/* 状态指示灯 */}
                 <div
                   className={styles.keyTableColStatus}
-                  title={keyTestStatuses[index]?.message || ''}
+                  title={statusMessage || t('ai_providers.key_test_status_hint')}
+                  aria-label={statusMessage || t('ai_providers.key_test_status_hint')}
                 >
-                  <StatusIcon status={keyStatus} />
+                  <KeyTestStatusIcon status={keyStatus} />
                 </div>
 
-                {/* Key 输入框 */}
                 <div className={styles.keyTableColKey}>
                   <input
                     type="text"
@@ -552,7 +498,6 @@ export function AiProvidersOpenAIEditPage() {
                   />
                 </div>
 
-                {/* Proxy 输入框 */}
                 <div className={styles.keyTableColProxy}>
                   <input
                     type="text"
@@ -564,7 +509,6 @@ export function AiProvidersOpenAIEditPage() {
                   />
                 </div>
 
-                {/* 操作按钮 */}
                 <div className={styles.keyTableColAction}>
                   <Button
                     variant="secondary"
