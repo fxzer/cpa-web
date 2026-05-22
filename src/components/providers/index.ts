@@ -7,6 +7,8 @@ export { VertexSection } from './VertexSection';
 export { ProviderList } from './ProviderList';
 export { ProviderAliasOverviewModal } from './ProviderAliasOverviewModal';
 export { ProviderStatusBar } from './ProviderStatusBar';
+export { ProviderConfigToggle } from './ProviderConfigToggle';
+export { ProviderPrefixPriorityRow } from './ProviderPrefixPriorityRow';
 export { ProviderNav } from './ProviderNav';
 export * from './hooks/useProviderRecentRequests';
 export * from './types';

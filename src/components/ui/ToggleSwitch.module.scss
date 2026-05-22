@@ -111,17 +111,19 @@
 }
 
 .trackTextOn {
-  left: 6px;
-  right: 28px;
-  justify-content: flex-start;
+  // 滑块在右侧时，文字占据左侧可见区域并居中
+  left: 4px;
+  right: 26px;
+  justify-content: center;
   color: #fff;
   opacity: 0;
 }
 
 .trackTextOff {
-  left: 28px;
-  right: 6px;
-  justify-content: flex-end;
+  // 滑块在左侧时，文字占据右侧可见区域并居中
+  left: 26px;
+  right: 4px;
+  justify-content: center;
   color: var(--text-secondary);
   opacity: 0;
 }

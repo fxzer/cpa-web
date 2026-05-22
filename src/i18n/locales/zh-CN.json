@@ -252,6 +252,8 @@
     "priority_label": "优先级 (可选):",
     "priority_hint": "数值越大优先级越高；留空表示默认（0）。",
     "config_toggle_label": "启用",
+    "config_enabled_label": "已启用",
+    "config_disabled_label": "已禁用",
     "config_disabled_badge": "已停用",
     "codex_title": "Codex API 配置",
     "codex_add_button": "添加配置",

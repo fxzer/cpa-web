@@ -2,7 +2,7 @@ import { Fragment, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { ProviderConfigToggle } from '../ProviderConfigToggle';
 import iconClaude from '@/assets/icons/claude.svg';
 import type { ProviderKeyConfig } from '@/types';
 import { statusBarDataFromRecentRequests } from '@/utils/recentRequests';
@@ -12,6 +12,7 @@ import { ProviderList } from '../ProviderList';
 import { ProviderModelsPreview } from '../ProviderModelsPreview';
 import { CopyableUrlValue } from '../CopyableUrlValue';
 import { ProviderSectionCardTitle } from '../ProviderSectionCardTitle';
+import { ProviderPrefixPriorityRow } from '../ProviderPrefixPriorityRow';
 import { ProviderStatusBar } from '../ProviderStatusBar';
 import {
   collectProviderKeyConfigRecentBuckets,
@@ -112,8 +113,7 @@ export function ClaudeSection({
           metaClassName={styles.openaiProviderMeta}
           getRowDisabled={(item) => hasDisableAllModelsRule(item.excludedModels)}
           renderExtraActions={(item, index) => (
-            <ToggleSwitch
-              label={t('ai_providers.config_toggle_label')}
+            <ProviderConfigToggle
               checked={!hasDisableAllModelsRule(item.excludedModels)}
               disabled={toggleDisabled}
               onChange={(value) => void onToggle(index, value)}
@@ -131,21 +131,24 @@ export function ClaudeSection({
 
             return (
               <Fragment>
-                <div className={styles.providerCardHeaderRow}>
-                  <div className={`item-title ${styles.providerCardTitle}`}>
-                    {buildProviderOverviewLabel(
-                      item,
-                      `${t('ai_providers.claude_item_title')} #${index + 1}`
-                    )}
+                <div className={styles.providerCardHeader}>
+                  <div className={styles.providerCardHeaderRow}>
+                    <div className={`item-title ${styles.providerCardTitle}`}>
+                      {buildProviderOverviewLabel(
+                        item,
+                        `${t('ai_providers.claude_item_title')} #${index + 1}`
+                      )}
+                    </div>
+                    <div className={styles.cardStats}>
+                      <span className={`${styles.statPill} ${styles.statSuccess}`}>
+                        {t('stats.success')}: {stats.success}
+                      </span>
+                      <span className={`${styles.statPill} ${styles.statFailure}`}>
+                        {t('stats.failure')}: {stats.failure}
+                      </span>
+                    </div>
                   </div>
-                  <div className={styles.cardStats}>
-                    <span className={`${styles.statPill} ${styles.statSuccess}`}>
-                      {t('stats.success')}: {stats.success}
-                    </span>
-                    <span className={`${styles.statPill} ${styles.statFailure}`}>
-                      {t('stats.failure')}: {stats.failure}
-                    </span>
-                  </div>
+                  <ProviderStatusBar statusData={statusData} />
                 </div>
                 <ProviderConfigApiKeyEntriesList
                   provider="claude"
@@ -153,18 +156,7 @@ export function ClaudeSection({
                   entries={item.apiKeyEntries}
                   usageByProvider={usageByProvider}
                 />
-                {item.priority !== undefined && (
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>{t('common.priority')}:</span>
-                    <span className={styles.fieldValue}>{item.priority}</span>
-                  </div>
-                )}
-                {item.prefix && (
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>{t('common.prefix')}:</span>
-                    <span className={styles.fieldValue}>{item.prefix}</span>
-                  </div>
-                )}
+                <ProviderPrefixPriorityRow prefix={item.prefix} priority={item.priority} />
                 {item.baseUrl && (
                   <div className={styles.fieldRow}>
                     <span className={styles.fieldLabel}>{t('common.base_url')}:</span>
@@ -232,7 +224,6 @@ export function ClaudeSection({
                     </div>
                   </div>
                 ) : null}
-                <ProviderStatusBar statusData={statusData} />
               </Fragment>
             );
           }}

@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { Select } from '@/components/ui/Select';
-import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { ProviderConfigToggle } from '../ProviderConfigToggle';
 import {
   IconCheck,
   IconChevronDown,
@@ -22,6 +22,7 @@ import styles from '@/pages/AiProvidersPage.module.scss';
 import { ProviderModelsPreview } from '../ProviderModelsPreview';
 import { CopyableUrlValue } from '../CopyableUrlValue';
 import { ProviderSectionCardTitle } from '../ProviderSectionCardTitle';
+import { ProviderPrefixPriorityRow } from '../ProviderPrefixPriorityRow';
 import { ProviderStatusBar } from '../ProviderStatusBar';
 import {
   getOpenAIProviderRecentWindowStats,
@@ -460,29 +461,21 @@ export function OpenAISection({
         style={actionsDisabled ? { opacity: 0.6 } : undefined}
       >
         <div className={styles.openaiProviderMeta}>
-          <div className={styles.providerCardHeaderRow}>
-            <div className={styles.openaiProviderTitle}>{provider.name}</div>
-            <div className={styles.cardStats}>
-              <span className={`${styles.statPill} ${styles.statSuccess}`}>
-                {t('stats.success')}: {stats.success}
-              </span>
-              <span className={`${styles.statPill} ${styles.statFailure}`}>
-                {t('stats.failure')}: {stats.failure}
-              </span>
+          <div className={styles.providerCardHeader}>
+            <div className={styles.providerCardHeaderRow}>
+              <div className={styles.openaiProviderTitle}>{provider.name}</div>
+              <div className={styles.cardStats}>
+                <span className={`${styles.statPill} ${styles.statSuccess}`}>
+                  {t('stats.success')}: {stats.success}
+                </span>
+                <span className={`${styles.statPill} ${styles.statFailure}`}>
+                  {t('stats.failure')}: {stats.failure}
+                </span>
+              </div>
             </div>
+            <ProviderStatusBar statusData={statusData} />
           </div>
-          {provider.priority !== undefined && (
-            <div className={styles.fieldRow}>
-              <span className={styles.fieldLabel}>{t('common.priority')}:</span>
-              <span className={styles.fieldValue}>{provider.priority}</span>
-            </div>
-          )}
-          {provider.prefix && (
-            <div className={styles.fieldRow}>
-              <span className={styles.fieldLabel}>{t('common.prefix')}:</span>
-              <span className={styles.fieldValue}>{provider.prefix}</span>
-            </div>
-          )}
+          <ProviderPrefixPriorityRow prefix={provider.prefix} priority={provider.priority} />
           <div className={styles.fieldRow}>
             <span className={styles.fieldLabel}>{t('common.base_url')}:</span>
             <CopyableUrlValue value={provider.baseUrl} />
@@ -558,7 +551,6 @@ export function OpenAISection({
               <span className={styles.fieldValue}>{provider.testModel}</span>
             </div>
           )}
-          <ProviderStatusBar statusData={statusData} />
         </div>
         <div className={styles.openaiProviderActions}>
           <div className="provider-card-action-buttons">
@@ -598,8 +590,7 @@ export function OpenAISection({
               {t('common.delete')}
             </Button>
           </div>
-          <ToggleSwitch
-            label={t('ai_providers.config_toggle_label')}
+          <ProviderConfigToggle
             checked={!providerDisabled}
             disabled={toggleDisabled}
             onChange={(value) => void onToggle(originalIndex, value)}

@@ -251,6 +251,8 @@
     "priority_label": "Priority (Optional):",
     "priority_hint": "Higher values are preferred. Leave empty for default (0).",
     "config_toggle_label": "Enabled",
+    "config_enabled_label": "Enabled",
+    "config_disabled_label": "Disabled",
     "config_disabled_badge": "Disabled",
     "codex_title": "Codex API Configuration",
     "codex_add_button": "Add Configuration",
