@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import styles from '@/pages/AiProvidersPage.module.scss';
 
 interface ProviderListProps<T> {
   items: T[];
@@ -84,8 +85,9 @@ export function ProviderList<T>({
                   {t('common.edit')}
                 </Button>
                 <Button
-                  variant="danger"
+                  variant="secondary"
                   size="sm"
+                  className={styles.providerCardDeleteButton}
                   onClick={() => onDelete(item, index)}
                   disabled={actionsDisabled}
                 >

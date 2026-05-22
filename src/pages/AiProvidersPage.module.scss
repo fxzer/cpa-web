@@ -237,6 +237,14 @@ $openai-toolbar-control-height: 36px;
   flex: 1 1 auto;
 }
 
+// 供应商已停用：标题变暗 + 删除线（不再展示「已停用」badge）
+.providerCardTitleDisabled {
+  color: var(--text-tertiary);
+  opacity: 0.72;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text-tertiary) 75%, transparent);
+}
+
 // 排序控件
 .sortControls {
   display: flex;
@@ -1726,7 +1734,8 @@ $provider-status-bar-height: 24px;
   white-space: nowrap;
 }
 
-// API 密钥表：删除为描边 + danger 色文字（保留边框，区别于实心 danger）
+// 卡片底部 / API 密钥表：删除为描边 + danger 色文字（不用实心红底）
+.providerCardDeleteButton:global(.btn.btn-secondary),
 .keyTableDeleteButton:global(.btn.btn-secondary) {
   color: var(--danger-color, var(--error-color, #c65746));
   border-color: var(--failure-badge-border, rgba(198, 87, 70, 0.35));
@@ -1739,6 +1748,7 @@ $provider-status-bar-height: 24px;
   }
 }
 
+[data-theme='dark'] .providerCardDeleteButton:global(.btn.btn-secondary),
 [data-theme='dark'] .keyTableDeleteButton:global(.btn.btn-secondary) {
   color: var(--danger-color, var(--error-color));
 

@@ -415,7 +415,7 @@
     "sort_ascending": "Sort ascending",
     "sort_asc_short": "Asc",
     "sort_by_priority": "Sort by Priority",
-    "sort_by_recent_success": "Sort by Recent Success",
+    "sort_by_success_rate": "Sort by Success Rate",
     "sort_descending": "Sort descending",
     "sort_desc_short": "Desc",
     "openai_test_model": "Test Model",

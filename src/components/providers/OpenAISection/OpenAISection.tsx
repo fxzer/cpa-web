@@ -25,7 +25,6 @@ import { ProviderSectionCardTitle } from '../ProviderSectionCardTitle';
 import { ProviderPrefixPriorityRow } from '../ProviderPrefixPriorityRow';
 import { ProviderStatusBar } from '../ProviderStatusBar';
 import {
-  getOpenAIProviderRecentWindowStats,
   getOpenAIProviderRecentStatusData,
   getOpenAIProviderTotalStats,
   getOpenAIProviderKey,
@@ -35,10 +34,20 @@ import {
 } from '../utils';
 import type { ProviderAliasOverviewRequest } from '../types';
 
-type SortOption = 'name' | 'priority' | 'recent-success';
+type SortOption = 'name' | 'priority' | 'success-rate';
 type SortDirection = 'asc' | 'desc';
 
 const EMPTY_STATUS_BAR = statusBarDataFromRecentRequests([]);
+
+function getSuccessRate(stats: { success: number; failure: number } | undefined): number | null {
+  const success = stats?.success ?? 0;
+  const failure = stats?.failure ?? 0;
+  const total = success + failure;
+  if (total === 0) {
+    return null;
+  }
+  return (success / total) * 100;
+}
 
 interface OpenAISectionProps {
   configs: OpenAIProviderConfig[];
@@ -84,7 +93,7 @@ export function OpenAISection({
   const actionsDisabled = disableControls || loading || isSwitching;
   const toggleDisabled = disableControls || loading || isSwitching;
   const [sortOption, setSortOption] = useState<SortOption>('priority');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownLayout, setDropdownLayout] = useState({ openAbove: false, maxHeight: 300 });
@@ -187,7 +196,7 @@ export function OpenAISection({
     () => [
       { value: 'priority', label: t('ai_providers.sort_by_priority') },
       { value: 'name', label: t('ai_providers.sort_by_name') },
-      { value: 'recent-success', label: t('ai_providers.sort_by_recent_success') },
+      { value: 'success-rate', label: t('ai_providers.sort_by_success_rate') },
     ],
     [t]
   );
@@ -202,11 +211,11 @@ export function OpenAISection({
     const sorted = [...filtered];
     const direction = sortDirection === 'desc' ? -1 : 1;
     const providerStats =
-      sortOption === 'recent-success'
+      sortOption === 'success-rate'
         ? new Map(
             sorted.map(({ config }) => [
               config,
-              getOpenAIProviderRecentWindowStats(config, usageByProvider),
+              getOpenAIProviderTotalStats(config, usageByProvider),
             ])
           )
         : null;
@@ -217,8 +226,8 @@ export function OpenAISection({
         break;
       case 'priority':
         sorted.sort((a, b) => {
-          const priorityA = a.config.priority ?? Number.MAX_SAFE_INTEGER;
-          const priorityB = b.config.priority ?? Number.MAX_SAFE_INTEGER;
+          const priorityA = a.config.priority ?? 0;
+          const priorityB = b.config.priority ?? 0;
           const priorityDiff = priorityA - priorityB;
 
           if (priorityDiff !== 0) {
@@ -228,14 +237,24 @@ export function OpenAISection({
           return direction * a.config.name.localeCompare(b.config.name);
         });
         break;
-      case 'recent-success':
+      case 'success-rate':
         sorted.sort((a, b) => {
-          const successDiff =
-            (providerStats?.get(a.config)?.success ?? 0) -
-            (providerStats?.get(b.config)?.success ?? 0);
+          const rateA = getSuccessRate(providerStats?.get(a.config));
+          const rateB = getSuccessRate(providerStats?.get(b.config));
 
-          if (successDiff !== 0) {
-            return direction * successDiff;
+          if (rateA === null && rateB === null) {
+            return direction * a.config.name.localeCompare(b.config.name);
+          }
+          if (rateA === null) {
+            return 1;
+          }
+          if (rateB === null) {
+            return -1;
+          }
+
+          const rateDiff = rateA - rateB;
+          if (rateDiff !== 0) {
+            return direction * rateDiff;
           }
 
           return direction * a.config.name.localeCompare(b.config.name);
@@ -463,7 +482,11 @@ export function OpenAISection({
         <div className={styles.openaiProviderMeta}>
           <div className={styles.providerCardHeader}>
             <div className={styles.providerCardHeaderRow}>
-              <div className={styles.openaiProviderTitle}>{provider.name}</div>
+              <div
+                className={`${styles.openaiProviderTitle} ${providerDisabled ? styles.providerCardTitleDisabled : ''}`}
+              >
+                {provider.name}
+              </div>
               <div className={styles.cardStats}>
                 <span className={`${styles.statPill} ${styles.statSuccess}`}>
                   {t('stats.success')}: {stats.success}
@@ -480,11 +503,6 @@ export function OpenAISection({
             <span className={styles.fieldLabel}>{t('common.base_url')}:</span>
             <CopyableUrlValue value={provider.baseUrl} />
           </div>
-          {providerDisabled && (
-            <div className="status-badge warning" style={{ marginTop: 8, marginBottom: 0 }}>
-              {t('ai_providers.config_disabled_badge')}
-            </div>
-          )}
           {headerEntries.length > 0 && (
             <div className={styles.headerBadgeList}>
               {headerEntries.map(([key, value]) => (
@@ -582,8 +600,9 @@ export function OpenAISection({
               {t('common.edit')}
             </Button>
             <Button
-              variant="danger"
+              variant="secondary"
               size="sm"
+              className={styles.providerCardDeleteButton}
               onClick={() => onDelete(originalIndex)}
               disabled={actionsDisabled}
             >

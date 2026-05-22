@@ -134,7 +134,9 @@ export function CodexSection({
               <Fragment>
                 <div className={styles.providerCardHeader}>
                   <div className={styles.providerCardHeaderRow}>
-                    <div className={`item-title ${styles.providerCardTitle}`}>
+                    <div
+                      className={`item-title ${styles.providerCardTitle} ${configDisabled ? styles.providerCardTitleDisabled : ''}`}
+                    >
                       {buildProviderOverviewLabel(
                         item,
                         `${t('ai_providers.codex_item_title')} #${index + 1}`
@@ -177,11 +179,6 @@ export function CodexSection({
                         <strong>{key}:</strong> {value}
                       </span>
                     ))}
-                  </div>
-                )}
-                {configDisabled && (
-                  <div className="status-badge warning" style={{ marginTop: 8, marginBottom: 0 }}>
-                    {t('ai_providers.config_disabled_badge')}
                   </div>
                 )}
                 {item.models?.length ? (

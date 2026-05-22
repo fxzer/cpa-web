@@ -12,6 +12,7 @@
 #   ./deploy.sh --frontend-only          # 只部署前端静态文件
 #   ./deploy.sh --backend-only           # 只部署后端二进制并重启
 #   ./deploy.sh --no-restart             # 替换后端后不重启
+#   ./deploy.sh --skip-build             # 跳过前端构建，只安装已有 dist/management.html
 #   ./deploy.sh --dry-run                # 只打印动作，不真正替换
 #
 # 可选环境变量：
@@ -29,6 +30,7 @@ set -euo pipefail
 FRONTEND_ONLY=false
 BACKEND_ONLY=false
 NO_RESTART=false
+SKIP_BUILD=false
 DRY_RUN=false
 
 for arg in "$@"; do
@@ -36,6 +38,7 @@ for arg in "$@"; do
     --frontend-only) FRONTEND_ONLY=true ;;
     --backend-only) BACKEND_ONLY=true ;;
     --no-restart) NO_RESTART=true ;;
+    --skip-build) SKIP_BUILD=true ;;
     --dry-run) DRY_RUN=true ;;
     -h|--help)
       sed -n '1,31p' "$0"
@@ -74,6 +77,8 @@ resolve_realpath() {
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FRONTEND_ROOT="$SCRIPT_DIR"
+# shellcheck source=scripts/frontend-static.sh
+source "$SCRIPT_DIR/scripts/frontend-static.sh"
 BACKEND_ROOT="${BACKEND_ROOT:-/Users/fxj/n/CLIProxyAPI}"
 BACKEND_BUILD_MODE="${BACKEND_BUILD_MODE:-current}"
 
@@ -88,48 +93,19 @@ BREW_SERVICE_NAME="cliproxyapi"
 BACKUP_ROOT="${BACKUP_ROOT:-$HOME/.cliproxyapi-deploy-backups}"
 BACKUP_DIR="$BACKUP_ROOT/$(date +%Y%m%d-%H%M%S)"
 
-resolve_static_targets() {
-  local targets=()
-  if [[ -n "${MANAGEMENT_STATIC_PATH:-}" ]]; then
-    local cleaned="$MANAGEMENT_STATIC_PATH"
-    if [[ "$(basename "$cleaned")" == "management.html" ]]; then
-      targets+=("$cleaned")
-    else
-      targets+=("$cleaned/management.html")
-    fi
-  elif [[ -n "${WRITABLE_PATH:-}" ]]; then
-    targets+=("${WRITABLE_PATH%/}/static/management.html")
-  elif [[ -n "${writable_path:-}" ]]; then
-    targets+=("${writable_path%/}/static/management.html")
-  else
-    targets+=("$(dirname "$CPA_CONFIG_PATH")/static/management.html")
-  fi
-
-  if [[ -n "${EXTRA_STATIC_DIRS:-}" ]]; then
-    local extra
-    for extra in $EXTRA_STATIC_DIRS; do
-      targets+=("${extra%/}/management.html")
-    done
-  fi
-
-  printf '%s\n' "${targets[@]}" | awk '!seen[$0]++'
-}
-
 backup_file() {
-  local path="$1"
-  local label="$2"
-  if [[ ! -e "$path" || "$DRY_RUN" == true ]]; then
-    return
-  fi
-  mkdir -p "$BACKUP_DIR"
-  cp -p "$path" "$BACKUP_DIR/$label"
+  frontend_static_backup_file "$1" "$2" "$DRY_RUN"
 }
 
 deploy_frontend() {
   log_step "构建并部署前端静态文件"
   cd "$FRONTEND_ROOT"
 
-  run npm run build
+  if [[ "$SKIP_BUILD" != true ]]; then
+    run npm run build
+  else
+    echo "跳过前端构建，使用已有 dist/management.html"
+  fi
 
   local built_html="$FRONTEND_ROOT/dist/management.html"
   if [[ "$DRY_RUN" != true && ! -f "$built_html" ]]; then
@@ -137,14 +113,11 @@ deploy_frontend() {
     exit 1
   fi
 
-  local target
-  while IFS= read -r target; do
-    [[ -n "$target" ]] || continue
-    echo "静态文件目标: $target"
-    backup_file "$target" "management.$(echo "$target" | shasum | awk '{print $1}').html"
-    run mkdir -p "$(dirname "$target")"
-    run install -m 0644 "$built_html" "$target"
-  done < <(resolve_static_targets)
+  if [[ "$DRY_RUN" == true ]]; then
+    install_built_frontend_static "$built_html" true
+  else
+    install_built_frontend_static "$built_html" false
+  fi
 }
 
 prepare_backend_build_dir() {
