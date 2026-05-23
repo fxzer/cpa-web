@@ -13,7 +13,7 @@
 }
 
 :root {
-  --header-height: 80px;
+  --header-height: 64px;
   --shell-gutter: 24px;
   --sidebar-panel-width: 240px;
   --sidebar-collapsed-width: 68px;
@@ -777,7 +777,6 @@
   min-width: 0;
   height: calc(100vh - var(--shell-gutter) - var(--shell-gutter));
   overflow-y: auto;
-  padding-right: 24px;
   scrollbar-gutter: stable;
 
   @supports (height: 100dvh) {
@@ -786,6 +785,12 @@
 
   &.content-logs {
     overflow: hidden;
+  }
+}
+
+@media (min-width: ($breakpoint-mobile + 1px)) {
+  .content {
+    padding-right: 24px;
   }
 }
 
