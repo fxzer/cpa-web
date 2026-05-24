@@ -1622,6 +1622,8 @@
     "api_key_stat_name": "API密钥",
     "combined_trend_title": "花费与 Token 趋势",
     "model_distribution_title": "模型用量分布",
+    "cache_hit_trend_title": "缓存命中率趋势",
+    "cache_hit_bucket_requests": "{{count}} 条请求",
     "metric_requests": "按请求统计",
     "metric_tokens": "按 Token 统计",
     "metric_cost": "按花费统计",

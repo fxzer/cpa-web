@@ -1622,6 +1622,8 @@
     "api_key_stat_name": "API Key",
     "combined_trend_title": "Cost and Token Trends",
     "model_distribution_title": "Model Usage Distribution",
+    "cache_hit_trend_title": "Cache Hit Rate Trend",
+    "cache_hit_bucket_requests": "{{count}} requests",
     "metric_requests": "By Requests",
     "metric_tokens": "By Tokens",
     "metric_cost": "By Cost",

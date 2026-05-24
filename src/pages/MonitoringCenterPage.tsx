@@ -30,6 +30,7 @@ import {
 import type { ModelStat } from '@/components/usage/ModelStatsCard';
 import { MonitorStatCards } from '@/components/monitor/MonitorStatCards';
 import { MonitorTrendChart } from '@/components/monitor/MonitorTrendChart';
+import { MonitorCacheHitChart } from '@/components/monitor/MonitorCacheHitChart';
 import { ModelUsageDistributionCard } from '@/components/monitor/ModelUsageDistributionCard';
 import { MonitorApiKeyStatsCard } from '@/components/monitor/MonitorApiKeyStatsCard';
 import {
@@ -222,6 +223,13 @@ export function MonitoringCenterPage() {
           modelStats={modelStats}
           loading={loading}
           isDark={isDark}
+        />
+        <MonitorCacheHitChart
+          usage={filteredUsage as UsagePayload | null}
+          loading={loading}
+          isDark={isDark}
+          isMobile={isMobile}
+          timeRange={timeRange}
         />
       </div>
 

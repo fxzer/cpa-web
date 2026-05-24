@@ -33,4 +33,7 @@ settings.local.json
 *.njsproj
 *.sln
 *.sw?
+deploy.sh
 deploy-server.sh
+scripts/deploy-common.sh
+scripts/frontend-static.sh
