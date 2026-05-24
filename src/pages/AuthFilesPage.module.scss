@@ -82,6 +82,10 @@
   gap: 8px 10px;
   flex: 1 1 auto;
   min-width: 0;
+
+  @include mobile {
+    flex-wrap: wrap;
+  }
 }
 
 .globalToolbarField {
@@ -102,6 +106,11 @@
 .globalToolbarSearch {
   width: min(400px, 100%);
   min-width: 400px;
+
+  @include mobile {
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 .globalToolbarPageSize {
@@ -1567,22 +1576,26 @@
 
 @include mobile {
   .cardActions {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 6px;
   }
 
   .cardActionsMain {
-    flex-wrap: wrap;
-    width: 100%;
+    flex-wrap: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
   }
 
   .primaryActionButton:global(.btn.btn-sm) {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-width: 0;
+    padding-inline: 8px;
   }
 
   .statusToggle {
-    width: 100%;
-    justify-content: space-between;
+    flex-shrink: 0;
+    width: auto;
   }
 }
 

@@ -1574,6 +1574,8 @@
     "request_events_delete_confirm": "Delete this request event?",
     "request_events_delete_success": "Request event deleted",
     "request_events_delete_failed": "Failed to delete request event",
+    "request_events_api_key_copy_title": "Click to copy full API key",
+    "request_events_api_key_copied": "Full API key copied",
     "thinking_intensity": "Thinking",
     "thinking_mode": "Thinking Mode",
     "thinking_level": "Thinking Level",

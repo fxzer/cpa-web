@@ -36,7 +36,7 @@ import {
 } from '@/utils/usage';
 import { REQUEST_EVENTS_TIME_RANGE_OPTIONS } from '@/utils/usageTimeRange';
 import { downloadBlob } from '@/utils/download';
-import { splitMiddleEllipsisParts } from '@/utils/format';
+import { copyToClipboard } from '@/utils/clipboard';
 import styles from '@/pages/UsagePage.module.scss';
 
 const ALL_FILTER = '__all__';
@@ -150,6 +150,23 @@ const shortHash = (hash: string): string => {
   return normalized.length > 16 ? `${normalized.slice(0, 12)}...` : normalized;
 };
 
+const API_KEY_EDGE_VISIBLE_CHARS = 10;
+const API_KEY_MASK_TEXT = '**********';
+
+const maskRequestEventApiKey = (apiKey: string): string => {
+  const trimmed = apiKey.trim();
+  if (!trimmed) return '';
+
+  if (trimmed.length <= API_KEY_EDGE_VISIBLE_CHARS * 2) {
+    const visibleChars = trimmed.length < 4 ? 1 : 2;
+    const start = trimmed.slice(0, visibleChars);
+    const end = trimmed.slice(-visibleChars);
+    return `${start}${API_KEY_MASK_TEXT}${end}`;
+  }
+
+  return `${trimmed.slice(0, API_KEY_EDGE_VISIBLE_CHARS)}${API_KEY_MASK_TEXT}${trimmed.slice(-API_KEY_EDGE_VISIBLE_CHARS)}`;
+};
+
 const formatCredentialKeyLine = (row: Pick<RequestEventRow, 'credentialSubtitle' | 'authFile' | 'authLabel'>): string => {
   if (row.credentialSubtitle) return row.credentialSubtitle;
   if (row.authFile && row.authFile !== '-') return row.authFile;
@@ -159,21 +176,26 @@ const formatCredentialKeyLine = (row: Pick<RequestEventRow, 'credentialSubtitle'
 
 const renderCredentialSubtitle = (
   row: Pick<RequestEventRow, 'credentialSubtitle' | 'authFile' | 'authLabel' | 'resolvedApiKey'>,
-  styles: Record<string, string>
+  styles: Record<string, string>,
+  onCopyApiKey: (apiKey: string) => void,
+  copyTitle: string
 ) => {
   const text = formatCredentialKeyLine(row);
   if (!text || text === '-') return '-';
 
   if (row.resolvedApiKey) {
-    const parts = splitMiddleEllipsisParts(text);
-    if (parts) {
-      return (
-        <span className={styles.requestEventsCredentialKeyLine} title={text}>
-          <span className={styles.requestEventsCredentialKeyStart}>{parts.head}</span>
-          <span className={styles.requestEventsCredentialKeyEnd}>{parts.tail}</span>
-        </span>
-      );
-    }
+    const maskedApiKey = maskRequestEventApiKey(row.resolvedApiKey);
+    return (
+      <button
+        type="button"
+        className={styles.requestEventsCredentialKeyButton}
+        onClick={() => onCopyApiKey(row.resolvedApiKey)}
+        title={copyTitle}
+        aria-label={copyTitle}
+      >
+        {maskedApiKey}
+      </button>
+    );
   }
 
   return text;
@@ -935,6 +957,17 @@ export function RequestEventsDetailsCard({
     [showNotification, t]
   );
 
+  const handleCopyCredentialApiKey = useCallback(
+    async (apiKey: string) => {
+      const copied = await copyToClipboard(apiKey);
+      showNotification(
+        t(copied ? 'usage_stats.request_events_api_key_copied' : 'notification.copy_failed'),
+        copied ? 'success' : 'error'
+      );
+    },
+    [showNotification, t]
+  );
+
   const selectedCredentialInfo = useMemo(() => {
     if (!selectedFailureRow) return null;
     const normalizedAuthIndex = normalizeAuthIndex(selectedFailureRow.authIndex);
@@ -1250,9 +1283,18 @@ export function RequestEventsDetailsCard({
                       </div>
                       <div
                         className={styles.requestEventsSecondaryText}
-                        title={formatCredentialKeyLine(row)}
+                        title={
+                          row.resolvedApiKey
+                            ? t('usage_stats.request_events_api_key_copy_title')
+                            : formatCredentialKeyLine(row)
+                        }
                       >
-                        {renderCredentialSubtitle(row, styles)}
+                        {renderCredentialSubtitle(
+                          row,
+                          styles,
+                          handleCopyCredentialApiKey,
+                          t('usage_stats.request_events_api_key_copy_title')
+                        )}
                       </div>
                     </td>
                     <td className={styles.requestEventsUsageCell}>

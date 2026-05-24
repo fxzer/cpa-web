@@ -30,6 +30,11 @@
   gap: $spacing-sm;
   min-width: 0;
   flex: 0 1 auto;
+
+  @include mobile {
+    flex: 1 1 100%;
+    width: 100%;
+  }
 }
 
 .pageSubtitle {

@@ -1574,6 +1574,8 @@
     "request_events_delete_confirm": "确认删除这条请求事件吗？",
     "request_events_delete_success": "请求事件已删除",
     "request_events_delete_failed": "删除请求事件失败",
+    "request_events_api_key_copy_title": "点击复制完整 API key",
+    "request_events_api_key_copied": "完整 API key 已复制",
     "thinking_intensity": "思考强度",
     "thinking_mode": "思考模式",
     "thinking_level": "思考等级",

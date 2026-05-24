@@ -1151,6 +1151,22 @@
 
   @include mobile {
     height: 680px;
+
+    .requestEventsToolbar {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    .requestEventsFilterItem {
+      flex-shrink: 0;
+    }
   }
 
   .requestEventsToolbar {
@@ -1273,6 +1289,32 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.requestEventsCredentialKeyButton {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  align-items: baseline;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--primary-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: $radius-sm;
+  }
 }
 
 .requestEventsCredentialKeyLine {
