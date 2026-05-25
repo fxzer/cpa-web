@@ -329,6 +329,201 @@ export function computeCacheHitRatio(inputTokens: number, cachedTokens: number):
   return Math.min(cached / totalInput, 1);
 }
 
+export type UsageTokenCacheHitAggregation = 'request' | '5m' | 'hour' | 'day' | 'month';
+
+export interface UsageTokenCacheHitTrendData {
+  labels: string[];
+  tooltipLabels: string[];
+  tokenSeries: number[];
+  costSeries: number[];
+  cacheHitSeries: number[];
+  requestCounts: number[];
+}
+
+const REQUEST_LEVEL_CACHE_HIT_POINT_LIMIT = 240;
+
+const formatUsageTrendRequestLabel = (timestampMs: number) =>
+  new Date(timestampMs)
+    .toLocaleString(undefined, {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+    .replace(',', '');
+
+const formatUsageTrendRequestTooltipLabel = (timestampMs: number) =>
+  new Date(timestampMs).toLocaleString(undefined, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+
+const formatUsageTrendBucketDatePart = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+const formatUsageTrendBucketTimePart = (date: Date) =>
+  `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+const getUsageTrendBucketStartMs = (
+  timestampMs: number,
+  aggregation: Exclude<UsageTokenCacheHitAggregation, 'request'>
+) => {
+  const date = new Date(timestampMs);
+  if (aggregation === 'month') {
+    date.setDate(1);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  }
+  if (aggregation === 'day') {
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  }
+  if (aggregation === 'hour') {
+    date.setMinutes(0, 0, 0);
+    return date.getTime();
+  }
+
+  date.setMinutes(Math.floor(date.getMinutes() / 5) * 5, 0, 0);
+  return date.getTime();
+};
+
+const formatUsageTrendBucketLabel = (
+  timestampMs: number,
+  aggregation: Exclude<UsageTokenCacheHitAggregation, 'request'>
+) => {
+  const date = new Date(timestampMs);
+  if (aggregation === 'month') {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+  if (aggregation === 'day') {
+    return formatUsageTrendBucketDatePart(date);
+  }
+  return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${formatUsageTrendBucketTimePart(date)}`;
+};
+
+export const getUsageTokenCacheHitAggregation = (
+  timeRange: UsageTimeRange,
+  pointCount: number,
+  spanMs: number
+): UsageTokenCacheHitAggregation => {
+  if (timeRange === '5m' || timeRange === '30m' || timeRange === '1h') {
+    return 'request';
+  }
+  if (timeRange === '7h') {
+    return pointCount > REQUEST_LEVEL_CACHE_HIT_POINT_LIMIT ? '5m' : 'request';
+  }
+  if (timeRange === '24h' || timeRange === '7d') {
+    return 'hour';
+  }
+  if (timeRange === '30d') {
+    return 'day';
+  }
+  if (spanMs > 180 * 24 * 60 * 60 * 1000) {
+    return 'month';
+  }
+  if (spanMs > 7 * 24 * 60 * 60 * 1000) {
+    return 'day';
+  }
+  return 'hour';
+};
+
+const getUsageDetailCacheHitPercent = (detail: UsageDetail): number => {
+  const inputTokens = detail.tokens.input_tokens;
+  const cachedTokens = Math.max(detail.tokens.cached_tokens, detail.tokens.cache_tokens ?? 0);
+  return (computeCacheHitRatio(inputTokens, cachedTokens) ?? 0) * 100;
+};
+
+export function buildUsageTokenCacheHitTrend(
+  usageData: unknown,
+  timeRange: UsageTimeRange,
+  modelPrices: Record<string, ModelPrice> = {}
+): UsageTokenCacheHitTrendData {
+  const requestPoints = collectUsageDetails(usageData)
+    .map((detail) => {
+      const timestampMs =
+        typeof detail.__timestampMs === 'number' && detail.__timestampMs > 0
+          ? detail.__timestampMs
+          : parseTimestampMs(detail.timestamp);
+      if (!Number.isFinite(timestampMs) || timestampMs <= 0) {
+        return null;
+      }
+
+      return {
+        timestampMs,
+        label: formatUsageTrendRequestLabel(timestampMs),
+        tooltipLabel: formatUsageTrendRequestTooltipLabel(timestampMs),
+        tokenCount: extractTotalTokens(detail),
+        cost: calculateCost(detail, modelPrices),
+        cacheHitPercent: getUsageDetailCacheHitPercent(detail),
+        requestCount: 1
+      };
+    })
+    .filter((point): point is NonNullable<typeof point> => point !== null)
+    .sort((a, b) => a.timestampMs - b.timestampMs);
+
+  if (!requestPoints.length) {
+    return {
+      labels: [],
+      tooltipLabels: [],
+      tokenSeries: [],
+      costSeries: [],
+      cacheHitSeries: [],
+      requestCounts: []
+    };
+  }
+
+  const spanMs = requestPoints[requestPoints.length - 1].timestampMs - requestPoints[0].timestampMs;
+  const aggregation = getUsageTokenCacheHitAggregation(timeRange, requestPoints.length, spanMs);
+  if (aggregation === 'request') {
+    return {
+      labels: requestPoints.map((point) => point.label),
+      tooltipLabels: requestPoints.map((point) => point.tooltipLabel),
+      tokenSeries: requestPoints.map((point) => point.tokenCount),
+      costSeries: requestPoints.map((point) => point.cost),
+      cacheHitSeries: requestPoints.map((point) => point.cacheHitPercent),
+      requestCounts: requestPoints.map((point) => point.requestCount)
+    };
+  }
+
+  const bucketMap = new Map<
+    number,
+    { tokenCount: number; cost: number; cacheHitPercentTotal: number; requestCount: number }
+  >();
+  requestPoints.forEach((point) => {
+    const bucketStartMs = getUsageTrendBucketStartMs(point.timestampMs, aggregation);
+    const bucket = bucketMap.get(bucketStartMs) ?? {
+      tokenCount: 0,
+      cost: 0,
+      cacheHitPercentTotal: 0,
+      requestCount: 0
+    };
+    bucket.tokenCount += point.tokenCount;
+    bucket.cost += point.cost;
+    bucket.cacheHitPercentTotal += point.cacheHitPercent;
+    bucket.requestCount += 1;
+    bucketMap.set(bucketStartMs, bucket);
+  });
+
+  const buckets = Array.from(bucketMap.entries()).sort(([left], [right]) => left - right);
+  return {
+    labels: buckets.map(([timestampMs]) => formatUsageTrendBucketLabel(timestampMs, aggregation)),
+    tooltipLabels: buckets.map(([timestampMs]) => formatUsageTrendBucketLabel(timestampMs, aggregation)),
+    tokenSeries: buckets.map(([, bucket]) => bucket.tokenCount),
+    costSeries: buckets.map(([, bucket]) => bucket.cost),
+    cacheHitSeries: buckets.map(([, bucket]) =>
+      bucket.requestCount > 0 ? bucket.cacheHitPercentTotal / bucket.requestCount : 0
+    ),
+    requestCounts: buckets.map(([, bucket]) => bucket.requestCount)
+  };
+}
+
 const normalizeUsageRecordDetail = (
   detailRaw: unknown,
   modelName: string,

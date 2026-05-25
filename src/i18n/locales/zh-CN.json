@@ -1620,7 +1620,7 @@
     "usage_stats_by_model": "模型",
     "usage_stats_by_api_key": "API密钥",
     "api_key_stat_name": "API密钥",
-    "combined_trend_title": "花费与 Token 趋势",
+    "combined_trend_title": "花费、Token 与缓存命中率趋势",
     "model_distribution_title": "模型用量分布",
     "cache_hit_trend_title": "缓存命中率趋势",
     "cache_hit_bucket_requests": "{{count}} 条请求",

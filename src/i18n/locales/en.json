@@ -1620,7 +1620,7 @@
     "usage_stats_by_model": "Model",
     "usage_stats_by_api_key": "API Key",
     "api_key_stat_name": "API Key",
-    "combined_trend_title": "Cost and Token Trends",
+    "combined_trend_title": "Cost, Token, and Cache Hit Trends",
     "model_distribution_title": "Model Usage Distribution",
     "cache_hit_trend_title": "Cache Hit Rate Trend",
     "cache_hit_bucket_requests": "{{count}} requests",

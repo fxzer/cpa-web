@@ -1,11 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { ChartData, ChartOptions } from 'chart.js';
-import { Chart } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { buildUsageTotalsTrend, formatUsdFixedOne, type ModelPrice } from '@/utils/usage';
-import { getHourChartMinWidth } from '@/utils/usage/chartConfig';
+import {
+  buildUsageTokenCacheHitTrend,
+  formatUsdFixedOne,
+  type ModelPrice,
+  type UsageTimeRange
+} from '@/utils/usage';
 import type { UsagePayload } from '@/components/usage';
 import styles from '@/pages/MonitoringCenterPage.module.scss';
 
@@ -14,7 +17,7 @@ export interface MonitorTrendChartProps {
   loading: boolean;
   isDark: boolean;
   isMobile: boolean;
-  hourWindowHours?: number;
+  timeRange: UsageTimeRange;
   modelPrices: Record<string, ModelPrice>;
 }
 
@@ -65,62 +68,88 @@ const formatTokenAxisValue = (value: number, ticks: { value: number | string }[]
   })}${unit.suffix}`;
 };
 
+const TOKEN_COLOR = '#8b5cf6';
+const COST_COLOR = '#f59e0b';
+const CACHE_HIT_COLOR = '#22c55e';
+
+const formatPercent = (value: number) => `${value.toFixed(value >= 10 || value === 0 ? 0 : 1)}%`;
 const formatCostValue = (value: number) => formatUsdFixedOne(value);
+
+const getChartMinWidth = (pointCount: number, isMobile: boolean): string | undefined => {
+  if (pointCount <= 24) return undefined;
+  const perPoint = isMobile ? 44 : 22;
+  const minWidth = Math.min(pointCount * perPoint, 12000);
+  return `${minWidth}px`;
+};
 
 export function MonitorTrendChart({
   usage,
   loading,
   isDark,
   isMobile,
-  hourWindowHours,
+  timeRange,
   modelPrices
 }: MonitorTrendChartProps) {
   const { t } = useTranslation();
-  const [period, setPeriod] = useState<'hour' | 'day'>('day');
 
   const trend = useMemo(
-    () => buildUsageTotalsTrend(usage, modelPrices, period, { hourWindowHours }),
-    [usage, modelPrices, period, hourWindowHours]
+    () => buildUsageTokenCacheHitTrend(usage, timeRange, modelPrices),
+    [usage, timeRange, modelPrices]
   );
+  const pointRadius = trend.labels.length > 180 || (isMobile && trend.labels.length > 80) ? 0 : isMobile ? 2 : 3;
 
-  const chartData = useMemo<ChartData<'bar' | 'line'>>(
+  const chartData = useMemo<ChartData<'line'>>(
     () => ({
       labels: trend.labels,
       datasets: [
         {
-          type: 'bar' as const,
           label: t('usage_stats.total_tokens'),
           data: trend.tokenSeries,
           yAxisID: 'yTokens',
-          backgroundColor: 'rgba(139, 92, 246, 0.58)',
-          borderColor: 'rgba(139, 92, 246, 0.9)',
-          borderWidth: 1,
-          borderRadius: 6,
-          maxBarThickness: period === 'hour' ? 18 : 28,
-          order: 2
+          borderColor: TOKEN_COLOR,
+          backgroundColor: 'rgba(139, 92, 246, 0.14)',
+          pointBackgroundColor: TOKEN_COLOR,
+          pointBorderColor: TOKEN_COLOR,
+          pointRadius,
+          pointHoverRadius: 4,
+          tension: 0.3,
+          fill: false,
+          borderWidth: isMobile ? 1.5 : 2
         },
         {
-          type: 'line' as const,
           label: t('usage_stats.total_cost'),
           data: trend.costSeries,
           yAxisID: 'yCost',
-          borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245, 158, 11, 0.18)',
-          pointBackgroundColor: '#f59e0b',
-          pointBorderColor: '#f59e0b',
-          pointRadius: isMobile && period === 'hour' ? 0 : isMobile ? 2 : 3,
+          borderColor: COST_COLOR,
+          backgroundColor: 'rgba(245, 158, 11, 0.16)',
+          pointBackgroundColor: COST_COLOR,
+          pointBorderColor: COST_COLOR,
+          pointRadius,
           pointHoverRadius: 4,
-          tension: 0.35,
+          tension: 0.3,
           fill: false,
-          borderWidth: isMobile ? 1.5 : 2,
-          order: 1
+          borderWidth: isMobile ? 1.5 : 2
+        },
+        {
+          label: t('usage_stats.cache_hit'),
+          data: trend.cacheHitSeries,
+          yAxisID: 'yCacheHit',
+          borderColor: CACHE_HIT_COLOR,
+          backgroundColor: 'rgba(34, 197, 94, 0.16)',
+          pointBackgroundColor: CACHE_HIT_COLOR,
+          pointBorderColor: CACHE_HIT_COLOR,
+          pointRadius,
+          pointHoverRadius: 4,
+          tension: 0.25,
+          fill: false,
+          borderWidth: isMobile ? 1.5 : 2
         }
       ]
     }),
-    [isMobile, period, t, trend.costSeries, trend.labels, trend.tokenSeries]
+    [isMobile, pointRadius, t, trend.cacheHitSeries, trend.costSeries, trend.labels, trend.tokenSeries]
   );
 
-  const chartOptions = useMemo<ChartOptions<'bar'>>(() => {
+  const chartOptions = useMemo<ChartOptions<'line'>>(() => {
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(17, 24, 39, 0.06)';
     const axisBorderColor = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(17, 24, 39, 0.10)';
     const tickColor = isDark ? 'rgba(255, 255, 255, 0.72)' : 'rgba(17, 24, 39, 0.72)';
@@ -129,7 +158,6 @@ export function MonitorTrendChart({
     const tooltipBody = isDark ? 'rgba(255, 255, 255, 0.86)' : '#374151';
     const tooltipBorder = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(17, 24, 39, 0.10)';
     const tickFontSize = isMobile ? 10 : 12;
-    const maxTickLabelCount = isMobile ? (period === 'hour' ? 8 : 6) : period === 'hour' ? 12 : 10;
 
     return {
       responsive: true,
@@ -150,13 +178,28 @@ export function MonitorTrendChart({
           displayColors: true,
           usePointStyle: true,
           callbacks: {
+            title: (items) => {
+              const index = items[0]?.dataIndex;
+              return typeof index === 'number' ? trend.tooltipLabels[index] ?? '' : '';
+            },
             label: (context) => {
               const label = context.dataset.label || '';
               const value = Number(context.parsed?.y ?? 0);
               if (context.dataset.yAxisID === 'yCost') {
                 return `${label}: ${formatCostValue(value)}`;
               }
+              if (context.dataset.yAxisID === 'yCacheHit') {
+                return `${label}: ${formatPercent(value)}`;
+              }
               return `${label}: ${value.toLocaleString()}`;
+            },
+            afterBody: (items) => {
+              const index = items[0]?.dataIndex;
+              const requestCount = typeof index === 'number' ? trend.requestCounts[index] : 0;
+              if (!requestCount || requestCount <= 1) {
+                return '';
+              }
+              return t('monitoring_center.cache_hit_bucket_requests', { count: requestCount });
             }
           }
         }
@@ -176,7 +219,7 @@ export function MonitorTrendChart({
             maxRotation: isMobile ? 0 : 45,
             minRotation: 0,
             autoSkip: true,
-            maxTicksLimit: maxTickLabelCount,
+            maxTicksLimit: isMobile ? 8 : 12,
             callback: (value) => {
               const index = typeof value === 'number' ? value : Number(value);
               const raw =
@@ -185,15 +228,6 @@ export function MonitorTrendChart({
                   : typeof value === 'string'
                     ? value
                     : '';
-
-              if (period === 'hour') {
-                const [md, time] = raw.split(' ');
-                if (!time) return raw;
-                if (time.startsWith('00:')) {
-                  return md ? [md, time] : time;
-                }
-                return time;
-              }
 
               if (isMobile) {
                 const parts = raw.split('-');
@@ -234,32 +268,31 @@ export function MonitorTrendChart({
             font: { size: tickFontSize },
             callback: (value) => formatCostValue(Number(value))
           }
+        },
+        yCacheHit: {
+          beginAtZero: true,
+          min: 0,
+          max: 100,
+          position: 'right',
+          grid: {
+            drawOnChartArea: false
+          },
+          border: {
+            color: axisBorderColor
+          },
+          ticks: {
+            color: tickColor,
+            font: { size: tickFontSize },
+            callback: (value) => `${Number(value)}%`
+          }
         }
       }
     };
-  }, [isDark, isMobile, period, trend.labels]);
+  }, [isDark, isMobile, t, trend.labels, trend.requestCounts, trend.tooltipLabels]);
 
   return (
     <Card
       title={t('monitoring_center.combined_trend_title')}
-      extra={
-        <div className={styles.periodButtons}>
-          <Button
-            variant={period === 'hour' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setPeriod('hour')}
-          >
-            {t('usage_stats.by_hour')}
-          </Button>
-          <Button
-            variant={period === 'day' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setPeriod('day')}
-          >
-            {t('usage_stats.by_day')}
-          </Button>
-        </div>
-      }
       className={styles.detailsFixedCard}
     >
       {loading ? (
@@ -278,17 +311,9 @@ export function MonitorTrendChart({
             <div className={styles.chartScroller}>
               <div
                 className={styles.chartCanvas}
-                style={
-                  period === 'hour'
-                    ? { minWidth: getHourChartMinWidth(trend.labels.length, isMobile) }
-                    : undefined
-                }
+                style={{ minWidth: getChartMinWidth(trend.labels.length, isMobile) }}
               >
-                <Chart
-                  type="bar"
-                  data={chartData as unknown as ChartData<'bar'>}
-                  options={chartOptions}
-                />
+                <Line data={chartData} options={chartOptions} />
               </div>
             </div>
           </div>

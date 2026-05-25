@@ -30,7 +30,6 @@ import {
 import type { ModelStat } from '@/components/usage/ModelStatsCard';
 import { MonitorStatCards } from '@/components/monitor/MonitorStatCards';
 import { MonitorTrendChart } from '@/components/monitor/MonitorTrendChart';
-import { MonitorCacheHitChart } from '@/components/monitor/MonitorCacheHitChart';
 import { ModelUsageDistributionCard } from '@/components/monitor/ModelUsageDistributionCard';
 import { MonitorApiKeyStatsCard } from '@/components/monitor/MonitorApiKeyStatsCard';
 import {
@@ -39,7 +38,7 @@ import {
   getModelStats,
   type UsageTimeRange
 } from '@/utils/usage';
-import { HOUR_WINDOW_BY_USAGE_TIME_RANGE, USAGE_TIME_RANGE_OPTIONS } from '@/utils/usageTimeRange';
+import { USAGE_TIME_RANGE_OPTIONS } from '@/utils/usageTimeRange';
 import {
   MONITOR_USAGE_TIME_RANGE_STORAGE_KEY,
   loadMonitorUsageTimeRange
@@ -100,8 +99,6 @@ export function MonitoringCenterPage() {
     () => (usage ? filterUsageByTimeRange(usage, timeRange) : null),
     [usage, timeRange]
   );
-  const hourWindowHours =
-    timeRange === 'all' ? undefined : HOUR_WINDOW_BY_USAGE_TIME_RANGE[timeRange];
   const rateWindowMinutes = useMemo(() => {
     if (timeRange === '7h') return 7 * 60;
     if (timeRange === '24h') return 24 * 60;
@@ -216,20 +213,13 @@ export function MonitoringCenterPage() {
           loading={loading}
           isDark={isDark}
           isMobile={isMobile}
-          hourWindowHours={hourWindowHours}
+          timeRange={timeRange}
           modelPrices={modelPrices}
         />
         <ModelUsageDistributionCard
           modelStats={modelStats}
           loading={loading}
           isDark={isDark}
-        />
-        <MonitorCacheHitChart
-          usage={filteredUsage as UsagePayload | null}
-          loading={loading}
-          isDark={isDark}
-          isMobile={isMobile}
-          timeRange={timeRange}
         />
       </div>
 
