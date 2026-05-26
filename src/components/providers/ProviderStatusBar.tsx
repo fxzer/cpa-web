@@ -8,9 +8,9 @@ import defaultStyles from '@/pages/AiProvidersPage.module.scss';
  * 0 → 红 (#ef4444)  →  0.5 → 金黄 (#facc15)  →  1 → 绿 (#22c55e)
  */
 const COLOR_STOPS = [
-  { r: 239, g: 68, b: 68 },   // #ef4444
-  { r: 250, g: 204, b: 21 },  // #facc15
-  { r: 34, g: 197, b: 94 },   // #22c55e
+  { r: 239, g: 68, b: 68 }, // #ef4444
+  { r: 250, g: 204, b: 21 }, // #facc15
+  { r: 34, g: 197, b: 94 }, // #22c55e
 ] as const;
 
 function rateToColor(rate: number): string {
@@ -38,17 +38,27 @@ function formatSuccessRate(rate: number): string {
 }
 
 type StylesModule = Record<string, string>;
+type ProviderStatusBarSize = 'default' | 'small';
 
 interface ProviderStatusBarProps {
   statusData: StatusBarData;
+  size?: ProviderStatusBarSize;
   styles?: StylesModule;
 }
 
-export function ProviderStatusBar({ statusData, styles: stylesProp }: ProviderStatusBarProps) {
+const cx = (...classes: Array<string | false | null | undefined>) =>
+  classes.filter(Boolean).join(' ');
+
+export function ProviderStatusBar({
+  statusData,
+  size = 'default',
+  styles: stylesProp,
+}: ProviderStatusBarProps) {
   const { t } = useTranslation();
   const s = (stylesProp || defaultStyles) as StylesModule;
   const [activeTooltip, setActiveTooltip] = useState<number | null>(null);
   const blocksRef = useRef<HTMLDivElement>(null);
+  const isSmall = size === 'small';
 
   const hasData = statusData.totalSuccess + statusData.totalFailure > 0;
   const rateClass = !hasData
@@ -102,12 +112,16 @@ export function ProviderStatusBar({ statusData, styles: stylesProp }: ProviderSt
     const timeRange = `${formatTime(detail.startTime)} – ${formatTime(detail.endTime)}`;
 
     return (
-      <div className={`${s.statusTooltip} ${posClass}`}>
+      <div className={cx(s.statusTooltip, posClass)}>
         <span className={s.tooltipTime}>{timeRange}</span>
         {total > 0 ? (
           <span className={s.tooltipStats}>
-            <span className={s.tooltipSuccess}>{t('status_bar.success_short')} {detail.success}</span>
-            <span className={s.tooltipFailure}>{t('status_bar.failure_short')} {detail.failure}</span>
+            <span className={s.tooltipSuccess}>
+              {t('status_bar.success_short')} {detail.success}
+            </span>
+            <span className={s.tooltipFailure}>
+              {t('status_bar.failure_short')} {detail.failure}
+            </span>
             <span className={s.tooltipRate}>({(detail.rate * 100).toFixed(1)}%)</span>
           </span>
         ) : (
@@ -118,8 +132,8 @@ export function ProviderStatusBar({ statusData, styles: stylesProp }: ProviderSt
   };
 
   return (
-    <div className={s.statusBar}>
-      <div className={s.statusBlocks} ref={blocksRef}>
+    <div className={cx(s.statusBar, isSmall && s.statusBarSmall)}>
+      <div className={cx(s.statusBlocks, isSmall && s.statusBlocksSmall)} ref={blocksRef}>
         {statusData.blockDetails.map((detail, idx) => {
           const isIdle = detail.rate === -1;
           const blockStyle = isIdle ? undefined : { backgroundColor: rateToColor(detail.rate) };
@@ -128,13 +142,17 @@ export function ProviderStatusBar({ statusData, styles: stylesProp }: ProviderSt
           return (
             <div
               key={idx}
-              className={`${s.statusBlockWrapper} ${isActive ? s.statusBlockActive : ''}`}
+              className={cx(s.statusBlockWrapper, isActive && s.statusBlockActive)}
               onPointerEnter={(e) => handlePointerEnter(e, idx)}
               onPointerLeave={handlePointerLeave}
               onPointerDown={(e) => handlePointerDown(e, idx)}
             >
               <div
-                className={`${s.statusBlock} ${isIdle ? s.statusBlockIdle : ''}`}
+                className={cx(
+                  s.statusBlock,
+                  isSmall && s.statusBlockSmall,
+                  isIdle && s.statusBlockIdle
+                )}
                 style={blockStyle}
               />
               {isActive && renderTooltip(detail, idx)}
@@ -142,7 +160,7 @@ export function ProviderStatusBar({ statusData, styles: stylesProp }: ProviderSt
           );
         })}
       </div>
-      <span className={`${s.statusRate} ${rateClass}`}>
+      <span className={cx(s.statusRate, isSmall && s.statusRateSmall, rateClass)}>
         {hasData ? formatSuccessRate(statusData.successRate) : '--'}
       </span>
     </div>

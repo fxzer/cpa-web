@@ -1088,6 +1088,7 @@ $openai-toolbar-control-height: 36px;
 
 // 状态监测栏（位于卡片标题下方）
 $provider-status-bar-height: 24px;
+$provider-status-bar-small-height: 16px;
 
 .providerCardHeader .statusBar {
   margin-top: 0;
@@ -1104,6 +1105,10 @@ $provider-status-bar-height: 24px;
   padding: 8px 0;
 }
 
+.statusBarSmall {
+  padding: 0;
+}
+
 .statusBlocks {
   display: flex;
   align-items: stretch;
@@ -1114,6 +1119,12 @@ $provider-status-bar-height: 24px;
   margin-right: 8px;
   position: relative;
   overflow: visible;
+}
+
+.statusBlocksSmall {
+  gap: 3px;
+  height: $provider-status-bar-small-height;
+  margin-right: 6px;
 }
 
 .statusBlockWrapper {
@@ -1143,6 +1154,11 @@ $provider-status-bar-height: 24px;
   .statusBlockWrapper.statusBlockActive & {
     opacity: 0.85;
   }
+}
+
+.statusBlockSmall {
+  min-height: $provider-status-bar-small-height;
+  border-radius: 3px;
 }
 
 .statusBlockIdle {
@@ -1255,6 +1271,14 @@ $provider-status-bar-height: 24px;
   padding: 0 8px;
   border-radius: 6px;
   background: var(--bg-tertiary);
+}
+
+.statusRateSmall {
+  min-width: 6ch;
+  height: $provider-status-bar-small-height;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 11px;
 }
 
 .statusRateHigh {

@@ -3,12 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-import {
-  IconDownload,
-  IconInfo,
-  IconSettings,
-  IconTrash2,
-} from '@/components/ui/icons';
+import { IconDownload, IconInfo, IconSettings, IconTrash2 } from '@/components/ui/icons';
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
 import type { AuthFileItem } from '@/types';
 import { resolveAuthProvider } from '@/utils/quota';
@@ -231,7 +226,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
               <div className={styles.statusPanelLabel}>
                 <span>{t('auth_files.health_status_label')}</span>
               </div>
-              <ProviderStatusBar statusData={statusData} styles={styles} />
+              <ProviderStatusBar statusData={statusData} size={compact ? 'small' : 'default'} />
             </div>
 
             {showQuotaLayout && quotaType && (
