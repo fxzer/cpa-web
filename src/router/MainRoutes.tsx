@@ -1,5 +1,4 @@
 import { Navigate, useRoutes, type Location } from 'react-router-dom';
-import { DashboardPage } from '@/pages/DashboardPage';
 import { AiProvidersPage } from '@/pages/AiProvidersPage';
 import { AiProvidersAmpcodeEditPage } from '@/pages/AiProvidersAmpcodeEditPage';
 import { AiProvidersClaudeEditLayout } from '@/pages/AiProvidersClaudeEditLayout';
@@ -23,8 +22,8 @@ import { RequestMonitoringPage } from '@/pages/RequestMonitoringPage';
 import { CredentialCenterPage } from '@/pages/CredentialCenterPage';
 
 const mainRoutes = [
-  { path: '/', element: <DashboardPage /> },
-  { path: '/dashboard', element: <DashboardPage /> },
+  { path: '/', element: <Navigate to="/monitoring-dashboard" replace /> },
+  { path: '/dashboard', element: <Navigate to="/monitoring-dashboard" replace /> },
   { path: '/monitoring-dashboard', element: <MonitoringCenterPage /> },
   { path: '/request-details', element: <RequestMonitoringPage /> },
   { path: '/monitor', element: <Navigate to="/monitoring-dashboard" replace /> },

@@ -109,7 +109,6 @@
     "status": "连接状态:"
   },
   "nav": {
-    "dashboard": "仪表盘",
     "basic_settings": "基础设置",
     "api_keys": "API 密钥",
     "ai_providers": "AI 提供商",
@@ -123,31 +122,6 @@
     "monitoring_center": "监控看板",
     "request_monitoring": "请求明细",
     "credential_center": "凭证中心"
-  },
-  "dashboard": {
-    "title": "仪表盘",
-    "subtitle": "欢迎使用 CLI Proxy API 管理中心",
-    "openai_providers": "OpenAI 提供商",
-    "quick_actions": "快捷操作",
-    "current_config": "当前配置",
-    "management_keys": "管理密钥",
-    "provider_keys_detail": "G:{{gemini}} C:{{codex}} Cl:{{claude}} O:{{openai}}",
-    "oauth_credentials": "OAuth 凭证",
-    "edit_settings": "编辑设置",
-    "routing_strategy": "路由策略",
-    "available_models": "可用模型",
-    "available_models_desc": "所有提供商的模型总数",
-    "welcome_back": "欢迎回来",
-    "greeting_morning": "早上好",
-    "greeting_afternoon": "下午好",
-    "greeting_evening": "晚上好",
-    "greeting_night": "夜深了",
-    "caring_morning": "新的一天，准备大展身手吧。",
-    "caring_afternoon": "稳步推进中，继续加油。",
-    "caring_evening": "今天辛苦了，收尾工作做好哦。",
-    "caring_night": "夜深了，别忘了早些休息。",
-    "system_overview": "系统概览",
-    "total_tokens": "总Token数"
   },
   "basic_settings": {
     "title": "基础设置",

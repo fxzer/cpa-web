@@ -15,7 +15,6 @@ import { MainRoutes } from '@/router/MainRoutes';
 import {
   IconSidebarAuthFiles,
   IconSidebarConfig,
-  IconSidebarDashboard,
   IconSidebarLogs,
   IconSidebarModels,
   IconSidebarOauth,
@@ -41,7 +40,6 @@ import { isSupportedLanguage } from '@/utils/language';
 import type { Theme } from '@/types';
 
 const sidebarIcons: Record<string, ReactNode> = {
-  dashboard: <IconSidebarDashboard size={18} />,
   monitoring: <IconSidebarMonitoring size={18} />,
   requestMonitoring: <IconSidebarMonitoring size={18} />,
   credentialCenter: <IconSidebarCredentialCenter size={18} />,
@@ -393,7 +391,11 @@ export function MainLayout() {
   }, [fetchConfig]);
 
   const navItems = [
-    { path: '/', label: t('nav.dashboard'), icon: sidebarIcons.dashboard },
+    {
+      path: '/monitoring-dashboard',
+      label: t('nav.monitoring_center'),
+      icon: sidebarIcons.monitoring,
+    },
     { path: '/config', label: t('nav.config_management'), icon: sidebarIcons.config },
     { path: '/ai-providers', label: t('nav.ai_providers'), icon: sidebarIcons.aiProviders },
     { path: '/models', label: t('nav.models'), icon: sidebarIcons.models },
@@ -405,11 +407,6 @@ export function MainLayout() {
       icon: sidebarIcons.credentialCenter,
     },
     { path: '/auth-files', label: t('nav.auth_files'), icon: sidebarIcons.authFiles },
-    {
-      path: '/monitoring-dashboard',
-      label: t('nav.monitoring_center'),
-      icon: sidebarIcons.monitoring,
-    },
     {
       path: '/request-details',
       label: t('nav.request_monitoring'),
@@ -424,7 +421,10 @@ export function MainLayout() {
   const getRouteOrder = (pathname: string) => {
     const trimmedPath =
       pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-    const normalizedPath = trimmedPath === '/dashboard' ? '/' : trimmedPath;
+    const normalizedPath =
+      trimmedPath === '/dashboard' || trimmedPath === '/'
+        ? '/monitoring-dashboard'
+        : trimmedPath;
 
     const aiProvidersIndex = navOrder.indexOf('/ai-providers');
     if (aiProvidersIndex !== -1) {
@@ -460,7 +460,7 @@ export function MainLayout() {
     const normalize = (pathname: string) => {
       const trimmed =
         pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-      return trimmed === '/dashboard' ? '/' : trimmed;
+      return trimmed === '/dashboard' || trimmed === '/' ? '/monitoring-dashboard' : trimmed;
     };
 
     const from = normalize(fromPathname);

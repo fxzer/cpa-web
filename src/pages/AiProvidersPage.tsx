@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -455,9 +455,28 @@ export function AiProvidersPage() {
     setAliasOverview(null);
   }, []);
 
+  const totalProviderCount = useMemo(
+    () =>
+      geminiKeys.length +
+      codexConfigs.length +
+      claudeConfigs.length +
+      vertexConfigs.length +
+      openaiProviders.length,
+    [geminiKeys, codexConfigs, claudeConfigs, vertexConfigs, openaiProviders]
+  );
+
   return (
     <div className={styles.container}>
-      <h1 className={styles.pageTitle}>{t('ai_providers.title')}</h1>
+      <div className={styles.pageTitleRow}>
+        <div className={styles.titleMain}>
+          <h1 className={styles.pageTitle}>{t('ai_providers.title')}</h1>
+          {!loading && totalProviderCount > 0 && (
+            <span className={`status-badge success ${styles.titleRowStatus}`}>
+              {totalProviderCount}
+            </span>
+          )}
+        </div>
+      </div>
       <div className={styles.content}>
         {error && <div className="error-box">{error}</div>}
 

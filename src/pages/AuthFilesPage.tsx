@@ -574,7 +574,11 @@ export function AuthFilesPage() {
       <div className={styles.pageTitleRow}>
         <div className={styles.titleMain}>
           <h1 className={styles.pageTitle}>{t('auth_files.title')}</h1>
-          {files.length > 0 && <span className={styles.countBadge}>{files.length}</span>}
+          {files.length > 0 && (
+            <span className={`status-badge success ${styles.titleRowStatus}`}>
+              {files.length}
+            </span>
+          )}
         </div>
         <div className={styles.headerActions}>
           <Button variant="secondary" size="sm" onClick={handleHeaderRefresh} loading={loading}>

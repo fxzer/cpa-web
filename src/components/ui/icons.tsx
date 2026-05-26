@@ -350,27 +350,7 @@ export function IconCode({ size = 20, ...props }: IconProps) {
   );
 }
 
-export function IconLayoutDashboard({ size = 20, ...props }: IconProps) {
-  return (
-    <svg {...baseSvgProps} width={size} height={size} {...props}>
-      <rect width="7" height="9" x="3" y="3" rx="1" />
-      <rect width="7" height="5" x="14" y="3" rx="1" />
-      <rect width="7" height="9" x="14" y="12" rx="1" />
-      <rect width="7" height="5" x="3" y="16" rx="1" />
-    </svg>
-  );
-}
 
-export function IconSidebarDashboard({ size = 20, ...props }: IconProps) {
-  return (
-    <svg {...sidebarSvgProps} width={size} height={size} {...props}>
-      <rect x="3" y="3" width="7.5" height="8" rx="1.5" />
-      <rect x="13.5" y="3" width="7.5" height="5" rx="1.5" fill="currentColor" fillOpacity="0.12" />
-      <rect x="3" y="14" width="7.5" height="7" rx="1.5" fill="currentColor" fillOpacity="0.12" />
-      <rect x="13.5" y="11" width="7.5" height="10" rx="1.5" />
-    </svg>
-  );
-}
 
 export function IconSidebarConfig({ size = 20, ...props }: IconProps) {
   return (

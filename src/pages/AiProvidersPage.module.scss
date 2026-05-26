@@ -26,12 +26,36 @@ $openai-toolbar-control-height: 36px;
   margin-left: 2px;
 }
 
+.pageTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  padding-bottom: 24px;
+}
+
+.titleMain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.titleRowStatus {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
 .pageTitle {
   font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
-  padding-bottom: 24px;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .content {

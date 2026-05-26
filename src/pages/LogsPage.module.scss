@@ -779,7 +779,7 @@
 
   @include tablet {
     min-height: 240px;
-    max-height: calc(100vh - 300px);
+    max-height: calc(100vh - 264px);
   }
 
   @include mobile {
@@ -1081,7 +1081,7 @@
   @media (min-width: 769px) {
     .logPanel {
       min-height: 160px;
-      max-height: calc(100vh - 300px);
+      max-height: calc(100vh - 232px);
     }
   }
 }
