@@ -167,7 +167,9 @@ export function ClaudeSection({
                 )}
                 {item.cloak && (
                   <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>{t('ai_providers.claude_cloak_mode_label')}:</span>
+                    <span className={styles.fieldLabel}>
+                      {t('ai_providers.claude_cloak_mode_label')}:
+                    </span>
                     <span className={styles.fieldValue}>
                       {(() => {
                         const raw = (item.cloak?.mode ?? '').trim().toLowerCase();
@@ -179,7 +181,9 @@ export function ClaudeSection({
                 )}
                 {item.cloak?.strictMode ? (
                   <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>{t('ai_providers.claude_cloak_strict_label')}:</span>
+                    <span className={styles.fieldLabel}>
+                      {t('ai_providers.claude_cloak_strict_label')}:
+                    </span>
                     <span className={styles.fieldValue}>{t('common.yes')}</span>
                   </div>
                 ) : null}
@@ -214,7 +218,10 @@ export function ClaudeSection({
                     </div>
                     <div className={styles.modelTagList}>
                       {excludedModels.map((model) => (
-                        <span key={model} className={`${styles.modelTag} ${styles.excludedModelTag}`}>
+                        <span
+                          key={model}
+                          className={`${styles.modelTag} ${styles.excludedModelTag}`}
+                        >
                           <span className={styles.modelName}>{model}</span>
                         </span>
                       ))}

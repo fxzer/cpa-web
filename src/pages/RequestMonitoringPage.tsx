@@ -5,10 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-import {
-  RequestEventsDetailsCard,
-  type RequestEventsFilteredStats,
-} from '@/components/usage';
+import { RequestEventsDetailsCard, type RequestEventsFilteredStats } from '@/components/usage';
 import usageStyles from '@/pages/UsagePage.module.scss';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -68,10 +65,7 @@ export function RequestMonitoringPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
-  const [autoRefresh, setAutoRefresh] = useLocalStorage(
-    'requestMonitoringPage.autoRefresh',
-    false
-  );
+  const [autoRefresh, setAutoRefresh] = useLocalStorage('requestMonitoringPage.autoRefresh', false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [filteredStats, setFilteredStats] = useState<RequestEventsFilteredStats>({
     count: 0,
@@ -94,9 +88,7 @@ export function RequestMonitoringPage() {
 
     const candidates = Array.from(
       new Set(
-        [usageServiceBase]
-          .map((value) => normalizeUsageServiceBase(value || ''))
-          .filter(Boolean)
+        [usageServiceBase].map((value) => normalizeUsageServiceBase(value || '')).filter(Boolean)
       )
     );
 
@@ -316,12 +308,7 @@ export function RequestMonitoringPage() {
               label={t('request_monitoring.auto_refresh')}
             />
           </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            loading={loading}
-            onClick={() => void loadData()}
-          >
+          <Button variant="secondary" size="sm" loading={loading} onClick={() => void loadData()}>
             {t('common.refresh')}
           </Button>
           <Button
@@ -349,9 +336,7 @@ export function RequestMonitoringPage() {
       {error && <div className={styles.errorBox}>{error}</div>}
 
       {showUsageStatisticsDisabledWarning && (
-        <div className={styles.warningBox}>
-          {t('request_monitoring.usage_statistics_disabled')}
-        </div>
+        <div className={styles.warningBox}>{t('request_monitoring.usage_statistics_disabled')}</div>
       )}
 
       {collectorStatus?.lastError && (

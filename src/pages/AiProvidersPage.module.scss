@@ -1699,7 +1699,10 @@ $provider-status-bar-small-height: 16px;
 .keyTableShellWithTesting {
   .keyTableHeader,
   .keyTableRow {
-    grid-template-columns: 46px 56px minmax(200px, 1.25fr) minmax(180px, 0.95fr) minmax(360px, 1.2fr);
+    grid-template-columns: 46px 56px minmax(200px, 1.25fr) minmax(180px, 0.95fr) minmax(
+        360px,
+        1.2fr
+      );
     min-width: 900px;
   }
 }

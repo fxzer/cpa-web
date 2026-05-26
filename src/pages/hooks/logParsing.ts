@@ -272,4 +272,3 @@ export const parseLogLine = (raw: string): ParsedLogLine => {
     message,
   };
 };
-

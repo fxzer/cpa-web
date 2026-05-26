@@ -363,14 +363,14 @@ export function LogsPage() {
     return {
       filteredParsedLines: filteredParsed,
       filteredLines: filteredParsed.map((line) => line.raw),
-      removedCount: Math.max(baseLines.length - filteredParsed.length, 0)
+      removedCount: Math.max(baseLines.length - filteredParsed.length, 0),
     };
   }, [
     baseLines,
     filters.methodFilterSet,
     filters.pathFilterSet,
     filters.statusFilterSet,
-    parsedSearchLines
+    parsedSearchLines,
   ]);
 
   const parsedVisibleLines = useMemo(
@@ -387,7 +387,7 @@ export function LogsPage() {
     isSearching,
     filteredLineCount: filteredLines.length,
     hasStructuredFilters: filters.hasStructuredFilters,
-    showRawLogs
+    showRawLogs,
   });
 
   logScrollerRef.current = scroller;
@@ -453,7 +453,7 @@ export function LogsPage() {
       const response = await logsApi.downloadRequestLogById(id);
       downloadBlob({
         filename: `request-${id}.log`,
-        blob: new Blob([response.data], { type: 'text/plain' })
+        blob: new Blob([response.data], { type: 'text/plain' }),
       });
       showNotification(t('logs.request_log_download_success'), 'success');
       setRequestLogId(null);
@@ -638,7 +638,9 @@ export function LogsPage() {
                       <span className={styles.filterChipLabel}>{t('logs.filter_path')}</span>
                       <div className={styles.filterChipList}>
                         {filters.pathOptions.length === 0 ? (
-                          <span className={styles.filterChipHint}>{t('logs.filter_path_empty')}</span>
+                          <span className={styles.filterChipHint}>
+                            {t('logs.filter_path_empty')}
+                          </span>
                         ) : (
                           filters.pathOptions.map(({ path, count }) => {
                             const active = filters.pathFilters.includes(path);
@@ -678,11 +680,7 @@ export function LogsPage() {
                       checked={autoRefresh}
                       onChange={(value) => setAutoRefresh(value)}
                       disabled={disableControls}
-                      label={
-                        <span className={styles.switchLabel}>
-                          {t('logs.auto_refresh')}
-                        </span>
-                      }
+                      label={<span className={styles.switchLabel}>{t('logs.auto_refresh')}</span>}
                     />
                   </div>
 
@@ -755,146 +753,148 @@ export function LogsPage() {
                   </div>
                 </div>
 
-            {loading ? (
-              <div className="hint">{t('logs.loading')}</div>
-            ) : logState.buffer.length > 0 && filteredLines.length > 0 ? (
-              <div
-                ref={scroller.logViewerRef}
-                className={styles.logPanel}
-                onScroll={scroller.handleLogScroll}
-              >
-                {scroller.canLoadMore && (
-                  <div className={styles.loadMoreBanner}>
-                    <span>{t('logs.load_more_hint')}</span>
-                    <div className={styles.loadMoreStats}>
-                      <span>
-                        {t('logs.loaded_lines', { count: filteredLines.length })}
-                      </span>
-                      {removedCount > 0 && (
-                        <span className={styles.loadMoreCount}>
-                          {t('logs.filtered_lines', { count: removedCount })}
-                        </span>
-                      )}
-                      <span className={styles.loadMoreCount}>
-                        {t('logs.hidden_lines', { count: logState.visibleFrom })}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {showRawLogs ? (
-                  <pre className={styles.rawLog} spellCheck={false}>
-                    {rawVisibleText}
-                  </pre>
-                ) : (
-                  <div className={styles.logList}>
-                    {parsedVisibleLines.map((line, index) => {
-                      const rowClassNames = [styles.logRow];
-                      if (line.level === 'warn') rowClassNames.push(styles.rowWarn);
-                      if (line.level === 'error' || line.level === 'fatal')
-                        rowClassNames.push(styles.rowError);
-                      return (
-                        <div
-                          key={`${logState.visibleFrom + index}-${line.raw}`}
-                          className={rowClassNames.join(' ')}
-                          onDoubleClick={() => {
-                            void copyLogLine(line.raw);
-                          }}
-                          onPointerDown={(event) => startLongPress(event, line.requestId)}
-                          onPointerUp={cancelLongPress}
-                          onPointerLeave={cancelLongPress}
-                          onPointerCancel={cancelLongPress}
-                          onPointerMove={handleLongPressMove}
-                          title={t('logs.double_click_copy_hint', {
-                            defaultValue: 'Double-click to copy',
-                          })}
-                        >
-                          <div className={styles.timestamp}>{line.timestamp || ''}</div>
-                          <div className={styles.rowMain}>
-                            {line.level && (
-                              <span
-                                className={[
-                                  styles.badge,
-                                  line.level === 'info' ? styles.levelInfo : '',
-                                  line.level === 'warn' ? styles.levelWarn : '',
-                                  line.level === 'error' || line.level === 'fatal'
-                                    ? styles.levelError
-                                    : '',
-                                  line.level === 'debug' ? styles.levelDebug : '',
-                                  line.level === 'trace' ? styles.levelTrace : '',
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                              >
-                                {line.level.toUpperCase()}
-                              </span>
-                            )}
-
-                            {line.source && (
-                              <span className={styles.source} title={line.source}>
-                                {line.source}
-                              </span>
-                            )}
-
-                            {line.requestId && (
-                              <span
-                                className={[styles.badge, styles.requestIdBadge].join(' ')}
-                                title={line.requestId}
-                              >
-                                {line.requestId}
-                              </span>
-                            )}
-
-                            {typeof line.statusCode === 'number' && (
-                              <span
-                                className={[
-                                  styles.badge,
-                                  styles.statusBadge,
-                                  getStatusCodeClassName(line.statusCode),
-                                ].join(' ')}
-                              >
-                                {line.statusCode}
-                              </span>
-                            )}
-
-                            {line.latency && <span className={styles.pill}>{line.latency}</span>}
-                            {line.ip && <span className={styles.pill}>{line.ip}</span>}
-
-                            {line.method && (
-                              <span
-                                className={[
-                                  styles.badge,
-                                  styles.methodBadge,
-                                  getMethodClassName(line.method),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                              >
-                                {line.method}
-                              </span>
-                            )}
-
-                            {line.path && (
-                              <span className={styles.path} title={line.path}>
-                                {line.path}
-                              </span>
-                            )}
-
-                            {line.message && <span className={styles.message}>{line.message}</span>}
-                          </div>
+                {loading ? (
+                  <div className="hint">{t('logs.loading')}</div>
+                ) : logState.buffer.length > 0 && filteredLines.length > 0 ? (
+                  <div
+                    ref={scroller.logViewerRef}
+                    className={styles.logPanel}
+                    onScroll={scroller.handleLogScroll}
+                  >
+                    {scroller.canLoadMore && (
+                      <div className={styles.loadMoreBanner}>
+                        <span>{t('logs.load_more_hint')}</span>
+                        <div className={styles.loadMoreStats}>
+                          <span>{t('logs.loaded_lines', { count: filteredLines.length })}</span>
+                          {removedCount > 0 && (
+                            <span className={styles.loadMoreCount}>
+                              {t('logs.filtered_lines', { count: removedCount })}
+                            </span>
+                          )}
+                          <span className={styles.loadMoreCount}>
+                            {t('logs.hidden_lines', { count: logState.visibleFrom })}
+                          </span>
                         </div>
-                      );
-                    })}
+                      </div>
+                    )}
+                    {showRawLogs ? (
+                      <pre className={styles.rawLog} spellCheck={false}>
+                        {rawVisibleText}
+                      </pre>
+                    ) : (
+                      <div className={styles.logList}>
+                        {parsedVisibleLines.map((line, index) => {
+                          const rowClassNames = [styles.logRow];
+                          if (line.level === 'warn') rowClassNames.push(styles.rowWarn);
+                          if (line.level === 'error' || line.level === 'fatal')
+                            rowClassNames.push(styles.rowError);
+                          return (
+                            <div
+                              key={`${logState.visibleFrom + index}-${line.raw}`}
+                              className={rowClassNames.join(' ')}
+                              onDoubleClick={() => {
+                                void copyLogLine(line.raw);
+                              }}
+                              onPointerDown={(event) => startLongPress(event, line.requestId)}
+                              onPointerUp={cancelLongPress}
+                              onPointerLeave={cancelLongPress}
+                              onPointerCancel={cancelLongPress}
+                              onPointerMove={handleLongPressMove}
+                              title={t('logs.double_click_copy_hint', {
+                                defaultValue: 'Double-click to copy',
+                              })}
+                            >
+                              <div className={styles.timestamp}>{line.timestamp || ''}</div>
+                              <div className={styles.rowMain}>
+                                {line.level && (
+                                  <span
+                                    className={[
+                                      styles.badge,
+                                      line.level === 'info' ? styles.levelInfo : '',
+                                      line.level === 'warn' ? styles.levelWarn : '',
+                                      line.level === 'error' || line.level === 'fatal'
+                                        ? styles.levelError
+                                        : '',
+                                      line.level === 'debug' ? styles.levelDebug : '',
+                                      line.level === 'trace' ? styles.levelTrace : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                  >
+                                    {line.level.toUpperCase()}
+                                  </span>
+                                )}
+
+                                {line.source && (
+                                  <span className={styles.source} title={line.source}>
+                                    {line.source}
+                                  </span>
+                                )}
+
+                                {line.requestId && (
+                                  <span
+                                    className={[styles.badge, styles.requestIdBadge].join(' ')}
+                                    title={line.requestId}
+                                  >
+                                    {line.requestId}
+                                  </span>
+                                )}
+
+                                {typeof line.statusCode === 'number' && (
+                                  <span
+                                    className={[
+                                      styles.badge,
+                                      styles.statusBadge,
+                                      getStatusCodeClassName(line.statusCode),
+                                    ].join(' ')}
+                                  >
+                                    {line.statusCode}
+                                  </span>
+                                )}
+
+                                {line.latency && (
+                                  <span className={styles.pill}>{line.latency}</span>
+                                )}
+                                {line.ip && <span className={styles.pill}>{line.ip}</span>}
+
+                                {line.method && (
+                                  <span
+                                    className={[
+                                      styles.badge,
+                                      styles.methodBadge,
+                                      getMethodClassName(line.method),
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' ')}
+                                  >
+                                    {line.method}
+                                  </span>
+                                )}
+
+                                {line.path && (
+                                  <span className={styles.path} title={line.path}>
+                                    {line.path}
+                                  </span>
+                                )}
+
+                                {line.message && (
+                                  <span className={styles.message}>{line.message}</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
+                ) : logState.buffer.length > 0 ? (
+                  <EmptyState
+                    title={t('logs.search_empty_title')}
+                    description={t('logs.search_empty_desc')}
+                  />
+                ) : (
+                  <EmptyState title={t('logs.empty_title')} description={t('logs.empty_desc')} />
                 )}
-              </div>
-            ) : logState.buffer.length > 0 ? (
-              <EmptyState
-                title={t('logs.search_empty_title')}
-                description={t('logs.search_empty_desc')}
-              />
-            ) : (
-              <EmptyState title={t('logs.empty_title')} description={t('logs.empty_desc')} />
-            )}
               </div>
             </div>
           </Card>
@@ -921,7 +921,9 @@ export function LogsPage() {
             <div className="stack">
               {requestLogEnabled && (
                 <div>
-                  <div className="status-badge warning">{t('logs.error_logs_request_log_enabled')}</div>
+                  <div className="status-badge warning">
+                    {t('logs.error_logs_request_log_enabled')}
+                  </div>
                 </div>
               )}
 
@@ -969,7 +971,11 @@ export function LogsPage() {
         title={t('logs.request_log_download_title')}
         footer={
           <>
-            <Button variant="secondary" onClick={closeRequestLogModal} disabled={requestLogDownloading}>
+            <Button
+              variant="secondary"
+              onClick={closeRequestLogModal}
+              disabled={requestLogDownloading}
+            >
               {t('common.cancel')}
             </Button>
             <Button

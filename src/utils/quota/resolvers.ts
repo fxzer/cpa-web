@@ -3,11 +3,7 @@
  */
 
 import type { AuthFileItem } from '@/types';
-import {
-  normalizeStringValue,
-  normalizePlanType,
-  parseIdTokenPayload
-} from './parsers';
+import { normalizeStringValue, normalizePlanType, parseIdTokenPayload } from './parsers';
 
 export function extractCodexChatgptAccountId(value: unknown): string | null {
   const payload = parseIdTokenPayload(value);
@@ -67,7 +63,7 @@ export function resolveCodexPlanType(file: AuthFileItem): string | null {
     metadataIdToken?.planType,
     attributes?.plan_type,
     attributes?.planType,
-    attributes?.id_token
+    attributes?.id_token,
   ];
 
   for (const candidate of candidates) {
@@ -96,12 +92,7 @@ export function resolveGeminiCliProjectId(file: AuthFileItem): string | null {
       ? (file.attributes as Record<string, unknown>)
       : null;
 
-  const candidates = [
-    file.account,
-    file['account'],
-    metadata?.account,
-    attributes?.account
-  ];
+  const candidates = [file.account, file['account'], metadata?.account, attributes?.account];
 
   for (const candidate of candidates) {
     const projectId = extractGeminiCliProjectId(candidate);

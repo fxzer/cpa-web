@@ -3,7 +3,13 @@
  */
 
 import { apiClient } from './client';
-import { computeKeyStats, normalizeUsageData, type KeyStats, type UsageDeleteResponse, type UsageQueryRange } from '@/utils/usage';
+import {
+  computeKeyStats,
+  normalizeUsageData,
+  type KeyStats,
+  type UsageDeleteResponse,
+  type UsageQueryRange,
+} from '@/utils/usage';
 
 const USAGE_TIMEOUT_MS = 60 * 1000;
 
@@ -32,5 +38,5 @@ export const usageApi = {
       payload = await usageApi.getUsage();
     }
     return computeKeyStats(normalizeUsageData(payload));
-  }
+  },
 };

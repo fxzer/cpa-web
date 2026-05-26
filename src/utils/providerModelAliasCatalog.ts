@@ -2,7 +2,10 @@ import type { Config } from '@/types';
 import type { OAuthModelAliasEntry } from '@/types/oauth';
 import type { ModelAlias } from '@/types/provider';
 import type { AuthFileModelItem } from '@/features/authFiles/constants';
-import { isDistinctOAuthModelAlias, resolveOAuthModelAliasChannel } from '@/utils/oauthModelAliasForm';
+import {
+  isDistinctOAuthModelAlias,
+  resolveOAuthModelAliasChannel,
+} from '@/utils/oauthModelAliasForm';
 
 const collectAliasesFromModels = (models?: ModelAlias[]): string[] => {
   if (!models?.length) return [];
@@ -50,7 +53,9 @@ const mergeChannelAliases = (
 };
 
 /** Collect deduplicated alias names from AI provider key configs, keyed by oauth-model-alias channel. */
-export function collectProviderAliasSeeds(config: Config | null | undefined): Record<string, string[]> {
+export function collectProviderAliasSeeds(
+  config: Config | null | undefined
+): Record<string, string[]> {
   const result: Record<string, string[]> = {};
   if (!config) return result;
 

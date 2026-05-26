@@ -24,7 +24,11 @@ import {
   serializeApiKeyEntriesForSave,
 } from '@/components/providers/utils';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
-import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
+import {
+  areKeyValueEntriesEqual,
+  areModelEntriesEqual,
+  areStringArraysEqual,
+} from '@/utils/compare';
 import type { VertexFormState } from '@/components/providers';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
 import styles from './AiProvidersPage.module.scss';
@@ -72,7 +76,9 @@ type VertexFormBaseline = {
 const buildVertexBaseline = (form: VertexFormState): VertexFormBaseline => ({
   apiKeyEntries: normalizeApiKeyEntriesForBaseline(form.apiKeyEntries),
   priority:
-    form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
+    form.priority !== undefined && Number.isFinite(form.priority)
+      ? Math.trunc(form.priority)
+      : null,
   name: String(form.name ?? '').trim(),
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
@@ -114,7 +120,9 @@ export function AiProvidersVertexEditPage() {
   const invalidIndex = editIndex !== null && !initialData;
 
   const title =
-    editIndex !== null ? t('ai_providers.vertex_edit_modal_title') : t('ai_providers.vertex_add_modal_title');
+    editIndex !== null
+      ? t('ai_providers.vertex_edit_modal_title')
+      : t('ai_providers.vertex_add_modal_title');
 
   const handleBack = useCallback(() => {
     const state = location.state as LocationState;
@@ -296,7 +304,9 @@ export function AiProvidersVertexEditPage() {
       updateConfigValue('vertex-api-key', nextList);
       clearCache('vertex-api-key');
       showNotification(
-        editIndex !== null ? t('notification.vertex_config_updated') : t('notification.vertex_config_added'),
+        editIndex !== null
+          ? t('notification.vertex_config_updated')
+          : t('notification.vertex_config_added'),
         'success'
       );
       allowNextNavigation();
@@ -389,8 +399,12 @@ export function AiProvidersVertexEditPage() {
               </div>
               <div className={styles.keyEntriesSection}>
                 <div className={styles.keyEntriesHeader}>
-                  <label className={styles.keyEntriesLabel}>{t('ai_providers.vertex_add_modal_key_label')}</label>
-                  <span className={styles.keyEntriesHint}>{t('ai_providers.provider_keys_hint')}</span>
+                  <label className={styles.keyEntriesLabel}>
+                    {t('ai_providers.vertex_add_modal_key_label')}
+                  </label>
+                  <span className={styles.keyEntriesHint}>
+                    {t('ai_providers.provider_keys_hint')}
+                  </span>
                 </div>
                 <ProviderApiKeyEntriesEditor
                   entries={form.apiKeyEntries}
@@ -399,44 +413,44 @@ export function AiProvidersVertexEditPage() {
                 />
               </div>
               <HeaderInputList
-              entries={form.headers}
-              onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}
-              addLabel={t('common.custom_headers_add')}
-              keyPlaceholder={t('common.custom_headers_key_placeholder')}
-              valuePlaceholder={t('common.custom_headers_value_placeholder')}
-              removeButtonTitle={t('common.delete')}
-              removeButtonAriaLabel={t('common.delete')}
-              disabled={disableControls || saving}
-            />
-            <div className="form-group">
-              <label>{t('ai_providers.vertex_models_label')}</label>
-              <ModelInputList
-                entries={form.modelEntries}
-                onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
-                addLabel={t('ai_providers.vertex_models_add_btn')}
-                namePlaceholder={t('common.model_name_placeholder')}
-                aliasPlaceholder={t('common.model_alias_placeholder')}
+                entries={form.headers}
+                onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}
+                addLabel={t('common.custom_headers_add')}
+                keyPlaceholder={t('common.custom_headers_key_placeholder')}
+                valuePlaceholder={t('common.custom_headers_value_placeholder')}
                 removeButtonTitle={t('common.delete')}
                 removeButtonAriaLabel={t('common.delete')}
                 disabled={disableControls || saving}
-                className={styles.modelInputList}
-                rowClassName={styles.modelInputRow}
-                inputClassName={styles.modelInputField}
-                removeButtonClassName={styles.modelRowRemoveButton}
               />
-            </div>
-            <div className="form-group">
-              <label>{t('ai_providers.excluded_models_label')}</label>
-              <textarea
-                className="input"
-                placeholder={t('ai_providers.excluded_models_placeholder')}
-                value={form.excludedText}
-                onChange={(e) => setForm((prev) => ({ ...prev, excludedText: e.target.value }))}
-                rows={4}
-                disabled={disableControls || saving}
-              />
-              <div className="hint">{t('ai_providers.excluded_models_hint')}</div>
-            </div>
+              <div className="form-group">
+                <label>{t('ai_providers.vertex_models_label')}</label>
+                <ModelInputList
+                  entries={form.modelEntries}
+                  onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
+                  addLabel={t('ai_providers.vertex_models_add_btn')}
+                  namePlaceholder={t('common.model_name_placeholder')}
+                  aliasPlaceholder={t('common.model_alias_placeholder')}
+                  removeButtonTitle={t('common.delete')}
+                  removeButtonAriaLabel={t('common.delete')}
+                  disabled={disableControls || saving}
+                  className={styles.modelInputList}
+                  rowClassName={styles.modelInputRow}
+                  inputClassName={styles.modelInputField}
+                  removeButtonClassName={styles.modelRowRemoveButton}
+                />
+              </div>
+              <div className="form-group">
+                <label>{t('ai_providers.excluded_models_label')}</label>
+                <textarea
+                  className="input"
+                  placeholder={t('ai_providers.excluded_models_placeholder')}
+                  value={form.excludedText}
+                  onChange={(e) => setForm((prev) => ({ ...prev, excludedText: e.target.value }))}
+                  rows={4}
+                  disabled={disableControls || saving}
+                />
+                <div className="hint">{t('ai_providers.excluded_models_hint')}</div>
+              </div>
             </div>
           </>
         )}

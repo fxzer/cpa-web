@@ -350,7 +350,7 @@ const formatUsageTrendRequestLabel = (timestampMs: number) =>
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: false
+      hour12: false,
     })
     .replace(',', '');
 
@@ -362,7 +362,7 @@ const formatUsageTrendRequestTooltipLabel = (timestampMs: number) =>
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false
+    hour12: false,
   });
 
 const formatUsageTrendBucketDatePart = (date: Date) =>
@@ -462,7 +462,7 @@ export function buildUsageTokenCacheHitTrend(
         tokenCount: extractTotalTokens(detail),
         cost: calculateCost(detail, modelPrices),
         cacheHitPercent: getUsageDetailCacheHitPercent(detail),
-        requestCount: 1
+        requestCount: 1,
       };
     })
     .filter((point): point is NonNullable<typeof point> => point !== null)
@@ -475,7 +475,7 @@ export function buildUsageTokenCacheHitTrend(
       tokenSeries: [],
       costSeries: [],
       cacheHitSeries: [],
-      requestCounts: []
+      requestCounts: [],
     };
   }
 
@@ -488,7 +488,7 @@ export function buildUsageTokenCacheHitTrend(
       tokenSeries: requestPoints.map((point) => point.tokenCount),
       costSeries: requestPoints.map((point) => point.cost),
       cacheHitSeries: requestPoints.map((point) => point.cacheHitPercent),
-      requestCounts: requestPoints.map((point) => point.requestCount)
+      requestCounts: requestPoints.map((point) => point.requestCount),
     };
   }
 
@@ -502,7 +502,7 @@ export function buildUsageTokenCacheHitTrend(
       tokenCount: 0,
       cost: 0,
       cacheHitPercentTotal: 0,
-      requestCount: 0
+      requestCount: 0,
     };
     bucket.tokenCount += point.tokenCount;
     bucket.cost += point.cost;
@@ -514,13 +514,15 @@ export function buildUsageTokenCacheHitTrend(
   const buckets = Array.from(bucketMap.entries()).sort(([left], [right]) => left - right);
   return {
     labels: buckets.map(([timestampMs]) => formatUsageTrendBucketLabel(timestampMs, aggregation)),
-    tooltipLabels: buckets.map(([timestampMs]) => formatUsageTrendBucketLabel(timestampMs, aggregation)),
+    tooltipLabels: buckets.map(([timestampMs]) =>
+      formatUsageTrendBucketLabel(timestampMs, aggregation)
+    ),
     tokenSeries: buckets.map(([, bucket]) => bucket.tokenCount),
     costSeries: buckets.map(([, bucket]) => bucket.cost),
     cacheHitSeries: buckets.map(([, bucket]) =>
       bucket.requestCount > 0 ? bucket.cacheHitPercentTotal / bucket.requestCount : 0
     ),
-    requestCounts: buckets.map(([, bucket]) => bucket.requestCount)
+    requestCounts: buckets.map(([, bucket]) => bucket.requestCount),
   };
 }
 
@@ -568,7 +570,11 @@ const normalizeUsageRecordDetail = (
     'auth_label_snapshot',
     'authLabelSnapshot'
   );
-  const authFileSnapshot = readOptionalStringField(detail, 'auth_file_snapshot', 'authFileSnapshot');
+  const authFileSnapshot = readOptionalStringField(
+    detail,
+    'auth_file_snapshot',
+    'authFileSnapshot'
+  );
   const authProviderSnapshot = readOptionalStringField(
     detail,
     'auth_provider_snapshot',
@@ -589,7 +595,10 @@ const normalizeUsageRecordDetail = (
     timestamp,
     ...(provider ? { provider } : {}),
     source: normalizedSource,
-    auth_index: (detail.auth_index ?? detail.authIndex ?? detail.AuthIndex ?? null) as UsageDetail['auth_index'],
+    auth_index: (detail.auth_index ??
+      detail.authIndex ??
+      detail.AuthIndex ??
+      null) as UsageDetail['auth_index'],
     ...(authType ? { auth_type: authType } : {}),
     ...(apiKeyHash ? { api_key_hash: apiKeyHash } : {}),
     ...(accountSnapshot ? { account_snapshot: accountSnapshot } : {}),
@@ -647,7 +656,9 @@ const collectEncodedUsageRequestDetails = (usageData: unknown): UsageDetailWithE
     .filter((detail): detail is UsageDetailWithEndpoint => Boolean(detail));
 };
 
-const collectBackendUsageDetails = (usageData: Record<string, unknown>): UsageDetailWithEndpoint[] => {
+const collectBackendUsageDetails = (
+  usageData: Record<string, unknown>
+): UsageDetailWithEndpoint[] => {
   const details: UsageDetailWithEndpoint[] = [];
 
   Object.entries(usageData).forEach(([endpoint, endpointEntry]) => {
@@ -740,7 +751,9 @@ export function buildUsageSnapshotFromDetails(
   return snapshot;
 }
 
-export function normalizeUsageData(usageData: unknown): UsageStatsSnapshot | Record<string, unknown> | null {
+export function normalizeUsageData(
+  usageData: unknown
+): UsageStatsSnapshot | Record<string, unknown> | null {
   const payload = isRecord(usageData) && isRecord(usageData.usage) ? usageData.usage : usageData;
   const usageRecord = isRecord(payload) ? payload : null;
   if (!usageRecord) {
@@ -1218,7 +1231,8 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
         const latencyMs = extractLatencyMs(detailRaw);
         const generationMs = extractGenerationMs(detailRaw);
         const firstByteLatencyMs = extractFirstByteLatencyMs(detailRaw);
-        const id = typeof detailRaw.id === 'string' && detailRaw.id.trim() ? detailRaw.id.trim() : undefined;
+        const id =
+          typeof detailRaw.id === 'string' && detailRaw.id.trim() ? detailRaw.id.trim() : undefined;
         const thinkingEffort =
           typeof detailRaw.thinking_effort === 'string' && detailRaw.thinking_effort.trim()
             ? detailRaw.thinking_effort.trim()
@@ -1351,7 +1365,8 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
         const latencyMs = extractLatencyMs(detailRaw);
         const generationMs = extractGenerationMs(detailRaw);
         const firstByteLatencyMs = extractFirstByteLatencyMs(detailRaw);
-        const id = typeof detailRaw.id === 'string' && detailRaw.id.trim() ? detailRaw.id.trim() : undefined;
+        const id =
+          typeof detailRaw.id === 'string' && detailRaw.id.trim() ? detailRaw.id.trim() : undefined;
         const thinkingEffort =
           typeof detailRaw.thinking_effort === 'string' && detailRaw.thinking_effort.trim()
             ? detailRaw.thinking_effort.trim()
@@ -1816,7 +1831,8 @@ export function getModelStats(
           const tokens = isRecord(detailRecord?.tokens) ? detailRecord.tokens : null;
           const outputTokensRaw = Number(tokens?.output_tokens);
           const outputTokens = Number.isFinite(outputTokensRaw) ? Math.max(outputTokensRaw, 0) : 0;
-          const tps = generationMs && generationMs > 0 ? outputTokens / (generationMs / 1000) : null;
+          const tps =
+            generationMs && generationMs > 0 ? outputTokens / (generationMs / 1000) : null;
           if (!hasExplicitCounts) {
             if (detailRecord?.failed === true) {
               existing.failureCount += 1;
@@ -2181,7 +2197,10 @@ const alignSeriesToLabels = (
   labels: string[],
   source: { labels: string[]; data: number[] }
 ): number[] => {
-  if (labels.length === source.labels.length && labels.every((label, index) => label === source.labels[index])) {
+  if (
+    labels.length === source.labels.length &&
+    labels.every((label, index) => label === source.labels[index])
+  ) {
     return source.data;
   }
 
@@ -2215,7 +2234,7 @@ export function buildUsageTotalsTrend(
     labels: requestBase.labels,
     requestSeries: sumModelSeries(requestBase.dataByModel, requestBase.labels.length),
     tokenSeries: sumModelSeries(tokenBase.dataByModel, tokenBase.labels.length),
-    costSeries: alignSeriesToLabels(requestBase.labels, costBase)
+    costSeries: alignSeriesToLabels(requestBase.labels, costBase),
   };
 }
 

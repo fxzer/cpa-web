@@ -396,17 +396,17 @@ export function MainLayout() {
       label: t('nav.monitoring_center'),
       icon: sidebarIcons.monitoring,
     },
-    { path: '/config', label: t('nav.config_management'), icon: sidebarIcons.config },
-    { path: '/ai-providers', label: t('nav.ai_providers'), icon: sidebarIcons.aiProviders },
-    { path: '/models', label: t('nav.models'), icon: sidebarIcons.models },
-    { path: '/quota', label: t('nav.quota_management'), icon: sidebarIcons.quota },
-    { path: '/oauth', label: t('nav.oauth', { defaultValue: 'OAuth' }), icon: sidebarIcons.oauth },
     {
       path: '/credential-center',
       label: t('nav.credential_center'),
       icon: sidebarIcons.credentialCenter,
     },
+    { path: '/config', label: t('nav.config_management'), icon: sidebarIcons.config },
+    { path: '/ai-providers', label: t('nav.ai_providers'), icon: sidebarIcons.aiProviders },
+    { path: '/models', label: t('nav.models'), icon: sidebarIcons.models },
+    { path: '/oauth', label: t('nav.oauth', { defaultValue: 'OAuth' }), icon: sidebarIcons.oauth },
     { path: '/auth-files', label: t('nav.auth_files'), icon: sidebarIcons.authFiles },
+    { path: '/quota', label: t('nav.quota_management'), icon: sidebarIcons.quota },
     {
       path: '/request-details',
       label: t('nav.request_monitoring'),
@@ -422,9 +422,7 @@ export function MainLayout() {
     const trimmedPath =
       pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
     const normalizedPath =
-      trimmedPath === '/dashboard' || trimmedPath === '/'
-        ? '/monitoring-dashboard'
-        : trimmedPath;
+      trimmedPath === '/dashboard' || trimmedPath === '/' ? '/monitoring-dashboard' : trimmedPath;
 
     const aiProvidersIndex = navOrder.indexOf('/ai-providers');
     if (aiProvidersIndex !== -1) {
@@ -576,7 +574,10 @@ export function MainLayout() {
               {headerIcons.refresh}
             </Button>
             <div className="sidebar-actions-extras">
-              <div className={`language-menu ${languageMenuOpen ? 'open' : ''}`} ref={languageMenuRef}>
+              <div
+                className={`language-menu ${languageMenuOpen ? 'open' : ''}`}
+                ref={languageMenuRef}
+              >
                 <Button
                   variant="ghost"
                   size="sm"
@@ -665,7 +666,10 @@ export function MainLayout() {
                                 borderRight: `1px solid ${tc.colors.border}`,
                               }}
                             />
-                            <div className="theme-card-content" style={{ background: tc.colors.bg }}>
+                            <div
+                              className="theme-card-content"
+                              style={{ background: tc.colors.bg }}
+                            >
                               <div
                                 className="theme-card-line"
                                 style={{ background: tc.colors.textMuted }}

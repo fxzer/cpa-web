@@ -5,12 +5,7 @@ function StatusLoadingIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={styles.statusIconSpin}>
       <circle cx="8" cy="8" r="7" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
-      <path
-        d="M8 1A7 7 0 0 1 8 15"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+      <path d="M8 1A7 7 0 0 1 8 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

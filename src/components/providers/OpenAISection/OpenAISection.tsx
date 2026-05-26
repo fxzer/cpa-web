@@ -578,7 +578,9 @@ export function OpenAISection({
                 size="sm"
                 onClick={() =>
                   onAliasOverview({
-                    providerKey: String(provider.name ?? provider.baseUrl ?? 'openai').trim().toLowerCase(),
+                    providerKey: String(provider.name ?? provider.baseUrl ?? 'openai')
+                      .trim()
+                      .toLowerCase(),
                     providerLabel: buildProviderOverviewLabel(
                       provider,
                       t('ai_providers.openai_item_title')

@@ -41,7 +41,10 @@ export function ProviderConfigApiKeyEntriesList({
             baseUrl
           );
           return (
-            <div key={getProviderApiKeyEntryKey(entry, entryIndex)} className={styles.apiKeyEntryCard}>
+            <div
+              key={getProviderApiKeyEntryKey(entry, entryIndex)}
+              className={styles.apiKeyEntryCard}
+            >
               <span className={styles.apiKeyEntryIndex}>{entryIndex + 1}</span>
               <span className={styles.apiKeyEntryKey}>{maskApiKey(entry.apiKey)}</span>
               {entry.proxyUrl && <span className={styles.apiKeyEntryProxy}>{entry.proxyUrl}</span>}

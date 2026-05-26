@@ -11,10 +11,7 @@ import { useCodexQuotaMetaStore } from '@/stores/useCodexQuotaMetaStore';
 import type { CodexQuotaState, CodexQuotaWindow } from '@/types';
 import type { AuthFileItem as AuthFileMeta } from '@/types/authFile';
 import type { UsagePayload } from '@/components/usage';
-import {
-  fetchCodexQuotaWithMeta,
-  type CodexQuotaWindowMeta,
-} from '@/utils/codexQuotaMeta';
+import { fetchCodexQuotaWithMeta, type CodexQuotaWindowMeta } from '@/utils/codexQuotaMeta';
 import { isCodexFile } from '@/utils/quota';
 import {
   calculateCost,
@@ -23,7 +20,7 @@ import {
   formatCompactNumber,
   formatUsd,
   normalizeAuthIndex,
-  type ModelPrice
+  type ModelPrice,
 } from '@/utils/usage';
 import styles from '@/pages/MonitoringCenterPage.module.scss';
 
@@ -101,7 +98,7 @@ export function MonitorCredentialStatsCard({
   usage,
   loading,
   modelPrices,
-  authFiles
+  authFiles,
 }: MonitorCredentialStatsCardProps) {
   const { t } = useTranslation();
   const [refreshingKeys, setRefreshingKeys] = useState<Record<string, boolean>>({});
@@ -143,7 +140,8 @@ export function MonitorCredentialStatsCard({
         (sourceText ? authFileNameToFile.get(sourceText) : undefined);
 
       const resolvedAuthIndex =
-        (matchedFile && normalizeAuthIndex(matchedFile['auth_index'] ?? matchedFile.authIndex)) ?? authIndex;
+        (matchedFile && normalizeAuthIndex(matchedFile['auth_index'] ?? matchedFile.authIndex)) ??
+        authIndex;
       const authFileName = matchedFile?.name ?? null;
 
       if (!resolvedAuthIndex && !authFileName) {
@@ -165,7 +163,7 @@ export function MonitorCredentialStatsCard({
         tokens: 0,
         cost: 0,
         successRate: 100,
-        quotaKey: matchedFile && isCodexAuthFile(matchedFile) ? matchedFile.name : null
+        quotaKey: matchedFile && isCodexAuthFile(matchedFile) ? matchedFile.name : null,
       };
 
       existing.requests += 1;
@@ -189,7 +187,7 @@ export function MonitorCredentialStatsCard({
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
       ...Array.from(new Set(authFiles.map((file) => normalizeCredentialType(file))))
         .sort((a, b) => a.localeCompare(b))
-        .map((type) => ({ value: type, label: type }))
+        .map((type) => ({ value: type, label: type })),
     ],
     [authFiles, t]
   );
@@ -214,8 +212,10 @@ export function MonitorCredentialStatsCard({
 
   const filteredAuthFiles = useMemo(
     () =>
-      authFiles.filter((file) =>
-        effectiveTypeFilter === ALL_FILTER || normalizeCredentialType(file) === effectiveTypeFilter
+      authFiles.filter(
+        (file) =>
+          effectiveTypeFilter === ALL_FILTER ||
+          normalizeCredentialType(file) === effectiveTypeFilter
       ),
     [authFiles, effectiveTypeFilter]
   );
@@ -235,7 +235,10 @@ export function MonitorCredentialStatsCard({
 
   const resolveQuotaKey = useCallback(
     (row: CredentialRow): string | null => {
-      if (row.quotaKey && (codexQuota[row.quotaKey] || authFiles.some((file) => file.name === row.quotaKey))) {
+      if (
+        row.quotaKey &&
+        (codexQuota[row.quotaKey] || authFiles.some((file) => file.name === row.quotaKey))
+      ) {
         return row.quotaKey;
       }
       if (row.authFileName) {
@@ -277,14 +280,14 @@ export function MonitorCredentialStatsCard({
       setRefreshingKeys((prev) => ({ ...prev, [quotaKey]: true }));
       setCodexQuota((prev) => ({
         ...prev,
-        [quotaKey]: CODEX_CONFIG.buildLoadingState()
+        [quotaKey]: CODEX_CONFIG.buildLoadingState(),
       }));
 
       try {
         const { data, meta } = await fetchCodexQuotaWithMeta(authFile, t);
         setCodexQuota((prev) => ({
           ...prev,
-          [quotaKey]: CODEX_CONFIG.buildSuccessState(data)
+          [quotaKey]: CODEX_CONFIG.buildSuccessState(data),
         }));
         setCodexQuotaMeta(quotaKey, meta);
       } catch (err: unknown) {
@@ -298,7 +301,7 @@ export function MonitorCredentialStatsCard({
           [quotaKey]: CODEX_CONFIG.buildErrorState(
             message,
             Number.isFinite(status) ? status : undefined
-          )
+          ),
         }));
       } finally {
         setRefreshingKeys((prev) => ({ ...prev, [quotaKey]: false }));
@@ -339,7 +342,9 @@ export function MonitorCredentialStatsCard({
 
     rows.forEach((row) => {
       const quotaKey = resolveQuotaKey(row);
-      const quotaState = quotaKey ? (codexQuota[quotaKey] as CodexQuotaState | undefined) : undefined;
+      const quotaState = quotaKey
+        ? (codexQuota[quotaKey] as CodexQuotaState | undefined)
+        : undefined;
       const quotaMeta = quotaKey ? codexQuotaMeta[quotaKey] : undefined;
       const events = rowCosts.get(row.key) ?? [];
       const fiveHourWindow = quotaState?.windows?.find((window) => window.id === 'five-hour');
@@ -355,13 +360,14 @@ export function MonitorCredentialStatsCard({
 
       const sumInWindow = (startMs: number, endMs: number) =>
         events.reduce(
-          (sum, item) => (item.timestampMs >= startMs && item.timestampMs <= endMs ? sum + item.cost : sum),
+          (sum, item) =>
+            item.timestampMs >= startMs && item.timestampMs <= endMs ? sum + item.cost : sum,
           0
         );
 
       result.set(row.key, {
         fiveHourCost: fiveHourInfo ? sumInWindow(fiveHourInfo.startMs, fiveHourInfo.endMs) : null,
-        weeklyCost: weeklyInfo ? sumInWindow(weeklyInfo.startMs, weeklyInfo.endMs) : null
+        weeklyCost: weeklyInfo ? sumInWindow(weeklyInfo.startMs, weeklyInfo.endMs) : null,
       });
     });
 
@@ -411,14 +417,16 @@ export function MonitorCredentialStatsCard({
     });
   }, [filteredRows, getSortValue, sortDir, sortKey]);
 
-  const arrow = (key: SortKey) =>
-    sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+  const arrow = (key: SortKey) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
 
   const ariaSort = (key: SortKey): 'none' | 'ascending' | 'descending' =>
     sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
 
   return (
-    <Card title={t('usage_stats.credential_stats')} className={`${styles.detailsFixedCard} ${styles.fullWidthSection}`}>
+    <Card
+      title={t('usage_stats.credential_stats')}
+      className={`${styles.detailsFixedCard} ${styles.fullWidthSection}`}
+    >
       <div className={styles.requestEventsToolbar}>
         <div className={styles.requestEventsFilterItem}>
           <span className={styles.requestEventsFilterLabel}>
@@ -445,7 +453,10 @@ export function MonitorCredentialStatsCard({
               aria-label={t('monitoring_center.credential_search_label')}
               className={styles.credentialSearchInput}
             />
-            <div className={styles.credentialStatsInline} aria-label={t('monitoring_center.credential_stats_label')}>
+            <div
+              className={styles.credentialStatsInline}
+              aria-label={t('monitoring_center.credential_stats_label')}
+            >
               <span className={styles.credentialStatChip}>
                 {t('monitoring_center.credential_status_normal')}
                 <strong>{credentialStats.normal}</strong>
@@ -478,62 +489,87 @@ export function MonitorCredentialStatsCard({
                         className={styles.sortHeaderButton}
                         onClick={() => handleSort('displayName')}
                       >
-                        {t('usage_stats.credential_name')}{arrow('displayName')}
+                        {t('usage_stats.credential_name')}
+                        {arrow('displayName')}
                       </button>
                     </th>
                     <th className={styles.credentialActionHeader}></th>
-                    <th className={`${styles.sortableHeader} ${styles.metricColumn}`} aria-sort={ariaSort('requests')}>
+                    <th
+                      className={`${styles.sortableHeader} ${styles.metricColumn}`}
+                      aria-sort={ariaSort('requests')}
+                    >
                       <button
                         type="button"
                         className={styles.sortHeaderButton}
                         onClick={() => handleSort('requests')}
                       >
-                        {t('usage_stats.requests_count')}{arrow('requests')}
+                        {t('usage_stats.requests_count')}
+                        {arrow('requests')}
                       </button>
                     </th>
-                    <th className={`${styles.sortableHeader} ${styles.metricColumn}`} aria-sort={ariaSort('tokens')}>
+                    <th
+                      className={`${styles.sortableHeader} ${styles.metricColumn}`}
+                      aria-sort={ariaSort('tokens')}
+                    >
                       <button
                         type="button"
                         className={styles.sortHeaderButton}
                         onClick={() => handleSort('tokens')}
                       >
-                        {t('usage_stats.tokens_count')}{arrow('tokens')}
+                        {t('usage_stats.tokens_count')}
+                        {arrow('tokens')}
                       </button>
                     </th>
-                    <th className={`${styles.sortableHeader} ${styles.metricColumn}`} aria-sort={ariaSort('successRate')}>
+                    <th
+                      className={`${styles.sortableHeader} ${styles.metricColumn}`}
+                      aria-sort={ariaSort('successRate')}
+                    >
                       <button
                         type="button"
                         className={styles.sortHeaderButton}
                         onClick={() => handleSort('successRate')}
                       >
-                        {t('usage_stats.success_rate')}{arrow('successRate')}
+                        {t('usage_stats.success_rate')}
+                        {arrow('successRate')}
                       </button>
                     </th>
-                    <th className={`${styles.sortableHeader} ${styles.metricColumn}`} aria-sort={ariaSort('cost')}>
+                    <th
+                      className={`${styles.sortableHeader} ${styles.metricColumn}`}
+                      aria-sort={ariaSort('cost')}
+                    >
                       <button
                         type="button"
                         className={styles.sortHeaderButton}
                         onClick={() => handleSort('cost')}
                       >
-                        {t('usage_stats.total_cost')}{arrow('cost')}
+                        {t('usage_stats.total_cost')}
+                        {arrow('cost')}
                       </button>
                     </th>
-                    <th className={`${styles.sortableHeader} ${styles.metricColumn}`} aria-sort={ariaSort('fiveHourCost')}>
+                    <th
+                      className={`${styles.sortableHeader} ${styles.metricColumn}`}
+                      aria-sort={ariaSort('fiveHourCost')}
+                    >
                       <button
                         type="button"
                         className={styles.sortHeaderButton}
                         onClick={() => handleSort('fiveHourCost')}
                       >
-                        {t('monitoring_center.credential_cost_5h')}{arrow('fiveHourCost')}
+                        {t('monitoring_center.credential_cost_5h')}
+                        {arrow('fiveHourCost')}
                       </button>
                     </th>
-                    <th className={`${styles.sortableHeader} ${styles.metricColumn}`} aria-sort={ariaSort('weeklyCost')}>
+                    <th
+                      className={`${styles.sortableHeader} ${styles.metricColumn}`}
+                      aria-sort={ariaSort('weeklyCost')}
+                    >
                       <button
                         type="button"
                         className={styles.sortHeaderButton}
                         onClick={() => handleSort('weeklyCost')}
                       >
-                        {t('monitoring_center.credential_cost_7d')}{arrow('weeklyCost')}
+                        {t('monitoring_center.credential_cost_7d')}
+                        {arrow('weeklyCost')}
                       </button>
                     </th>
                   </tr>
@@ -548,14 +584,18 @@ export function MonitorCredentialStatsCard({
                       .filter((window) => window.id === 'five-hour' || window.id === 'weekly')
                       .map((window) => ({
                         id: window.id,
-                        label: window.labelKey ? t(window.labelKey, window.labelParams ?? {}) : window.label,
+                        label: window.labelKey
+                          ? t(window.labelKey, window.labelParams ?? {})
+                          : window.label,
                         remainingPercent:
                           typeof window.usedPercent === 'number'
                             ? `${Math.max(0, Math.min(100, Math.round(100 - window.usedPercent)))}%`
-                            : '--'
+                            : '--',
                       }));
                     const quotaCosts = windowCosts.get(row.key);
-                    const isRefreshing = resolvedQuotaKey ? refreshingKeys[resolvedQuotaKey] === true : false;
+                    const isRefreshing = resolvedQuotaKey
+                      ? refreshingKeys[resolvedQuotaKey] === true
+                      : false;
                     return (
                       <tr key={row.key}>
                         <td className={styles.modelCell}>
@@ -595,8 +635,14 @@ export function MonitorCredentialStatsCard({
                           <span className={styles.requestCountCell}>
                             <span>{row.requests.toLocaleString()}</span>
                             <span className={styles.requestBreakdown}>
-                              (<span className={styles.statSuccess}>{row.successCount.toLocaleString()}</span>{' '}
-                              <span className={styles.statFailure}>{row.failureCount.toLocaleString()}</span>)
+                              (
+                              <span className={styles.statSuccess}>
+                                {row.successCount.toLocaleString()}
+                              </span>{' '}
+                              <span className={styles.statFailure}>
+                                {row.failureCount.toLocaleString()}
+                              </span>
+                              )
                             </span>
                           </span>
                         </td>
@@ -616,7 +662,8 @@ export function MonitorCredentialStatsCard({
                         </td>
                         <td>{row.cost > 0 ? formatUsd(row.cost) : '--'}</td>
                         <td className={styles.windowCostCell}>
-                          {quotaCosts?.fiveHourCost !== null && quotaCosts?.fiveHourCost !== undefined
+                          {quotaCosts?.fiveHourCost !== null &&
+                          quotaCosts?.fiveHourCost !== undefined
                             ? formatUsd(quotaCosts.fiveHourCost)
                             : '--'}
                         </td>

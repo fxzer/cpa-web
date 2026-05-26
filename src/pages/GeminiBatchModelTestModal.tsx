@@ -236,7 +236,8 @@ export function GeminiBatchModelTestModal({
               typeof err === 'object' && err !== null && 'code' in err
                 ? String((err as { code?: string }).code)
                 : '';
-            const isTimeout = errorCode === 'ECONNABORTED' || message.toLowerCase().includes('timeout');
+            const isTimeout =
+              errorCode === 'ECONNABORTED' || message.toLowerCase().includes('timeout');
             results[modelName] = {
               success: false,
               message: isTimeout

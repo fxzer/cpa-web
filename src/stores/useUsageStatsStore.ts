@@ -53,7 +53,12 @@ type UsageStatsState = {
 const createEmptyKeyStats = (): KeyStats => ({ bySource: {}, byAuthIndex: {} });
 
 let usageRequestToken = 0;
-let inFlightUsageRequest: { id: number; scopeKey: string; requestKey: string; promise: Promise<void> } | null = null;
+let inFlightUsageRequest: {
+  id: number;
+  scopeKey: string;
+  requestKey: string;
+  promise: Promise<void>;
+} | null = null;
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error
@@ -82,7 +87,9 @@ const getTargetStartMs = (
 
   const rangeStartMs = getRangeStartMs(timeRange, nowMs);
   const minimumStartMs =
-    typeof minimumLookbackMs === 'number' && Number.isFinite(minimumLookbackMs) && minimumLookbackMs > 0
+    typeof minimumLookbackMs === 'number' &&
+    Number.isFinite(minimumLookbackMs) &&
+    minimumLookbackMs > 0
       ? nowMs - minimumLookbackMs
       : null;
 
@@ -287,7 +294,11 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
       .map((range) => `${range.startMs ?? 'all'}-${range.endMs}`)
       .join(',')}`;
 
-    if (inFlightUsageRequest && inFlightUsageRequest.scopeKey === scopeKey && inFlightUsageRequest.requestKey === requestKey) {
+    if (
+      inFlightUsageRequest &&
+      inFlightUsageRequest.scopeKey === scopeKey &&
+      inFlightUsageRequest.requestKey === requestKey
+    ) {
       await inFlightUsageRequest.promise;
       return;
     }
@@ -359,7 +370,9 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
     set((state) => {
       const idSet = new Set(uniqueIds);
       const usageDetailsByKey = Object.fromEntries(
-        Object.entries(state.usageDetailsByKey).filter(([, detail]) => !detail.id || !idSet.has(detail.id))
+        Object.entries(state.usageDetailsByKey).filter(
+          ([, detail]) => !detail.id || !idSet.has(detail.id)
+        )
       ) as Record<string, UsageDetailWithEndpoint>;
       const deletedUsageIds = { ...state.deletedUsageIds };
       uniqueIds.forEach((id) => {

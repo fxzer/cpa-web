@@ -5,7 +5,7 @@ import {
   extractTotalTokens,
   normalizeAuthIndex,
   type ModelPrice,
-  type UsageDetail
+  type UsageDetail,
 } from '@/utils/usage';
 
 export interface CredentialUsageRow {
@@ -90,7 +90,8 @@ const resolveCredentialMatch = (
     (sourceText ? lookup.authFileNameToFile.get(sourceText) : undefined);
 
   const resolvedAuthIndex =
-    (matchedFile && normalizeAuthIndex(matchedFile['auth_index'] ?? matchedFile.authIndex)) ?? authIndex;
+    (matchedFile && normalizeAuthIndex(matchedFile['auth_index'] ?? matchedFile.authIndex)) ??
+    authIndex;
   const authFileName = matchedFile?.name ?? null;
 
   if (!resolvedAuthIndex && !authFileName) {
@@ -102,7 +103,7 @@ const resolveCredentialMatch = (
     displayName: authFileName ?? resolvedAuthIndex ?? '-',
     type: normalizeCredentialType(matchedFile),
     authIndex: resolvedAuthIndex ?? null,
-    authFileName
+    authFileName,
   };
 };
 
@@ -111,7 +112,9 @@ const getRequestCompletedAtMs = (detail: UsageDetail): number => {
   if (!Number.isFinite(timestampMs) || timestampMs <= 0) return Number.NaN;
 
   const latencyMs =
-    typeof detail.latency_ms === 'number' && Number.isFinite(detail.latency_ms) && detail.latency_ms > 0
+    typeof detail.latency_ms === 'number' &&
+    Number.isFinite(detail.latency_ms) &&
+    detail.latency_ms > 0
       ? detail.latency_ms
       : 0;
   return timestampMs + latencyMs;
@@ -120,7 +123,7 @@ const getRequestCompletedAtMs = (detail: UsageDetail): number => {
 export function buildCredentialUsageRows({
   usage,
   authFiles,
-  modelPrices
+  modelPrices,
 }: CredentialUsageInput): CredentialUsageRow[] {
   if (!usage) return [];
 
@@ -142,7 +145,7 @@ export function buildCredentialUsageRows({
       failureCount: 0,
       tokens: 0,
       cost: 0,
-      successRate: 100
+      successRate: 100,
     };
 
     existing.requests += 1;
@@ -153,7 +156,8 @@ export function buildCredentialUsageRows({
     }
     existing.tokens += extractTotalTokens(detail);
     existing.cost += calculateCost(detail, modelPrices);
-    existing.successRate = existing.requests > 0 ? (existing.successCount / existing.requests) * 100 : 100;
+    existing.successRate =
+      existing.requests > 0 ? (existing.successCount / existing.requests) * 100 : 100;
     rowMap.set(match.rowKey, existing);
   });
 
@@ -163,7 +167,7 @@ export function buildCredentialUsageRows({
 export function buildCredentialCostBuckets({
   usage,
   authFiles,
-  modelPrices
+  modelPrices,
 }: CredentialUsageInput): Map<string, CredentialCostEvent[]> {
   const buckets = new Map<string, CredentialCostEvent[]>();
 

@@ -13,7 +13,7 @@ import {
   LinearScale,
   PointElement,
   Title,
-  Tooltip
+  Tooltip,
 } from 'chart.js';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -25,7 +25,7 @@ import {
   PriceSettingsCard,
   useSparklines,
   useUsageData,
-  type UsagePayload
+  type UsagePayload,
 } from '@/components/usage';
 import type { ModelStat } from '@/components/usage/ModelStatsCard';
 import { MonitorStatCards } from '@/components/monitor/MonitorStatCards';
@@ -36,12 +36,12 @@ import {
   filterUsageByTimeRange,
   getModelNamesFromUsage,
   getModelStats,
-  type UsageTimeRange
+  type UsageTimeRange,
 } from '@/utils/usage';
 import { USAGE_TIME_RANGE_OPTIONS } from '@/utils/usageTimeRange';
 import {
   MONITOR_USAGE_TIME_RANGE_STORAGE_KEY,
-  loadMonitorUsageTimeRange
+  loadMonitorUsageTimeRange,
 } from '@/utils/monitorUsageTimeRange';
 import styles from './MonitoringCenterPage.module.scss';
 
@@ -68,15 +68,8 @@ export function MonitoringCenterPage() {
   const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadMonitorUsageTimeRange);
   const [usageStatsDimension, setUsageStatsDimension] = useState<'model' | 'apiKey'>('model');
 
-  const {
-    usage,
-    loading,
-    error,
-    lastRefreshedAt,
-    modelPrices,
-    setModelPrices,
-    loadUsage,
-  } = useUsageData({ timeRange });
+  const { usage, loading, error, lastRefreshedAt, modelPrices, setModelPrices, loadUsage } =
+    useUsageData({ timeRange });
 
   const handleRefresh = useCallback(async () => {
     await loadUsage();
@@ -114,11 +107,14 @@ export function MonitoringCenterPage() {
       loading,
       nowMs,
       timeRange,
-      modelPrices
+      modelPrices,
     });
 
   const modelNames = useMemo(() => getModelNamesFromUsage(usage), [usage]);
-  const modelStats = useMemo<ModelStat[]>(() => getModelStats(filteredUsage, modelPrices), [filteredUsage, modelPrices]);
+  const modelStats = useMemo<ModelStat[]>(
+    () => getModelStats(filteredUsage, modelPrices),
+    [filteredUsage, modelPrices]
+  );
 
   const handleTimeRangeChange = useCallback((range: UsageTimeRange) => {
     setTimeRange(range);
@@ -203,7 +199,7 @@ export function MonitoringCenterPage() {
           tokens: tokensSparkline,
           rpm: rpmSparkline,
           tpm: tpmSparkline,
-          cost: costSparkline
+          cost: costSparkline,
         }}
       />
 
@@ -216,11 +212,7 @@ export function MonitoringCenterPage() {
           timeRange={timeRange}
           modelPrices={modelPrices}
         />
-        <ModelUsageDistributionCard
-          modelStats={modelStats}
-          loading={loading}
-          isDark={isDark}
-        />
+        <ModelUsageDistributionCard modelStats={modelStats} loading={loading} isDark={isDark} />
       </div>
 
       <div className={styles.middleGrid}>
@@ -247,7 +239,6 @@ export function MonitoringCenterPage() {
           onPricesChange={setModelPrices}
         />
       </div>
-
     </div>
   );
 }

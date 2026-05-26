@@ -7,7 +7,7 @@ import {
   buildUsageTokenCacheHitTrend,
   formatUsdFixedOne,
   type ModelPrice,
-  type UsageTimeRange
+  type UsageTimeRange,
 } from '@/utils/usage';
 import type { UsagePayload } from '@/components/usage';
 import styles from '@/pages/MonitoringCenterPage.module.scss';
@@ -25,7 +25,7 @@ const TOKEN_AXIS_UNITS = [
   { value: 1_000_000_000_000, suffix: 'T' },
   { value: 1_000_000_000, suffix: 'B' },
   { value: 1_000_000, suffix: 'M' },
-  { value: 1_000, suffix: 'K' }
+  { value: 1_000, suffix: 'K' },
 ];
 
 const getTokenAxisUnit = (tickValues: number[]) => {
@@ -35,12 +35,15 @@ const getTokenAxisUnit = (tickValues: number[]) => {
     .filter((value) => value > 0)
     .sort((a, b) => a - b);
 
-  const smallestStep = positive.reduce<number | null>((step, value, index) => {
-    if (index === 0) return step;
-    const diff = value - positive[index - 1];
-    if (diff <= 0) return step;
-    return step === null ? diff : Math.min(step, diff);
-  }, null) ?? positive[0] ?? 0;
+  const smallestStep =
+    positive.reduce<number | null>((step, value, index) => {
+      if (index === 0) return step;
+      const diff = value - positive[index - 1];
+      if (diff <= 0) return step;
+      return step === null ? diff : Math.min(step, diff);
+    }, null) ??
+    positive[0] ??
+    0;
 
   return TOKEN_AXIS_UNITS.find((unit) => smallestStep >= unit.value) ?? null;
 };
@@ -64,7 +67,7 @@ const formatTokenAxisValue = (value: number, ticks: { value: number | string }[]
   const fractionDigits = Number.isInteger(scaled) ? 0 : absScaled >= 10 ? 1 : 2;
   return `${scaled.toLocaleString(undefined, {
     minimumFractionDigits: 0,
-    maximumFractionDigits: fractionDigits
+    maximumFractionDigits: fractionDigits,
   })}${unit.suffix}`;
 };
 
@@ -88,7 +91,7 @@ export function MonitorTrendChart({
   isDark,
   isMobile,
   timeRange,
-  modelPrices
+  modelPrices,
 }: MonitorTrendChartProps) {
   const { t } = useTranslation();
 
@@ -96,7 +99,8 @@ export function MonitorTrendChart({
     () => buildUsageTokenCacheHitTrend(usage, timeRange, modelPrices),
     [usage, timeRange, modelPrices]
   );
-  const pointRadius = trend.labels.length > 180 || (isMobile && trend.labels.length > 80) ? 0 : isMobile ? 2 : 3;
+  const pointRadius =
+    trend.labels.length > 180 || (isMobile && trend.labels.length > 80) ? 0 : isMobile ? 2 : 3;
 
   const chartData = useMemo<ChartData<'line'>>(
     () => ({
@@ -114,7 +118,7 @@ export function MonitorTrendChart({
           pointHoverRadius: 4,
           tension: 0.3,
           fill: false,
-          borderWidth: isMobile ? 1.5 : 2
+          borderWidth: isMobile ? 1.5 : 2,
         },
         {
           label: t('usage_stats.total_cost'),
@@ -128,7 +132,7 @@ export function MonitorTrendChart({
           pointHoverRadius: 4,
           tension: 0.3,
           fill: false,
-          borderWidth: isMobile ? 1.5 : 2
+          borderWidth: isMobile ? 1.5 : 2,
         },
         {
           label: t('usage_stats.cache_hit'),
@@ -142,11 +146,19 @@ export function MonitorTrendChart({
           pointHoverRadius: 4,
           tension: 0.25,
           fill: false,
-          borderWidth: isMobile ? 1.5 : 2
-        }
-      ]
+          borderWidth: isMobile ? 1.5 : 2,
+        },
+      ],
     }),
-    [isMobile, pointRadius, t, trend.cacheHitSeries, trend.costSeries, trend.labels, trend.tokenSeries]
+    [
+      isMobile,
+      pointRadius,
+      t,
+      trend.cacheHitSeries,
+      trend.costSeries,
+      trend.labels,
+      trend.tokenSeries,
+    ]
   );
 
   const chartOptions = useMemo<ChartOptions<'line'>>(() => {
@@ -164,7 +176,7 @@ export function MonitorTrendChart({
       maintainAspectRatio: false,
       interaction: {
         mode: 'index',
-        intersect: false
+        intersect: false,
       },
       plugins: {
         legend: { display: false },
@@ -180,7 +192,7 @@ export function MonitorTrendChart({
           callbacks: {
             title: (items) => {
               const index = items[0]?.dataIndex;
-              return typeof index === 'number' ? trend.tooltipLabels[index] ?? '' : '';
+              return typeof index === 'number' ? (trend.tooltipLabels[index] ?? '') : '';
             },
             label: (context) => {
               const label = context.dataset.label || '';
@@ -200,18 +212,18 @@ export function MonitorTrendChart({
                 return '';
               }
               return t('monitoring_center.cache_hit_bucket_requests', { count: requestCount });
-            }
-          }
-        }
+            },
+          },
+        },
       },
       scales: {
         x: {
           grid: {
             color: gridColor,
-            drawTicks: false
+            drawTicks: false,
           },
           border: {
-            color: axisBorderColor
+            color: axisBorderColor,
           },
           ticks: {
             color: tickColor,
@@ -236,38 +248,38 @@ export function MonitorTrendChart({
                 }
               }
               return raw;
-            }
-          }
+            },
+          },
         },
         yTokens: {
           beginAtZero: true,
           position: 'left',
           grid: {
-            color: gridColor
+            color: gridColor,
           },
           border: {
-            color: axisBorderColor
+            color: axisBorderColor,
           },
           ticks: {
             color: tickColor,
             font: { size: tickFontSize },
-            callback: (value, _index, ticks) => formatTokenAxisValue(Number(value), ticks)
-          }
+            callback: (value, _index, ticks) => formatTokenAxisValue(Number(value), ticks),
+          },
         },
         yCost: {
           beginAtZero: true,
           position: 'right',
           grid: {
-            drawOnChartArea: false
+            drawOnChartArea: false,
           },
           border: {
-            color: axisBorderColor
+            color: axisBorderColor,
           },
           ticks: {
             color: tickColor,
             font: { size: tickFontSize },
-            callback: (value) => formatCostValue(Number(value))
-          }
+            callback: (value) => formatCostValue(Number(value)),
+          },
         },
         yCacheHit: {
           beginAtZero: true,
@@ -275,34 +287,38 @@ export function MonitorTrendChart({
           max: 100,
           position: 'right',
           grid: {
-            drawOnChartArea: false
+            drawOnChartArea: false,
           },
           border: {
-            color: axisBorderColor
+            color: axisBorderColor,
           },
           ticks: {
             color: tickColor,
             font: { size: tickFontSize },
-            callback: (value) => `${Number(value)}%`
-          }
-        }
-      }
+            callback: (value) => `${Number(value)}%`,
+          },
+        },
+      },
     };
   }, [isDark, isMobile, t, trend.labels, trend.requestCounts, trend.tooltipLabels]);
 
   return (
-    <Card
-      title={t('monitoring_center.combined_trend_title')}
-      className={styles.detailsFixedCard}
-    >
+    <Card title={t('monitoring_center.combined_trend_title')} className={styles.detailsFixedCard}>
       {loading ? (
         <div className={styles.hint}>{t('common.loading')}</div>
       ) : trend.labels.length > 0 ? (
         <div className={styles.chartWrapper}>
           <div className={styles.chartLegend} aria-label="Chart legend">
             {chartData.datasets.map((dataset, index) => (
-              <div key={`${dataset.label}-${index}`} className={styles.legendItem} title={dataset.label}>
-                <span className={styles.legendDot} style={{ backgroundColor: String(dataset.borderColor) }} />
+              <div
+                key={`${dataset.label}-${index}`}
+                className={styles.legendItem}
+                title={dataset.label}
+              >
+                <span
+                  className={styles.legendDot}
+                  style={{ backgroundColor: String(dataset.borderColor) }}
+                />
                 <span className={styles.legendLabel}>{dataset.label}</span>
               </div>
             ))}

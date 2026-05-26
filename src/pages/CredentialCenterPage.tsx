@@ -16,7 +16,7 @@ import { filterUsageByTimeRange, type UsageTimeRange } from '@/utils/usage';
 import {
   DEFAULT_USAGE_TIME_RANGE,
   USAGE_TIME_RANGE_OPTIONS,
-  isUsageTimeRange
+  isUsageTimeRange,
 } from '@/utils/usageTimeRange';
 import styles from './CredentialCenterPage.module.scss';
 
@@ -38,17 +38,10 @@ const loadTimeRange = (): UsageTimeRange => {
 export function CredentialCenterPage() {
   const { t } = useTranslation();
   const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadTimeRange);
-  const {
-    usage,
-    loading,
-    error,
-    lastRefreshedAt,
-    modelPrices,
-    loadUsage,
-  } = useUsageData({
+  const { usage, loading, error, lastRefreshedAt, modelPrices, loadUsage } = useUsageData({
     timeRange,
     minimumLookbackMs: CREDENTIAL_USAGE_LOOKBACK_MS,
-    refreshFullRange: true
+    refreshFullRange: true,
   });
   const [authFiles, setAuthFiles] = useState<AuthFileItem[]>([]);
   const [authRefreshQueue, setAuthRefreshQueue] = useState<AuthRefreshQueueResponse | null>(null);
@@ -69,7 +62,8 @@ export function CredentialCenterPage() {
       setAuthRefreshQueue(payload);
       setAuthRefreshQueueError(null);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t('credential_center.refresh_queue_load_error');
+      const message =
+        err instanceof Error ? err.message : t('credential_center.refresh_queue_load_error');
       setAuthRefreshQueueError(message || t('credential_center.refresh_queue_load_error'));
     } finally {
       setAuthRefreshQueueLoading(false);

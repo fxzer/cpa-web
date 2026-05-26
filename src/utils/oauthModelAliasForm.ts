@@ -31,9 +31,7 @@ export function findOAuthModelAliasMappings(
   const normalized = resolveOAuthModelAliasChannel(channel);
   if (!normalized) return [];
   if (modelAlias[normalized]) return modelAlias[normalized];
-  const entry = Object.entries(modelAlias).find(
-    ([key]) => normalizeChannelKey(key) === normalized
-  );
+  const entry = Object.entries(modelAlias).find(([key]) => normalizeChannelKey(key) === normalized);
   return entry?.[1] ?? [];
 }
 

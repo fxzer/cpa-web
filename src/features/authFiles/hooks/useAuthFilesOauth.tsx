@@ -88,10 +88,7 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
     return Array.from(providers);
   }, [files]);
 
-  const modelAlias = useMemo(
-    () => buildProviderModelAliasMap(providerConfigs),
-    [providerConfigs]
-  );
+  const modelAlias = useMemo(() => buildProviderModelAliasMap(providerConfigs), [providerConfigs]);
 
   const notifyAliasConfigChanged = useCallback(() => {
     onAliasConfigChanged?.();
@@ -284,7 +281,11 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
           const cached = providerConfigsRef.current[normalizedProvider];
           if (!cached) return;
 
-          const nextRows = removeAliasLink(cloneConfigRows(cached.config.rows), nameTrim, aliasTrim);
+          const nextRows = removeAliasLink(
+            cloneConfigRows(cached.config.rows),
+            nameTrim,
+            aliasTrim
+          );
           try {
             await persistProviderRows(normalizedProvider, nextRows);
             showNotification(t('oauth_model_alias.save_success'), 'success');
@@ -304,12 +305,7 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
       const cached = providerConfigsRef.current[normalizedProvider];
       if (!normalizedProvider || !cached) return;
 
-      const nextRows = toggleRowFork(
-        cloneConfigRows(cached.config.rows),
-        sourceModel,
-        alias,
-        fork
-      );
+      const nextRows = toggleRowFork(cloneConfigRows(cached.config.rows), sourceModel, alias, fork);
 
       try {
         await persistProviderRows(normalizedProvider, nextRows);
@@ -330,7 +326,10 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
 
       const providersToUpdate = Object.entries(providerConfigsRef.current).filter(([_, entry]) =>
         entry.config.rows.some(
-          (row) => String(row.alias ?? '').trim().toLowerCase() === oldTrim.toLowerCase()
+          (row) =>
+            String(row.alias ?? '')
+              .trim()
+              .toLowerCase() === oldTrim.toLowerCase()
         )
       );
 
@@ -342,7 +341,11 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
       try {
         const results = await Promise.allSettled(
           providersToUpdate.map(([provider, entry]) => {
-            const nextRows = renameAliasInRows(cloneConfigRows(entry.config.rows), oldTrim, newTrim);
+            const nextRows = renameAliasInRows(
+              cloneConfigRows(entry.config.rows),
+              oldTrim,
+              newTrim
+            );
             return persistProviderRows(provider, nextRows);
           })
         );
@@ -382,7 +385,10 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
 
       const providersToUpdate = Object.entries(providerConfigsRef.current).filter(([_, entry]) =>
         entry.config.rows.some(
-          (row) => String(row.alias ?? '').trim().toLowerCase() === aliasTrim.toLowerCase()
+          (row) =>
+            String(row.alias ?? '')
+              .trim()
+              .toLowerCase() === aliasTrim.toLowerCase()
         )
       );
 
@@ -406,7 +412,10 @@ export function useAuthFilesOauth(options: UseAuthFilesOauthOptions): UseAuthFil
           try {
             const results = await Promise.allSettled(
               providersToUpdate.map(([provider, entry]) => {
-                const nextRows = removeAliasNameFromRows(cloneConfigRows(entry.config.rows), aliasTrim);
+                const nextRows = removeAliasNameFromRows(
+                  cloneConfigRows(entry.config.rows),
+                  aliasTrim
+                );
                 return persistProviderRows(provider, nextRows);
               })
             );

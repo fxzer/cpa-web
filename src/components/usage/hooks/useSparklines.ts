@@ -5,7 +5,7 @@ import {
   buildHourlyCostSeries,
   buildHourlySeriesByModel,
   type ModelPrice,
-  type UsageTimeRange
+  type UsageTimeRange,
 } from '@/utils/usage';
 import type { UsagePayload } from './useUsageData';
 
@@ -20,7 +20,7 @@ export interface SparklineData {
       tension: number;
       pointRadius: number;
       borderWidth: number;
-    }
+    },
   ];
 }
 
@@ -64,7 +64,7 @@ const trimDailySeriesToRecentDays = (
   const startIndex = Math.max(series.labels.length - days, 0);
   return {
     labels: series.labels.slice(startIndex),
-    data: series.data.slice(startIndex)
+    data: series.data.slice(startIndex),
   };
 };
 
@@ -72,7 +72,7 @@ export function useSparklines({
   usage,
   loading,
   timeRange = '24h',
-  modelPrices = {}
+  modelPrices = {},
 }: UseSparklinesOptions): UseSparklinesReturn {
   const requestsAndTokensSeries = useMemo(() => {
     if (!usage) {
@@ -86,7 +86,7 @@ export function useSparklines({
       return {
         labels: requestBase.labels,
         requests: sumSeries(requestBase.dataByModel, requestBase.labels.length),
-        tokens: sumSeries(tokenBase.dataByModel, tokenBase.labels.length)
+        tokens: sumSeries(tokenBase.dataByModel, tokenBase.labels.length),
       };
     }
 
@@ -94,11 +94,11 @@ export function useSparklines({
     const tokenBase = buildDailySeriesByModel(usage, 'tokens');
     const requestSeries = {
       labels: requestBase.labels,
-      data: sumSeries(requestBase.dataByModel, requestBase.labels.length)
+      data: sumSeries(requestBase.dataByModel, requestBase.labels.length),
     };
     const tokenSeries = {
       labels: tokenBase.labels,
-      data: sumSeries(tokenBase.dataByModel, tokenBase.labels.length)
+      data: sumSeries(tokenBase.dataByModel, tokenBase.labels.length),
     };
 
     if (timeRange === '7d' || timeRange === '30d') {
@@ -108,14 +108,14 @@ export function useSparklines({
       return {
         labels: trimmedRequests.labels,
         requests: trimmedRequests.data,
-        tokens: trimmedTokens.data
+        tokens: trimmedTokens.data,
       };
     }
 
     return {
       labels: requestSeries.labels,
       requests: requestSeries.data,
-      tokens: tokenSeries.data
+      tokens: tokenSeries.data,
     };
   }, [timeRange, usage]);
 
@@ -158,10 +158,10 @@ export function useSparklines({
               fill: true,
               tension: 0.45,
               pointRadius: 0,
-              borderWidth: 2
-            }
-          ]
-        }
+              borderWidth: 2,
+            },
+          ],
+        },
       };
     },
     [loading]
@@ -222,6 +222,6 @@ export function useSparklines({
     tokensSparkline,
     rpmSparkline,
     tpmSparkline,
-    costSparkline
+    costSparkline,
   };
 }

@@ -91,10 +91,7 @@ export function formatMappingListForTextarea(values: NameMapping[]): string {
     .join('\n');
 }
 
-function normalizeStringList(
-  values: string[] | string,
-  lowercase = true,
-): string[] {
+function normalizeStringList(values: string[] | string, lowercase = true): string[] {
   const items = Array.isArray(values) ? values : parseLinesToList(values);
   const result: string[] = [];
   const seen = new Set<string>();
@@ -109,12 +106,8 @@ function normalizeStringList(
   return result;
 }
 
-function normalizeModelNameMappings(
-  values: NameMapping[] | string,
-): NameMapping[] {
-  const items: NameMapping[] = Array.isArray(values)
-    ? values
-    : parseLinesToMappingList(values);
+function normalizeModelNameMappings(values: NameMapping[] | string): NameMapping[] {
+  const items: NameMapping[] = Array.isArray(values) ? values : parseLinesToMappingList(values);
   const result: NameMapping[] = [];
   const seen = new Set<string>();
   for (const item of items) {
@@ -142,25 +135,22 @@ export function getDefaultSyncSettings(): SyncSettings {
 }
 
 export function sanitizeSyncSettings(
-  input: Partial<SyncSettings> | null | undefined,
+  input: Partial<SyncSettings> | null | undefined
 ): SyncSettings {
   const defaults = getDefaultSyncSettings();
   const providerPriority = normalizeStringList(
     (input?.providerPriority as string[] | string) ?? [],
-    true,
+    true
   );
   const ignoredModelNameSuffixes = normalizeStringList(
     (input?.ignoredModelNameSuffixes as string[] | string) ?? [],
-    true,
+    true
   );
   const modelNameMappings = normalizeModelNameMappings(
-    (input?.modelNameMappings as NameMapping[] | string) ?? [],
+    (input?.modelNameMappings as NameMapping[] | string) ?? []
   );
   return {
-    providerPriority:
-      providerPriority.length > 0
-        ? providerPriority
-        : defaults.providerPriority,
+    providerPriority: providerPriority.length > 0 ? providerPriority : defaults.providerPriority,
     ignoredModelNameSuffixes:
       ignoredModelNameSuffixes.length > 0
         ? ignoredModelNameSuffixes
@@ -181,10 +171,7 @@ export function loadSyncSettings(): SyncSettings {
 
 export function saveSyncSettings(settings: SyncSettings): SyncSettings {
   const sanitized = sanitizeSyncSettings(settings);
-  localStorage.setItem(
-    SYNC_SETTINGS_STORAGE_KEY,
-    JSON.stringify(sanitized),
-  );
+  localStorage.setItem(SYNC_SETTINGS_STORAGE_KEY, JSON.stringify(sanitized));
   return sanitized;
 }
 
@@ -210,7 +197,7 @@ function mapModelName(name: string, mappings: NameMapping[]): string {
 function normalizeModelNameForMatch(
   name: string,
   ignoredSuffixes: string[],
-  mappings: NameMapping[],
+  mappings: NameMapping[]
 ): string {
   let n = mapModelName(name, mappings);
   while (n) {
@@ -221,13 +208,8 @@ function normalizeModelNameForMatch(
   return n;
 }
 
-function getProviderPriorityRank(
-  providerName: string,
-  providerPriority: string[],
-): number {
-  const idx = providerPriority.indexOf(
-    normalizeModelName(providerName),
-  );
+function getProviderPriorityRank(providerName: string, providerPriority: string[]): number {
+  const idx = providerPriority.indexOf(normalizeModelName(providerName));
   return idx === -1 ? providerPriority.length : idx;
 }
 
@@ -242,10 +224,7 @@ interface AllowedModelNames {
   count: number;
 }
 
-function buildAllowedModelNames(
-  modelNames: string[],
-  settings: SyncSettings,
-): AllowedModelNames {
+function buildAllowedModelNames(modelNames: string[], settings: SyncSettings): AllowedModelNames {
   const exactNames = new Set<string>();
   const normalisedNames = new Set<string>();
   const normalisedToExact = new Map<string, Set<string>>();
@@ -255,7 +234,7 @@ function buildAllowedModelNames(
     const normalised = normalizeModelNameForMatch(
       raw,
       settings.ignoredModelNameSuffixes,
-      settings.modelNameMappings,
+      settings.modelNameMappings
     );
     if (exact) exactNames.add(exact);
     if (normalised) {
@@ -283,7 +262,7 @@ function formatPrice(value: unknown): number {
 function processData(
   rawData: Record<string, unknown>,
   allowed: AllowedModelNames,
-  settings: SyncSettings,
+  settings: SyncSettings
 ): Record<string, SyncedPrice> {
   const newPrices: Record<string, SyncedPrice> = {};
   const chosenProviders: Record<string, { name: string; rank: number }> = {};
@@ -302,7 +281,7 @@ function processData(
       (provider.id as string) ||
         (provider.name as string) ||
         (provider.label as string) ||
-        providerKey,
+        providerKey
     );
     const rank = getProviderPriorityRank(providerName, settings.providerPriority);
 
@@ -312,7 +291,7 @@ function processData(
       const normalisedName = normalizeModelNameForMatch(
         modelKey,
         settings.ignoredModelNameSuffixes,
-        settings.modelNameMappings,
+        settings.modelNameMappings
       );
       const matchedExacts = allowed.exactNames.has(exactName)
         ? [exactName]
@@ -335,7 +314,11 @@ function processData(
         newPrices[matched] = {
           prompt: formatPrice(cost.input),
           completion: formatPrice(cost.output),
-          cache: formatPrice((cost as Record<string, unknown>).cache_read ?? (cost as Record<string, unknown>).cache_write ?? 0),
+          cache: formatPrice(
+            (cost as Record<string, unknown>).cache_read ??
+              (cost as Record<string, unknown>).cache_write ??
+              0
+          ),
         };
         chosenProviders[matched] = { name: providerName, rank };
       }
@@ -363,7 +346,7 @@ export interface SyncResult {
 
 export async function syncPrices(
   modelNames: string[],
-  settings: SyncSettings,
+  settings: SyncSettings
 ): Promise<SyncResult> {
   if (modelNames.length === 0) {
     throw new Error('当前没有可同步的模型，请确保已有使用数据。');

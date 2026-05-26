@@ -62,12 +62,48 @@ function getErrorStatus(error: unknown): number | undefined {
   return typeof error.status === 'number' ? error.status : undefined;
 }
 
-const PROVIDERS: { id: OAuthProvider; titleKey: string; hintKey: string; urlLabelKey: string; icon: string | { light: string; dark: string } }[] = [
-  { id: 'codex', titleKey: 'auth_login.codex_oauth_title', hintKey: 'auth_login.codex_oauth_hint', urlLabelKey: 'auth_login.codex_oauth_url_label', icon: iconCodex },
-  { id: 'anthropic', titleKey: 'auth_login.anthropic_oauth_title', hintKey: 'auth_login.anthropic_oauth_hint', urlLabelKey: 'auth_login.anthropic_oauth_url_label', icon: iconClaude },
-  { id: 'antigravity', titleKey: 'auth_login.antigravity_oauth_title', hintKey: 'auth_login.antigravity_oauth_hint', urlLabelKey: 'auth_login.antigravity_oauth_url_label', icon: iconAntigravity },
-  { id: 'gemini-cli', titleKey: 'auth_login.gemini_cli_oauth_title', hintKey: 'auth_login.gemini_cli_oauth_hint', urlLabelKey: 'auth_login.gemini_cli_oauth_url_label', icon: iconGemini },
-  { id: 'kimi', titleKey: 'auth_login.kimi_oauth_title', hintKey: 'auth_login.kimi_oauth_hint', urlLabelKey: 'auth_login.kimi_oauth_url_label', icon: { light: iconKimiLight, dark: iconKimiDark } }
+const PROVIDERS: {
+  id: OAuthProvider;
+  titleKey: string;
+  hintKey: string;
+  urlLabelKey: string;
+  icon: string | { light: string; dark: string };
+}[] = [
+  {
+    id: 'codex',
+    titleKey: 'auth_login.codex_oauth_title',
+    hintKey: 'auth_login.codex_oauth_hint',
+    urlLabelKey: 'auth_login.codex_oauth_url_label',
+    icon: iconCodex,
+  },
+  {
+    id: 'anthropic',
+    titleKey: 'auth_login.anthropic_oauth_title',
+    hintKey: 'auth_login.anthropic_oauth_hint',
+    urlLabelKey: 'auth_login.anthropic_oauth_url_label',
+    icon: iconClaude,
+  },
+  {
+    id: 'antigravity',
+    titleKey: 'auth_login.antigravity_oauth_title',
+    hintKey: 'auth_login.antigravity_oauth_hint',
+    urlLabelKey: 'auth_login.antigravity_oauth_url_label',
+    icon: iconAntigravity,
+  },
+  {
+    id: 'gemini-cli',
+    titleKey: 'auth_login.gemini_cli_oauth_title',
+    hintKey: 'auth_login.gemini_cli_oauth_hint',
+    urlLabelKey: 'auth_login.gemini_cli_oauth_url_label',
+    icon: iconGemini,
+  },
+  {
+    id: 'kimi',
+    titleKey: 'auth_login.kimi_oauth_title',
+    hintKey: 'auth_login.kimi_oauth_hint',
+    urlLabelKey: 'auth_login.kimi_oauth_url_label',
+    icon: { light: iconKimiLight, dark: iconKimiDark },
+  },
 ];
 
 const CALLBACK_SUPPORTED: OAuthProvider[] = ['codex', 'anthropic', 'antigravity', 'gemini-cli'];
@@ -86,11 +122,13 @@ export function OAuthPage() {
   const navigate = useNavigate();
   const { showNotification } = useNotificationStore();
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
-  const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>({} as Record<OAuthProvider, ProviderState>);
+  const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>(
+    {} as Record<OAuthProvider, ProviderState>
+  );
   const [vertexState, setVertexState] = useState<VertexImportState>({
     fileName: '',
     location: '',
-    loading: false
+    loading: false,
   });
   const pollingTimers = useRef<Partial<Record<OAuthProvider, number>>>({});
   const successResetTimers = useRef<Partial<Record<OAuthProvider, number>>>({});
@@ -117,7 +155,7 @@ export function OAuthPage() {
   const updateProviderState = (provider: OAuthProvider, next: Partial<ProviderState>) => {
     setStates((prev) => ({
       ...prev,
-      [provider]: { ...(prev[provider] ?? {}), ...next }
+      [provider]: { ...(prev[provider] ?? {}), ...next },
     }));
   };
 
@@ -152,7 +190,7 @@ export function OAuthPage() {
       }
       return {
         ...prev,
-        [provider]: next
+        [provider]: next,
       };
     });
   };
@@ -169,7 +207,7 @@ export function OAuthPage() {
       callbackUrl: '',
       callbackSubmitting: false,
       callbackStatus: undefined,
-      callbackError: undefined
+      callbackError: undefined,
     });
     successResetTimers.current[provider] = window.setTimeout(() => {
       resetProviderAttempt(provider);
@@ -194,7 +232,11 @@ export function OAuthPage() {
           delete pollingTimers.current[provider];
         }
       } catch (err: unknown) {
-        updateProviderState(provider, { status: 'error', error: getErrorMessage(err), polling: false });
+        updateProviderState(provider, {
+          status: 'error',
+          error: getErrorMessage(err),
+          polling: false,
+        });
         window.clearInterval(timer);
         delete pollingTimers.current[provider];
       }
@@ -223,7 +265,7 @@ export function OAuthPage() {
       error: undefined,
       callbackStatus: undefined,
       callbackError: undefined,
-      callbackUrl: ''
+      callbackUrl: '',
     });
     try {
       const res = await oauthApi.startAuth(
@@ -237,12 +279,17 @@ export function OAuthPage() {
           state: undefined,
           status: 'error',
           error: message,
-          polling: false
+          polling: false,
         });
         showNotification(message, 'error');
         return;
       }
-      updateProviderState(provider, { url: res.url, state: res.state, status: 'waiting', polling: true });
+      updateProviderState(provider, {
+        url: res.url,
+        state: res.state,
+        status: 'waiting',
+        polling: true,
+      });
       startPolling(provider, res.state);
     } catch (err: unknown) {
       const message = getErrorMessage(err);
@@ -272,7 +319,7 @@ export function OAuthPage() {
     updateProviderState(provider, {
       callbackSubmitting: true,
       callbackStatus: undefined,
-      callbackError: undefined
+      callbackError: undefined,
     });
     try {
       await oauthApi.submitCallback(provider, redirectUrl);
@@ -284,13 +331,13 @@ export function OAuthPage() {
       const errorMessage =
         status === 404
           ? t('auth_login.oauth_callback_upgrade_hint', {
-              defaultValue: 'Please update CLI Proxy API or check the connection.'
+              defaultValue: 'Please update CLI Proxy API or check the connection.',
             })
           : message || undefined;
       updateProviderState(provider, {
         callbackSubmitting: false,
         callbackStatus: 'error',
-        callbackError: errorMessage
+        callbackError: errorMessage,
       });
       const notificationMessage = errorMessage
         ? `${t('auth_login.oauth_callback_error')} ${errorMessage}`
@@ -316,7 +363,7 @@ export function OAuthPage() {
       file,
       fileName: file.name,
       error: undefined,
-      result: undefined
+      result: undefined,
     }));
     event.target.value = '';
   };
@@ -339,7 +386,7 @@ export function OAuthPage() {
         projectId: res.project_id,
         email: res.email,
         location: res.location,
-        authFile: res['auth-file'] ?? res.auth_file
+        authFile: res['auth-file'] ?? res.auth_file,
       };
       setVertexState((prev) => ({ ...prev, loading: false, result }));
       showNotification(t('vertex_import.success'), 'success');
@@ -348,7 +395,7 @@ export function OAuthPage() {
       setVertexState((prev) => ({
         ...prev,
         loading: false,
-        error: message || t('notification.upload_failed')
+        error: message || t('notification.upload_failed'),
       }));
       const notification = message
         ? `${t('notification.upload_failed')}: ${message}`
@@ -362,7 +409,11 @@ export function OAuthPage() {
       <h1 className={styles.pageTitle}>{t('nav.oauth', { defaultValue: 'OAuth' })}</h1>
 
       <div className={styles.content}>
-        <div className={styles.tabBar} role="tablist" aria-label={t('nav.oauth', { defaultValue: 'OAuth' })}>
+        <div
+          className={styles.tabBar}
+          role="tablist"
+          aria-label={t('nav.oauth', { defaultValue: 'OAuth' })}
+        >
           {PROVIDERS.map((provider) => (
             <button
               key={provider.id}
@@ -389,224 +440,246 @@ export function OAuthPage() {
         <div className={styles.tabPanel} role="tabpanel">
           {activeTab !== 'vertex' &&
             PROVIDERS.filter((p) => p.id === activeTab).map((provider) => {
-          const state = states[provider.id] || {};
-          const canSubmitCallback = CALLBACK_SUPPORTED.includes(provider.id) && Boolean(state.url);
-          const loginButtonLabel =
-            state.status === 'success'
-              ? t('auth_login.login_another_account')
-              : t(getAuthKey(provider.id, 'oauth_button'));
-          const statusBadgeClassName = [
-            'status-badge',
-            state.status === 'success' ? 'success' : '',
-            state.status === 'error' ? 'error' : ''
-          ]
-            .filter(Boolean)
-            .join(' ');
-          return (
-            <div key={provider.id}>
-              <Card
-                title={
-                  <span className={styles.cardTitle}>
-                    <img
-                      src={getIcon(provider.icon, resolvedTheme)}
-                      alt=""
-                      className={styles.cardTitleIcon}
-                    />
-                    {t(provider.titleKey)}
-                  </span>
-                }
-                extra={
-                  <Button onClick={() => startAuth(provider.id)} loading={state.polling}>
-                    {loginButtonLabel}
-                  </Button>
-                }
-              >
-                <div className={styles.cardContent}>
-                  <div className={styles.cardHint}>{t(provider.hintKey)}</div>
-                  {provider.id === 'gemini-cli' && (
-                    <div className={styles.geminiProjectField}>
-                      <Input
-                        label={t('auth_login.gemini_cli_project_id_label')}
-                        hint={t('auth_login.gemini_cli_project_id_hint')}
-                        value={state.projectId || ''}
-                        error={state.projectIdError}
-                        disabled={Boolean(state.polling)}
-                        onChange={(e) =>
-                          updateProviderState(provider.id, {
-                            projectId: e.target.value,
-                            projectIdError: undefined
-                          })
-                        }
-                        placeholder={t('auth_login.gemini_cli_project_id_placeholder')}
-                      />
-                    </div>
-                  )}
-                  {state.url && (
-                    <div className={styles.authUrlBox}>
-                      <div className={styles.authUrlLabel}>{t(provider.urlLabelKey)}</div>
-                      <div className={styles.authUrlValue}>{state.url}</div>
-                      <div className={styles.authUrlActions}>
-                        <Button variant="secondary" size="sm" onClick={() => copyLink(state.url!)}>
-                          {t(getAuthKey(provider.id, 'copy_link'))}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => window.open(state.url, '_blank', 'noopener,noreferrer')}
-                        >
-                          {t(getAuthKey(provider.id, 'open_link'))}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  {canSubmitCallback && (
-                    <div className={styles.callbackSection}>
-                      <Input
-                        label={t('auth_login.oauth_callback_label')}
-                        hint={t('auth_login.oauth_callback_hint')}
-                        value={state.callbackUrl || ''}
-                        onChange={(e) =>
-                          updateProviderState(provider.id, {
-                            callbackUrl: e.target.value,
-                            callbackStatus: undefined,
-                            callbackError: undefined
-                          })
-                        }
-                        placeholder={t('auth_login.oauth_callback_placeholder')}
-                      />
-                      <div className={styles.callbackActions}>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => submitCallback(provider.id)}
-                          loading={state.callbackSubmitting}
-                        >
-                          {t('auth_login.oauth_callback_button')}
-                        </Button>
-                      </div>
-                      {state.callbackStatus === 'success' && state.status === 'waiting' && (
-                        <div className="status-badge success">
-                          {t('auth_login.oauth_callback_status_success')}
-                        </div>
-                      )}
-                      {state.callbackStatus === 'error' && (
-                        <div className="status-badge error">
-                          {t('auth_login.oauth_callback_status_error')} {state.callbackError || ''}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {state.status && state.status !== 'idle' && (
-                    <div className={statusBadgeClassName}>
-                      {state.status === 'success'
-                        ? t(getAuthKey(provider.id, 'oauth_status_success'))
-                        : state.status === 'error'
-                          ? `${t(getAuthKey(provider.id, 'oauth_status_error'))} ${state.error || ''}`
-                          : t(getAuthKey(provider.id, 'oauth_status_waiting'))}
-                    </div>
-                  )}
-                  {state.status === 'success' && (
-                    <div className={styles.successActions}>
-                      <Button variant="secondary" size="sm" onClick={() => navigate('/auth-files')}>
-                        {t('auth_login.view_auth_files')}
+              const state = states[provider.id] || {};
+              const canSubmitCallback =
+                CALLBACK_SUPPORTED.includes(provider.id) && Boolean(state.url);
+              const loginButtonLabel =
+                state.status === 'success'
+                  ? t('auth_login.login_another_account')
+                  : t(getAuthKey(provider.id, 'oauth_button'));
+              const statusBadgeClassName = [
+                'status-badge',
+                state.status === 'success' ? 'success' : '',
+                state.status === 'error' ? 'error' : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
+              return (
+                <div key={provider.id}>
+                  <Card
+                    title={
+                      <span className={styles.cardTitle}>
+                        <img
+                          src={getIcon(provider.icon, resolvedTheme)}
+                          alt=""
+                          className={styles.cardTitleIcon}
+                        />
+                        {t(provider.titleKey)}
+                      </span>
+                    }
+                    extra={
+                      <Button onClick={() => startAuth(provider.id)} loading={state.polling}>
+                        {loginButtonLabel}
                       </Button>
+                    }
+                  >
+                    <div className={styles.cardContent}>
+                      <div className={styles.cardHint}>{t(provider.hintKey)}</div>
+                      {provider.id === 'gemini-cli' && (
+                        <div className={styles.geminiProjectField}>
+                          <Input
+                            label={t('auth_login.gemini_cli_project_id_label')}
+                            hint={t('auth_login.gemini_cli_project_id_hint')}
+                            value={state.projectId || ''}
+                            error={state.projectIdError}
+                            disabled={Boolean(state.polling)}
+                            onChange={(e) =>
+                              updateProviderState(provider.id, {
+                                projectId: e.target.value,
+                                projectIdError: undefined,
+                              })
+                            }
+                            placeholder={t('auth_login.gemini_cli_project_id_placeholder')}
+                          />
+                        </div>
+                      )}
+                      {state.url && (
+                        <div className={styles.authUrlBox}>
+                          <div className={styles.authUrlLabel}>{t(provider.urlLabelKey)}</div>
+                          <div className={styles.authUrlValue}>{state.url}</div>
+                          <div className={styles.authUrlActions}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => copyLink(state.url!)}
+                            >
+                              {t(getAuthKey(provider.id, 'copy_link'))}
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() =>
+                                window.open(state.url, '_blank', 'noopener,noreferrer')
+                              }
+                            >
+                              {t(getAuthKey(provider.id, 'open_link'))}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      {canSubmitCallback && (
+                        <div className={styles.callbackSection}>
+                          <Input
+                            label={t('auth_login.oauth_callback_label')}
+                            hint={t('auth_login.oauth_callback_hint')}
+                            value={state.callbackUrl || ''}
+                            onChange={(e) =>
+                              updateProviderState(provider.id, {
+                                callbackUrl: e.target.value,
+                                callbackStatus: undefined,
+                                callbackError: undefined,
+                              })
+                            }
+                            placeholder={t('auth_login.oauth_callback_placeholder')}
+                          />
+                          <div className={styles.callbackActions}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => submitCallback(provider.id)}
+                              loading={state.callbackSubmitting}
+                            >
+                              {t('auth_login.oauth_callback_button')}
+                            </Button>
+                          </div>
+                          {state.callbackStatus === 'success' && state.status === 'waiting' && (
+                            <div className="status-badge success">
+                              {t('auth_login.oauth_callback_status_success')}
+                            </div>
+                          )}
+                          {state.callbackStatus === 'error' && (
+                            <div className="status-badge error">
+                              {t('auth_login.oauth_callback_status_error')}{' '}
+                              {state.callbackError || ''}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {state.status && state.status !== 'idle' && (
+                        <div className={statusBadgeClassName}>
+                          {state.status === 'success'
+                            ? t(getAuthKey(provider.id, 'oauth_status_success'))
+                            : state.status === 'error'
+                              ? `${t(getAuthKey(provider.id, 'oauth_status_error'))} ${state.error || ''}`
+                              : t(getAuthKey(provider.id, 'oauth_status_waiting'))}
+                        </div>
+                      )}
+                      {state.status === 'success' && (
+                        <div className={styles.successActions}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => navigate('/auth-files')}
+                          >
+                            {t('auth_login.view_auth_files')}
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </Card>
                 </div>
-              </Card>
-            </div>
-          );
+              );
             })}
 
           {activeTab === 'vertex' && (
-        <Card
-          title={
-            <span className={styles.cardTitle}>
-              <img src={iconVertex} alt="" className={styles.cardTitleIcon} />
-              {t('vertex_import.title')}
-            </span>
-          }
-          extra={
-            <Button onClick={handleVertexImport} loading={vertexState.loading}>
-              {t('vertex_import.import_button')}
-            </Button>
-          }
-        >
-          <div className={styles.cardContent}>
-            <div className={styles.cardHint}>{t('vertex_import.description')}</div>
-            <Input
-              label={t('vertex_import.location_label')}
-              hint={t('vertex_import.location_hint')}
-              value={vertexState.location}
-              onChange={(e) =>
-                setVertexState((prev) => ({
-                  ...prev,
-                  location: e.target.value
-                }))
+            <Card
+              title={
+                <span className={styles.cardTitle}>
+                  <img src={iconVertex} alt="" className={styles.cardTitleIcon} />
+                  {t('vertex_import.title')}
+                </span>
               }
-              placeholder={t('vertex_import.location_placeholder')}
-            />
-            <div className={styles.formItem}>
-              <label className={styles.formItemLabel}>{t('vertex_import.file_label')}</label>
-              <div className={styles.filePicker}>
-                <Button variant="secondary" size="sm" onClick={handleVertexFilePick}>
-                  {t('vertex_import.choose_file')}
+              extra={
+                <Button onClick={handleVertexImport} loading={vertexState.loading}>
+                  {t('vertex_import.import_button')}
                 </Button>
-                <div
-                  className={`${styles.fileName} ${
-                    vertexState.fileName ? '' : styles.fileNamePlaceholder
-                  }`.trim()}
-                >
-                  {vertexState.fileName || t('vertex_import.file_placeholder')}
+              }
+            >
+              <div className={styles.cardContent}>
+                <div className={styles.cardHint}>{t('vertex_import.description')}</div>
+                <Input
+                  label={t('vertex_import.location_label')}
+                  hint={t('vertex_import.location_hint')}
+                  value={vertexState.location}
+                  onChange={(e) =>
+                    setVertexState((prev) => ({
+                      ...prev,
+                      location: e.target.value,
+                    }))
+                  }
+                  placeholder={t('vertex_import.location_placeholder')}
+                />
+                <div className={styles.formItem}>
+                  <label className={styles.formItemLabel}>{t('vertex_import.file_label')}</label>
+                  <div className={styles.filePicker}>
+                    <Button variant="secondary" size="sm" onClick={handleVertexFilePick}>
+                      {t('vertex_import.choose_file')}
+                    </Button>
+                    <div
+                      className={`${styles.fileName} ${
+                        vertexState.fileName ? '' : styles.fileNamePlaceholder
+                      }`.trim()}
+                    >
+                      {vertexState.fileName || t('vertex_import.file_placeholder')}
+                    </div>
+                  </div>
+                  <div className={styles.cardHintSecondary}>{t('vertex_import.file_hint')}</div>
+                  <input
+                    ref={vertexFileInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    style={{ display: 'none' }}
+                    onChange={handleVertexFileChange}
+                  />
                 </div>
+                {vertexState.error && <div className="status-badge error">{vertexState.error}</div>}
+                {vertexState.result && (
+                  <div className={styles.connectionBox}>
+                    <div className={styles.connectionLabel}>{t('vertex_import.result_title')}</div>
+                    <div className={styles.keyValueList}>
+                      {vertexState.result.projectId && (
+                        <div className={styles.keyValueItem}>
+                          <span className={styles.keyValueKey}>
+                            {t('vertex_import.result_project')}
+                          </span>
+                          <span className={styles.keyValueValue}>
+                            {vertexState.result.projectId}
+                          </span>
+                        </div>
+                      )}
+                      {vertexState.result.email && (
+                        <div className={styles.keyValueItem}>
+                          <span className={styles.keyValueKey}>
+                            {t('vertex_import.result_email')}
+                          </span>
+                          <span className={styles.keyValueValue}>{vertexState.result.email}</span>
+                        </div>
+                      )}
+                      {vertexState.result.location && (
+                        <div className={styles.keyValueItem}>
+                          <span className={styles.keyValueKey}>
+                            {t('vertex_import.result_location')}
+                          </span>
+                          <span className={styles.keyValueValue}>
+                            {vertexState.result.location}
+                          </span>
+                        </div>
+                      )}
+                      {vertexState.result.authFile && (
+                        <div className={styles.keyValueItem}>
+                          <span className={styles.keyValueKey}>
+                            {t('vertex_import.result_file')}
+                          </span>
+                          <span className={styles.keyValueValue}>
+                            {vertexState.result.authFile}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className={styles.cardHintSecondary}>{t('vertex_import.file_hint')}</div>
-              <input
-                ref={vertexFileInputRef}
-                type="file"
-                accept=".json,application/json"
-                style={{ display: 'none' }}
-                onChange={handleVertexFileChange}
-              />
-            </div>
-            {vertexState.error && (
-              <div className="status-badge error">
-                {vertexState.error}
-              </div>
-            )}
-            {vertexState.result && (
-              <div className={styles.connectionBox}>
-                <div className={styles.connectionLabel}>{t('vertex_import.result_title')}</div>
-                <div className={styles.keyValueList}>
-                  {vertexState.result.projectId && (
-                    <div className={styles.keyValueItem}>
-                      <span className={styles.keyValueKey}>{t('vertex_import.result_project')}</span>
-                      <span className={styles.keyValueValue}>{vertexState.result.projectId}</span>
-                    </div>
-                  )}
-                  {vertexState.result.email && (
-                    <div className={styles.keyValueItem}>
-                      <span className={styles.keyValueKey}>{t('vertex_import.result_email')}</span>
-                      <span className={styles.keyValueValue}>{vertexState.result.email}</span>
-                    </div>
-                  )}
-                  {vertexState.result.location && (
-                    <div className={styles.keyValueItem}>
-                      <span className={styles.keyValueKey}>{t('vertex_import.result_location')}</span>
-                      <span className={styles.keyValueValue}>{vertexState.result.location}</span>
-                    </div>
-                  )}
-                  {vertexState.result.authFile && (
-                    <div className={styles.keyValueItem}>
-                      <span className={styles.keyValueKey}>{t('vertex_import.result_file')}</span>
-                      <span className={styles.keyValueValue}>{vertexState.result.authFile}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
+            </Card>
           )}
         </div>
       </div>

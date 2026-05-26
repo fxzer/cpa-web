@@ -14,12 +14,9 @@ import {
   CREDENTIAL_COST_WINDOW_GRACE_MS,
   buildCredentialCostBuckets,
   getCredentialRowKeyForFile,
-  sumCostInWindow
+  sumCostInWindow,
 } from '@/utils/credentialUsage';
-import {
-  fetchCodexQuotaWithMeta,
-  type CodexQuotaWindowMeta,
-} from '@/utils/codexQuotaMeta';
+import { fetchCodexQuotaWithMeta, type CodexQuotaWindowMeta } from '@/utils/codexQuotaMeta';
 import { isCodexFile } from '@/utils/quota';
 import { formatUsd, type ModelPrice } from '@/utils/usage';
 import styles from '@/pages/CredentialCenterPage.module.scss';
@@ -49,7 +46,10 @@ const getRemainingPercentLabel = (window: CodexQuotaWindow): string => {
   return remainingPercent === null ? '--' : `${Math.round(remainingPercent)}%`;
 };
 
-const estimateQuotaCost = (cost: number | null | undefined, window: CodexQuotaWindow | undefined): number | null => {
+const estimateQuotaCost = (
+  cost: number | null | undefined,
+  window: CodexQuotaWindow | undefined
+): number | null => {
   if (typeof cost !== 'number' || !Number.isFinite(cost)) return null;
   const remainingPercent = getRemainingPercentValue(window);
   if (remainingPercent === null) return null;
@@ -71,7 +71,7 @@ export function CodexCredentialQuotaCard({
   usage,
   loading,
   modelPrices,
-  authFiles
+  authFiles,
 }: CodexCredentialQuotaCardProps) {
   const { t } = useTranslation();
   const [refreshingKeys, setRefreshingKeys] = useState<Record<string, boolean>>({});
@@ -133,7 +133,7 @@ export function CodexCredentialQuotaCard({
                 weeklyEndMs - SEVEN_DAYS_MS,
                 weeklyEndMs,
                 CREDENTIAL_COST_WINDOW_GRACE_MS
-              )
+              ),
       });
     });
 
@@ -148,14 +148,14 @@ export function CodexCredentialQuotaCard({
       setRefreshingKeys((prev) => ({ ...prev, [quotaKey]: true }));
       setCodexQuota((prev) => ({
         ...prev,
-        [quotaKey]: CODEX_CONFIG.buildLoadingState()
+        [quotaKey]: CODEX_CONFIG.buildLoadingState(),
       }));
 
       try {
         const { data, meta } = await fetchCodexQuotaWithMeta(file, t);
         setCodexQuota((prev) => ({
           ...prev,
-          [quotaKey]: CODEX_CONFIG.buildSuccessState(data)
+          [quotaKey]: CODEX_CONFIG.buildSuccessState(data),
         }));
         setCodexQuotaMeta(quotaKey, meta);
       } catch (err: unknown) {
@@ -169,7 +169,7 @@ export function CodexCredentialQuotaCard({
           [quotaKey]: CODEX_CONFIG.buildErrorState(
             message,
             Number.isFinite(status) ? status : undefined
-          )
+          ),
         }));
       } finally {
         setRefreshingKeys((prev) => ({ ...prev, [quotaKey]: false }));
@@ -178,7 +178,10 @@ export function CodexCredentialQuotaCard({
     [setCodexQuota, setCodexQuotaMeta, t]
   );
 
-  const renderQuotaLimit = (quotaState: CodexQuotaState | undefined, id: 'five-hour' | 'weekly') => {
+  const renderQuotaLimit = (
+    quotaState: CodexQuotaState | undefined,
+    id: 'five-hour' | 'weekly'
+  ) => {
     if (quotaState?.status === 'loading') {
       return <span className={styles.quotaStatus}>{t('credential_center.quota_loading')}</span>;
     }
@@ -238,14 +241,20 @@ export function CodexCredentialQuotaCard({
               <tr>
                 <th>{t('credential_center.quota_credential')}</th>
                 <th className={styles.refreshColumn}>
-                  <span className={styles.visuallyHidden}>{t('credential_center.quota_refresh')}</span>
+                  <span className={styles.visuallyHidden}>
+                    {t('credential_center.quota_refresh')}
+                  </span>
                 </th>
                 <th className={styles.quotaLimitColumn}>{t('credential_center.quota_limit_5h')}</th>
                 <th className={styles.quotaLimitColumn}>{t('credential_center.quota_limit_7d')}</th>
                 <th className={styles.quotaSpendColumn}>{t('credential_center.quota_spend_5h')}</th>
                 <th className={styles.quotaSpendColumn}>{t('credential_center.quota_spend_7d')}</th>
-                <th className={styles.quotaEstimateColumn}>{t('credential_center.quota_estimate_5h')}</th>
-                <th className={styles.quotaEstimateColumn}>{t('credential_center.quota_estimate_7d')}</th>
+                <th className={styles.quotaEstimateColumn}>
+                  {t('credential_center.quota_estimate_5h')}
+                </th>
+                <th className={styles.quotaEstimateColumn}>
+                  {t('credential_center.quota_estimate_7d')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -276,8 +285,12 @@ export function CodexCredentialQuotaCard({
                         </Button>
                       </span>
                     </td>
-                    <td className={styles.quotaLimitColumn}>{renderQuotaLimit(quotaState, 'five-hour')}</td>
-                    <td className={styles.quotaLimitColumn}>{renderQuotaLimit(quotaState, 'weekly')}</td>
+                    <td className={styles.quotaLimitColumn}>
+                      {renderQuotaLimit(quotaState, 'five-hour')}
+                    </td>
+                    <td className={styles.quotaLimitColumn}>
+                      {renderQuotaLimit(quotaState, 'weekly')}
+                    </td>
                     <td className={styles.quotaSpendColumn}>
                       {spend?.fiveHourCost !== null && spend?.fiveHourCost !== undefined
                         ? formatUsd(spend.fiveHourCost)

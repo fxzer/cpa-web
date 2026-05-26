@@ -1,4 +1,9 @@
-import type { ApiKeyEntry, GeminiKeyConfig, OpenAIProviderConfig, ProviderKeyConfig } from '@/types';
+import type {
+  ApiKeyEntry,
+  GeminiKeyConfig,
+  OpenAIProviderConfig,
+  ProviderKeyConfig,
+} from '@/types';
 import {
   buildProviderOverviewLabel,
   buildProviderRequestLabel,
@@ -80,7 +85,9 @@ const createLookup = (): ConfiguredCredentialLookup => ({
 });
 
 /** Build lookup tables from configured provider API keys for request-detail credential resolution. */
-export function buildConfiguredCredentialLookup(input: SourceInfoMapInput): ConfiguredCredentialLookup {
+export function buildConfiguredCredentialLookup(
+  input: SourceInfoMapInput
+): ConfiguredCredentialLookup {
   const lookup = createLookup();
 
   const registerProviderKeyEntries = (
@@ -232,7 +239,7 @@ export function resolveConfiguredCredential(
   }
 
   return null;
-};
+}
 
 const firstText = (...values: Array<unknown>): string => {
   for (const value of values) {
@@ -308,7 +315,9 @@ export function resolveProviderModelColumnDisplay(input: {
   const showName =
     Boolean(normalizedName) &&
     (!channelTag || normalizedName.toLowerCase() !== channelTag) &&
-    !input.openaiProviderNames?.some((name) => name.trim().toLowerCase() === normalizedName.toLowerCase());
+    !input.openaiProviderNames?.some(
+      (name) => name.trim().toLowerCase() === normalizedName.toLowerCase()
+    );
 
   let headline = '-';
   if (channelTag && showName) {

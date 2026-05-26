@@ -5,11 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { IconGithub, IconBookOpen, IconExternalLink, IconCode } from '@/components/ui/icons';
-import {
-  useAuthStore,
-  useConfigStore,
-  useNotificationStore,
-} from '@/stores';
+import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import { configApi, versionApi } from '@/services/api';
 import { PANEL_WEBUI_GITHUB_URL, STORAGE_KEY_AUTH } from '@/utils/constants';
 import { copyToClipboard } from '@/utils/clipboard';

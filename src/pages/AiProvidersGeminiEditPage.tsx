@@ -16,8 +16,17 @@ import { apiCallApi, getApiCallErrorMessage, modelsApi, providersApi } from '@/s
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import type { KeyTestStatus } from '@/stores/useOpenAIEditDraftStore';
 import type { GeminiKeyConfig } from '@/types';
-import { buildHeaderObject, hasHeader, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
-import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
+import {
+  buildHeaderObject,
+  hasHeader,
+  headersToEntries,
+  normalizeHeaderEntries,
+} from '@/utils/headers';
+import {
+  areKeyValueEntriesEqual,
+  areModelEntriesEqual,
+  areStringArraysEqual,
+} from '@/utils/compare';
 import type { ModelInfo } from '@/utils/models';
 import { entriesToModels, modelsToEntries } from '@/components/ui/modelInputListUtils';
 import { ProviderApiKeyEntriesEditor } from '@/components/providers/ProviderApiKeyEntriesEditor';
@@ -107,7 +116,9 @@ type GeminiFormBaseline = {
 const buildGeminiBaseline = (form: GeminiFormState): GeminiFormBaseline => ({
   apiKeyEntries: normalizeApiKeyEntriesForBaseline(form.apiKeyEntries),
   priority:
-    form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
+    form.priority !== undefined && Number.isFinite(form.priority)
+      ? Math.trunc(form.priority)
+      : null,
   name: String(form.name ?? '').trim(),
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
@@ -292,7 +303,9 @@ export function AiProvidersGeminiEditPage() {
     const modelsSignature = form.modelEntries
       .map((entry) => `${entry.name.trim()}:${entry.alias.trim()}`)
       .join('|');
-    return [form.baseUrl?.trim() ?? '', testModel.trim(), headersSignature, modelsSignature].join('||');
+    return [form.baseUrl?.trim() ?? '', testModel.trim(), headersSignature, modelsSignature].join(
+      '||'
+    );
   }, [form.baseUrl, form.headers, form.modelEntries, testModel]);
   const previousConnectivityConfigRef = useRef(connectivityConfigSignature);
 
@@ -308,7 +321,8 @@ export function AiProvidersGeminiEditPage() {
   }, [connectivityConfigSignature, form.apiKeyEntries.length, resetKeyTestStatuses]);
 
   const apiKeysSignature = useMemo(
-    () => form.apiKeyEntries.map((entry) => `${entry.apiKey ?? ''}|${entry.proxyUrl ?? ''}`).join(';'),
+    () =>
+      form.apiKeyEntries.map((entry) => `${entry.apiKey ?? ''}|${entry.proxyUrl ?? ''}`).join(';'),
     [form.apiKeyEntries]
   );
 
@@ -373,7 +387,9 @@ export function AiProvidersGeminiEditPage() {
         lines.push(
           t('ai_providers.openai_batch_model_tooltip_line', {
             keyIndex: ki + 1,
-            status: r.success ? t('ai_providers.openai_batch_status_ok') : t('ai_providers.openai_batch_status_fail'),
+            status: r.success
+              ? t('ai_providers.openai_batch_status_ok')
+              : t('ai_providers.openai_batch_status_fail'),
             code: r.statusCode != null ? ` HTTP ${r.statusCode}` : '',
             message: r.message ? ` ${r.message}` : '',
           })
@@ -578,7 +594,12 @@ export function AiProvidersGeminiEditPage() {
   ]);
 
   const canSave =
-    !disableControls && !saving && !loading && !invalidIndexParam && !invalidIndex && !isTestingKeys;
+    !disableControls &&
+    !saving &&
+    !loading &&
+    !invalidIndexParam &&
+    !invalidIndex &&
+    !isTestingKeys;
 
   const discoveredModelsFiltered = useMemo(() => {
     const filter = modelDiscoverySearch.trim().toLowerCase();
@@ -711,7 +732,13 @@ export function AiProvidersGeminiEditPage() {
     autoFetchSignatureRef.current = signature;
 
     void fetchGeminiModelDiscovery();
-  }, [fetchGeminiModelDiscovery, form.apiKeyEntries, form.baseUrl, form.headers, modelDiscoveryOpen]);
+  }, [
+    fetchGeminiModelDiscovery,
+    form.apiKeyEntries,
+    form.baseUrl,
+    form.headers,
+    modelDiscoveryOpen,
+  ]);
 
   useEffect(() => {
     const availableNames = new Set(discoveredModels.map((model) => model.name));
@@ -930,197 +957,202 @@ export function AiProvidersGeminiEditPage() {
         ) : (
           <>
             <div className={styles.openaiEditForm}>
-            <div className={styles.providerEditTopGrid}>
-              <Input
-                label={t('ai_providers.provider_name_label')}
-                value={form.name ?? ''}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                hint={t('ai_providers.provider_name_hint')}
-                disabled={disableControls || saving}
-              />
-              <Input
-                label={t('ai_providers.priority_label')}
-                hint={t('ai_providers.priority_hint')}
-                type="number"
-                step={1}
-                value={form.priority ?? ''}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  const parsed = raw.trim() === '' ? undefined : Number(raw);
-                  setForm((prev) => ({
-                    ...prev,
-                    priority: parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
-                  }));
-                }}
-                disabled={disableControls || saving}
-              />
-              <Input
-                label={t('ai_providers.prefix_label')}
-                placeholder={t('ai_providers.prefix_placeholder')}
-                value={form.prefix ?? ''}
-                onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
-                hint={t('ai_providers.prefix_hint')}
-                disabled={disableControls || saving}
-              />
-              <Input
-                label={t('ai_providers.gemini_base_url_label')}
-                placeholder={t('ai_providers.gemini_base_url_placeholder')}
-                value={form.baseUrl ?? ''}
-                onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
-                disabled={disableControls || saving}
-              />
-            </div>
-            <div className={styles.keyEntriesSection}>
-              <div className={styles.keyEntriesHeader}>
-                <label className={styles.keyEntriesLabel}>{t('ai_providers.gemini_add_modal_key_label')}</label>
-                <span className={styles.keyEntriesHint}>{t('ai_providers.provider_keys_hint')}</span>
+              <div className={styles.providerEditTopGrid}>
+                <Input
+                  label={t('ai_providers.provider_name_label')}
+                  value={form.name ?? ''}
+                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                  hint={t('ai_providers.provider_name_hint')}
+                  disabled={disableControls || saving}
+                />
+                <Input
+                  label={t('ai_providers.priority_label')}
+                  hint={t('ai_providers.priority_hint')}
+                  type="number"
+                  step={1}
+                  value={form.priority ?? ''}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const parsed = raw.trim() === '' ? undefined : Number(raw);
+                    setForm((prev) => ({
+                      ...prev,
+                      priority:
+                        parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
+                    }));
+                  }}
+                  disabled={disableControls || saving}
+                />
+                <Input
+                  label={t('ai_providers.prefix_label')}
+                  placeholder={t('ai_providers.prefix_placeholder')}
+                  value={form.prefix ?? ''}
+                  onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
+                  hint={t('ai_providers.prefix_hint')}
+                  disabled={disableControls || saving}
+                />
+                <Input
+                  label={t('ai_providers.gemini_base_url_label')}
+                  placeholder={t('ai_providers.gemini_base_url_placeholder')}
+                  value={form.baseUrl ?? ''}
+                  onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
+                  disabled={disableControls || saving}
+                />
               </div>
-              <ProviderApiKeyEntriesEditor
-                entries={form.apiKeyEntries}
-                disabled={disableControls || saving}
-                onChange={(apiKeyEntries) => {
-                  setForm((prev) => ({ ...prev, apiKeyEntries }));
-                  resetKeyTestStatuses(apiKeyEntries.length);
-                  setTestStatus('idle');
-                  setTestMessage('');
-                }}
-                keyTestStatuses={keyTestStatuses}
-                isTestingKeys={isTestingKeys}
-                hasConfiguredModels={hasConfiguredModels}
-                baseUrl={form.baseUrl ?? ''}
-                onBatchTest={openBatchModelTest}
-                onSingleTest={(index) => void testSingleKey(index)}
-              />
-            </div>
-            <HeaderInputList
-              entries={form.headers}
-              onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}
-              addLabel={t('common.custom_headers_add')}
-              keyPlaceholder={t('common.custom_headers_key_placeholder')}
-              valuePlaceholder={t('common.custom_headers_value_placeholder')}
-              removeButtonTitle={t('common.delete')}
-              removeButtonAriaLabel={t('common.delete')}
-              disabled={disableControls || saving}
-            />
-
-            <div className={styles.modelConfigSection}>
-              <div className={styles.modelConfigHeader}>
-                <label className={styles.modelConfigTitle}>
-                  {t('ai_providers.gemini_models_label')}
-                </label>
-                <div className={styles.modelConfigToolbar}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        modelEntries: [...prev.modelEntries, { name: '', alias: '' }],
-                      }))
-                    }
-                    disabled={disableControls || saving || isTestingKeys}
-                  >
-                    {t('ai_providers.gemini_models_add_btn')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setModelDiscoveryOpen(true)}
-                    disabled={!canOpenModelDiscovery || isTestingKeys}
-                  >
-                    {t('ai_providers.gemini_models_fetch_button')}
-                  </Button>
-                  <div className={styles.modelToolbarTestCluster}>
-                    <Select
-                      value={testModel}
-                      options={modelSelectOptions}
-                      onChange={(value) => {
-                        setTestModel(value);
-                        setTestStatus('idle');
-                        setTestMessage('');
-                      }}
-                      placeholder={
-                        availableModels.length
-                          ? t('ai_providers.openai_test_select_placeholder')
-                          : t('ai_providers.openai_test_select_empty')
-                      }
-                      className={styles.openaiTestSelect}
-                      ariaLabel={t('ai_providers.openai_test_title')}
-                      disabled={
-                        disableControls ||
-                        saving ||
-                        isTestingKeys ||
-                        testStatus === 'loading' ||
-                        availableModels.length === 0
-                      }
-                    />
-                    <Button
-                      variant={testStatus === 'error' ? 'danger' : 'secondary'}
-                      size="sm"
-                      onClick={() => void testAllKeys()}
-                      loading={testStatus === 'loading'}
-                      disabled={
-                        disableControls ||
-                        saving ||
-                        isTestingKeys ||
-                        testStatus === 'loading' ||
-                        !hasConfiguredModels ||
-                        !hasTestableKeys
-                      }
-                      title={t('ai_providers.openai_test_all_hint')}
-                      className={styles.modelTestAllButton}
-                    >
-                      {t('ai_providers.openai_test_all_action')}
-                    </Button>
-                  </div>
+              <div className={styles.keyEntriesSection}>
+                <div className={styles.keyEntriesHeader}>
+                  <label className={styles.keyEntriesLabel}>
+                    {t('ai_providers.gemini_add_modal_key_label')}
+                  </label>
+                  <span className={styles.keyEntriesHint}>
+                    {t('ai_providers.provider_keys_hint')}
+                  </span>
                 </div>
+                <ProviderApiKeyEntriesEditor
+                  entries={form.apiKeyEntries}
+                  disabled={disableControls || saving}
+                  onChange={(apiKeyEntries) => {
+                    setForm((prev) => ({ ...prev, apiKeyEntries }));
+                    resetKeyTestStatuses(apiKeyEntries.length);
+                    setTestStatus('idle');
+                    setTestMessage('');
+                  }}
+                  keyTestStatuses={keyTestStatuses}
+                  isTestingKeys={isTestingKeys}
+                  hasConfiguredModels={hasConfiguredModels}
+                  baseUrl={form.baseUrl ?? ''}
+                  onBatchTest={openBatchModelTest}
+                  onSingleTest={(index) => void testSingleKey(index)}
+                />
               </div>
-              <div className={styles.sectionHint}>{t('ai_providers.gemini_models_hint')}</div>
-
-              <ModelInputList
-                entries={form.modelEntries}
-                onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
-                namePlaceholder={t('common.model_name_placeholder')}
-                aliasPlaceholder={t('common.model_alias_placeholder')}
-                disabled={disableControls || saving || isTestingKeys}
-                hideAddButton
-                className={styles.modelInputList}
-                rowClassName={styles.modelInputRow}
-                inputClassName={styles.modelInputField}
-                removeButtonClassName={styles.modelRowRemoveButton}
+              <HeaderInputList
+                entries={form.headers}
+                onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}
+                addLabel={t('common.custom_headers_add')}
+                keyPlaceholder={t('common.custom_headers_key_placeholder')}
+                valuePlaceholder={t('common.custom_headers_value_placeholder')}
                 removeButtonTitle={t('common.delete')}
                 removeButtonAriaLabel={t('common.delete')}
-                renderAfterRow={(_idx, entry) => renderBatchModelRowStatus(entry.name)}
-              />
-
-              {testMessage && (
-                <div
-                  className={`status-badge ${
-                    testStatus === 'error'
-                      ? 'error'
-                      : testStatus === 'success'
-                        ? 'success'
-                        : 'muted'
-                  }`}
-                >
-                  {testMessage}
-                </div>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label>{t('ai_providers.excluded_models_label')}</label>
-              <textarea
-                className="input"
-                placeholder={t('ai_providers.excluded_models_placeholder')}
-                value={form.excludedText}
-                onChange={(e) => setForm((prev) => ({ ...prev, excludedText: e.target.value }))}
-                rows={4}
                 disabled={disableControls || saving}
               />
-              <div className="hint">{t('ai_providers.excluded_models_hint')}</div>
+
+              <div className={styles.modelConfigSection}>
+                <div className={styles.modelConfigHeader}>
+                  <label className={styles.modelConfigTitle}>
+                    {t('ai_providers.gemini_models_label')}
+                  </label>
+                  <div className={styles.modelConfigToolbar}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          modelEntries: [...prev.modelEntries, { name: '', alias: '' }],
+                        }))
+                      }
+                      disabled={disableControls || saving || isTestingKeys}
+                    >
+                      {t('ai_providers.gemini_models_add_btn')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setModelDiscoveryOpen(true)}
+                      disabled={!canOpenModelDiscovery || isTestingKeys}
+                    >
+                      {t('ai_providers.gemini_models_fetch_button')}
+                    </Button>
+                    <div className={styles.modelToolbarTestCluster}>
+                      <Select
+                        value={testModel}
+                        options={modelSelectOptions}
+                        onChange={(value) => {
+                          setTestModel(value);
+                          setTestStatus('idle');
+                          setTestMessage('');
+                        }}
+                        placeholder={
+                          availableModels.length
+                            ? t('ai_providers.openai_test_select_placeholder')
+                            : t('ai_providers.openai_test_select_empty')
+                        }
+                        className={styles.openaiTestSelect}
+                        ariaLabel={t('ai_providers.openai_test_title')}
+                        disabled={
+                          disableControls ||
+                          saving ||
+                          isTestingKeys ||
+                          testStatus === 'loading' ||
+                          availableModels.length === 0
+                        }
+                      />
+                      <Button
+                        variant={testStatus === 'error' ? 'danger' : 'secondary'}
+                        size="sm"
+                        onClick={() => void testAllKeys()}
+                        loading={testStatus === 'loading'}
+                        disabled={
+                          disableControls ||
+                          saving ||
+                          isTestingKeys ||
+                          testStatus === 'loading' ||
+                          !hasConfiguredModels ||
+                          !hasTestableKeys
+                        }
+                        title={t('ai_providers.openai_test_all_hint')}
+                        className={styles.modelTestAllButton}
+                      >
+                        {t('ai_providers.openai_test_all_action')}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.sectionHint}>{t('ai_providers.gemini_models_hint')}</div>
+
+                <ModelInputList
+                  entries={form.modelEntries}
+                  onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
+                  namePlaceholder={t('common.model_name_placeholder')}
+                  aliasPlaceholder={t('common.model_alias_placeholder')}
+                  disabled={disableControls || saving || isTestingKeys}
+                  hideAddButton
+                  className={styles.modelInputList}
+                  rowClassName={styles.modelInputRow}
+                  inputClassName={styles.modelInputField}
+                  removeButtonClassName={styles.modelRowRemoveButton}
+                  removeButtonTitle={t('common.delete')}
+                  removeButtonAriaLabel={t('common.delete')}
+                  renderAfterRow={(_idx, entry) => renderBatchModelRowStatus(entry.name)}
+                />
+
+                {testMessage && (
+                  <div
+                    className={`status-badge ${
+                      testStatus === 'error'
+                        ? 'error'
+                        : testStatus === 'success'
+                          ? 'success'
+                          : 'muted'
+                    }`}
+                  >
+                    {testMessage}
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label>{t('ai_providers.excluded_models_label')}</label>
+                <textarea
+                  className="input"
+                  placeholder={t('ai_providers.excluded_models_placeholder')}
+                  value={form.excludedText}
+                  onChange={(e) => setForm((prev) => ({ ...prev, excludedText: e.target.value }))}
+                  rows={4}
+                  disabled={disableControls || saving}
+                />
+                <div className="hint">{t('ai_providers.excluded_models_hint')}</div>
+              </div>
             </div>
-          </div>
 
             <Modal
               open={modelDiscoveryOpen}

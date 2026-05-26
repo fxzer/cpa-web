@@ -29,7 +29,7 @@ type SyncStatusType = 'info' | 'success' | 'error';
 export function PriceSettingsCard({
   modelNames,
   modelPrices,
-  onPricesChange
+  onPricesChange,
 }: PriceSettingsCardProps) {
   const { t } = useTranslation();
 
@@ -108,7 +108,7 @@ export function PriceSettingsCard({
   const options = useMemo(
     () => [
       { value: '', label: t('usage_stats.model_price_select_placeholder') },
-      ...modelNames.map((name) => ({ value: name, label: name }))
+      ...modelNames.map((name) => ({ value: name, label: name })),
     ],
     [modelNames, t]
   );
@@ -185,7 +185,7 @@ export function PriceSettingsCard({
         t('usage_stats.price_sync_status_success', {
           matched: result.matchedCount,
           total: result.totalModels,
-        }),
+        })
       );
       setSyncStatusType('success');
     } catch (err) {
@@ -204,11 +204,12 @@ export function PriceSettingsCard({
     onPricesChange,
   ]);
 
-  const syncStatusClass = syncStatusType === 'success'
-    ? `${styles.syncStatus} ${styles.syncStatusSuccess}`
-    : syncStatusType === 'error'
-      ? `${styles.syncStatus} ${styles.syncStatusError}`
-      : `${styles.syncStatus} ${styles.syncStatusInfo}`;
+  const syncStatusClass =
+    syncStatusType === 'success'
+      ? `${styles.syncStatus} ${styles.syncStatusSuccess}`
+      : syncStatusType === 'error'
+        ? `${styles.syncStatus} ${styles.syncStatusError}`
+        : `${styles.syncStatus} ${styles.syncStatusInfo}`;
 
   const syncButton = (
     <Button variant="secondary" size="sm" onClick={handleOpenSync}>
@@ -364,18 +365,10 @@ export function PriceSettingsCard({
         closeDisabled={syncPending}
         footer={
           <div className={styles.priceActions}>
-            <Button
-              variant="secondary"
-              onClick={() => setSyncOpen(false)}
-              disabled={syncPending}
-            >
+            <Button variant="secondary" onClick={() => setSyncOpen(false)} disabled={syncPending}>
               {t('common.cancel')}
             </Button>
-            <Button
-              variant="secondary"
-              onClick={handleSaveSettingsOnly}
-              disabled={syncPending}
-            >
+            <Button variant="secondary" onClick={handleSaveSettingsOnly} disabled={syncPending}>
               {t('usage_stats.price_sync_save_settings')}
             </Button>
             <Button
@@ -393,9 +386,7 @@ export function PriceSettingsCard({
         width={540}
       >
         <div className={styles.syncModalBody}>
-          <p className={styles.syncDesc}>
-            {t('usage_stats.price_sync_desc')}
-          </p>
+          <p className={styles.syncDesc}>{t('usage_stats.price_sync_desc')}</p>
 
           <div className={styles.syncFieldGroup}>
             <label className={styles.syncFieldLabel}>
@@ -448,11 +439,7 @@ export function PriceSettingsCard({
             />
           </div>
 
-          {syncStatusMsg && (
-            <div className={syncStatusClass}>
-              {syncStatusMsg}
-            </div>
-          )}
+          {syncStatusMsg && <div className={syncStatusClass}>{syncStatusMsg}</div>}
         </div>
       </Modal>
     </Card>

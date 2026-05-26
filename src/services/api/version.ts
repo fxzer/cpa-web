@@ -6,5 +6,5 @@
 import { apiClient } from './client';
 
 export const versionApi = {
-  checkLatest: () => apiClient.get<Record<string, unknown>>('/latest-version')
+  checkLatest: () => apiClient.get<Record<string, unknown>>('/latest-version'),
 };

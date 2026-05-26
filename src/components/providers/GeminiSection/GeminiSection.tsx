@@ -58,7 +58,6 @@ export function GeminiSection({
     const cache = new Map<string, ReturnType<typeof statusBarDataFromRecentRequests>>();
 
     configs.forEach((config, index) => {
-      
       const configKey = getProviderConfigKey(config, index);
       cache.set(
         configKey,
@@ -189,7 +188,10 @@ export function GeminiSection({
                     </div>
                     <div className={styles.modelTagList}>
                       {excludedModels.map((model) => (
-                        <span key={model} className={`${styles.modelTag} ${styles.excludedModelTag}`}>
+                        <span
+                          key={model}
+                          className={`${styles.modelTag} ${styles.excludedModelTag}`}
+                        >
                           <span className={styles.modelName}>{model}</span>
                         </span>
                       ))}

@@ -48,11 +48,7 @@ export function AmpcodeSection({
           />
         }
         extra={
-          <Button
-            size="sm"
-            onClick={onEdit}
-            disabled={disableControls || loading || isSwitching}
-          >
+          <Button size="sm" onClick={onEdit} disabled={disableControls || loading || isSwitching}>
             {t('common.edit')}
           </Button>
         }
@@ -62,7 +58,9 @@ export function AmpcodeSection({
         ) : (
           <>
             <div className={styles.fieldRow}>
-              <span className={styles.fieldLabel}>{t('ai_providers.ampcode_upstream_url_label')}:</span>
+              <span className={styles.fieldLabel}>
+                {t('ai_providers.ampcode_upstream_url_label')}:
+              </span>
               {config?.upstreamUrl ? (
                 <CopyableUrlValue value={config.upstreamUrl} />
               ) : (
@@ -86,11 +84,15 @@ export function AmpcodeSection({
               </span>
             </div>
             <div className={styles.fieldRow} style={{ marginTop: 8 }}>
-              <span className={styles.fieldLabel}>{t('ai_providers.ampcode_model_mappings_count')}:</span>
+              <span className={styles.fieldLabel}>
+                {t('ai_providers.ampcode_model_mappings_count')}:
+              </span>
               <span className={styles.fieldValue}>{config?.modelMappings?.length || 0}</span>
             </div>
             <div className={styles.fieldRow}>
-              <span className={styles.fieldLabel}>{t('ai_providers.ampcode_upstream_api_keys_count')}:</span>
+              <span className={styles.fieldLabel}>
+                {t('ai_providers.ampcode_upstream_api_keys_count')}:
+              </span>
               <span className={styles.fieldValue}>{config?.upstreamApiKeys?.length || 0}</span>
             </div>
             {config?.modelMappings?.length ? (

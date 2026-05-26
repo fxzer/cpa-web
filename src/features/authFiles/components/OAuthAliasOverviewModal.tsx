@@ -3,10 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
-import {
-  ModelMappingDiagram,
-  type ModelMappingDiagramRef,
-} from '@/components/modelAlias';
+import { ModelMappingDiagram, type ModelMappingDiagramRef } from '@/components/modelAlias';
 import type { OAuthModelAliasEntry } from '@/types';
 import type { AuthFileModelItem } from '@/features/authFiles/constants';
 import { getTypeColor, getTypeLabel } from '@/features/authFiles/constants';
@@ -91,9 +88,7 @@ export function OAuthAliasOverviewModal(props: OAuthAliasOverviewModalProps) {
   );
 
   const scopeLabel =
-    providerFilter === 'all'
-      ? t('auth_files.filter_all')
-      : getTypeLabel(t, providerFilter);
+    providerFilter === 'all' ? t('auth_files.filter_all') : getTypeLabel(t, providerFilter);
 
   const scopeBadgeStyle = useMemo(() => {
     const colorKey = providerFilter === 'all' ? 'unknown' : providerFilter;

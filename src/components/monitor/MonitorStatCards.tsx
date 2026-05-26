@@ -6,7 +6,7 @@ import {
   IconDollarSign,
   IconSatellite,
   IconTimer,
-  IconTrendingUp
+  IconTrendingUp,
 } from '@/components/ui/icons';
 import {
   calculateRecentPerMinuteRates,
@@ -15,7 +15,7 @@ import {
   formatPerMinuteValue,
   formatUsd,
   type ModelPrice,
-  type UsageTimeRange
+  type UsageTimeRange,
 } from '@/utils/usage';
 import { sparklineOptions } from '@/utils/usage/chartConfig';
 import type { UsagePayload, SparklineBundle } from '@/components/usage';
@@ -53,7 +53,7 @@ export function MonitorStatCards({
   modelPrices,
   rateWindowMinutes,
   timeRange,
-  sparklines
+  sparklines,
 }: MonitorStatCardsProps) {
   const { t } = useTranslation();
 
@@ -73,7 +73,7 @@ export function MonitorStatCards({
       accentSoft: 'rgba(14, 165, 233, 0.18)',
       accentBorder: 'rgba(14, 165, 233, 0.32)',
       value: loading ? '-' : (usage?.total_requests ?? 0).toLocaleString(),
-      trend: sparklines.requests
+      trend: sparklines.requests,
     },
     {
       key: 'tokens',
@@ -83,7 +83,7 @@ export function MonitorStatCards({
       accentSoft: 'rgba(139, 92, 246, 0.18)',
       accentBorder: 'rgba(139, 92, 246, 0.35)',
       value: loading ? '-' : formatCompactNumber(usage?.total_tokens ?? 0),
-      trend: sparklines.tokens
+      trend: sparklines.tokens,
     },
     {
       key: 'rpm',
@@ -93,7 +93,7 @@ export function MonitorStatCards({
       accentSoft: 'rgba(34, 197, 94, 0.18)',
       accentBorder: 'rgba(34, 197, 94, 0.32)',
       value: loading ? '-' : formatPerMinuteValue(rateStats.rpm),
-      trend: sparklines.rpm
+      trend: sparklines.rpm,
     },
     {
       key: 'tpm',
@@ -103,7 +103,7 @@ export function MonitorStatCards({
       accentSoft: 'rgba(249, 115, 22, 0.18)',
       accentBorder: 'rgba(249, 115, 22, 0.32)',
       value: loading ? '-' : formatPerMinuteValue(rateStats.tpm),
-      trend: sparklines.tpm
+      trend: sparklines.tpm,
     },
     {
       key: 'cost',
@@ -113,8 +113,8 @@ export function MonitorStatCards({
       accentSoft: 'rgba(236, 72, 153, 0.18)',
       accentBorder: 'rgba(236, 72, 153, 0.34)',
       value: loading ? '-' : hasPrices ? formatUsd(totalCost) : '--',
-      trend: hasPrices ? sparklines.cost : null
-    }
+      trend: hasPrices ? sparklines.cost : null,
+    },
   ];
 
   return (
@@ -127,7 +127,7 @@ export function MonitorStatCards({
             {
               '--accent': card.accent,
               '--accent-soft': card.accentSoft,
-              '--accent-border': card.accentBorder
+              '--accent-border': card.accentBorder,
             } as CSSProperties
           }
         >
@@ -138,7 +138,11 @@ export function MonitorStatCards({
           <div className={styles.statValue}>{card.value}</div>
           <div className={styles.statTrend}>
             {card.trend ? (
-              <Line className={styles.sparkline} data={card.trend.data} options={sparklineOptions} />
+              <Line
+                className={styles.sparkline}
+                data={card.trend.data}
+                options={sparklineOptions}
+              />
             ) : (
               <div className={styles.statTrendPlaceholder}></div>
             )}

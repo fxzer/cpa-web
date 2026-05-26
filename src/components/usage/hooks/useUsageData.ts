@@ -1,6 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { USAGE_STATS_STALE_TIME_MS, useUsageStatsStore } from '@/stores/useUsageStatsStore';
-import { loadModelPrices, saveModelPrices, type ModelPrice, type UsageTimeRange } from '@/utils/usage';
+import {
+  loadModelPrices,
+  saveModelPrices,
+  type ModelPrice,
+  type UsageTimeRange,
+} from '@/utils/usage';
 
 export interface UsagePayload {
   total_requests?: number;
@@ -35,7 +40,9 @@ export function useUsageData(options: UseUsageDataOptions = {}): UseUsageDataRet
   const lastRefreshedAtTs = useUsageStatsStore((state) => state.lastRefreshedAt);
   const loadUsageStats = useUsageStatsStore((state) => state.loadUsageStats);
 
-  const [modelPrices, setModelPrices] = useState<Record<string, ModelPrice>>(() => loadModelPrices());
+  const [modelPrices, setModelPrices] = useState<Record<string, ModelPrice>>(() =>
+    loadModelPrices()
+  );
 
   const loadUsage = useCallback(async () => {
     await loadUsageStats({

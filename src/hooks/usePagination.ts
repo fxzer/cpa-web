@@ -54,6 +54,6 @@ export function usePagination<T>(
     goToPage,
     nextPage,
     prevPage,
-    setPageSize: handleSetPageSize
+    setPageSize: handleSetPageSize,
   };
 }

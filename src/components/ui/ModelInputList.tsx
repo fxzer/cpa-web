@@ -45,7 +45,9 @@ export function ModelInputList({
   const rowClassNames = ['header-input-row', rowClassName].filter(Boolean).join(' ');
 
   const updateEntry = (index: number, field: 'name' | 'alias', value: string) => {
-    const next = currentEntries.map((entry, idx) => (idx === index ? { ...entry, [field]: value } : entry));
+    const next = currentEntries.map((entry, idx) =>
+      idx === index ? { ...entry, [field]: value } : entry
+    );
     onChange(next);
   };
 
@@ -98,7 +100,13 @@ export function ModelInputList({
         </Fragment>
       ))}
       {!hideAddButton && addLabel && (
-        <Button variant="secondary" size="sm" onClick={addEntry} disabled={disabled} className="align-start">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={addEntry}
+          disabled={disabled}
+          className="align-start"
+        >
           {addLabel}
         </Button>
       )}

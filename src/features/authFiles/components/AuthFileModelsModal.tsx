@@ -89,18 +89,19 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
     const keyword = search.trim().toLowerCase();
     if (!keyword) return rows;
     return rows.filter((row) => {
-      const id = String(row.id ?? '').trim().toLowerCase();
-      const alias = String(row.alias ?? '').trim().toLowerCase();
+      const id = String(row.id ?? '')
+        .trim()
+        .toLowerCase();
+      const alias = String(row.alias ?? '')
+        .trim()
+        .toLowerCase();
       return id.includes(keyword) || alias.includes(keyword);
     });
   }, [rows, search]);
 
-  const updateRow = useCallback(
-    (index: number, patch: Partial<AuthFileModelConfigRow>) => {
-      setRows((prev) => prev.map((row, idx) => (idx === index ? { ...row, ...patch } : row)));
-    },
-    []
-  );
+  const updateRow = useCallback((index: number, patch: Partial<AuthFileModelConfigRow>) => {
+    setRows((prev) => prev.map((row, idx) => (idx === index ? { ...row, ...patch } : row)));
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!fileName) return;
@@ -253,9 +254,7 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
                         className={`input ${styles.modelsModalAliasInput}`}
                         placeholder={t('oauth_model_alias.alias_empty_passthrough_placeholder')}
                         value={row.alias}
-                        onChange={(event) =>
-                          updateRow(rowIndex, { alias: event.target.value })
-                        }
+                        onChange={(event) => updateRow(rowIndex, { alias: event.target.value })}
                         disabled={saving || !name}
                       />
                     ) : (

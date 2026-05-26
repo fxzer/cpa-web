@@ -627,7 +627,10 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
-  transition: transform $transition-fast, box-shadow $transition-fast, border-color $transition-fast;
+  transition:
+    transform $transition-fast,
+    box-shadow $transition-fast,
+    border-color $transition-fast;
 
   &:hover {
     transform: translateY(-2px);
@@ -705,4 +708,42 @@
     font-size: 14px;
     line-height: 1.6;
   }
+}
+
+.allSectionsWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.pageTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.globalRefreshButton:global(.btn.btn-sm) {
+  padding-inline: 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-secondary));
+  border-color: color-mix(in srgb, var(--primary-color) 22%, var(--border-color));
+  color: var(--text-primary);
+
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--primary-color) 16%, var(--bg-secondary));
+    border-color: color-mix(in srgb, var(--primary-color) 34%, var(--border-color));
+  }
+}
+
+:global([data-theme='dark']) .globalRefreshButton:global(.btn.btn-sm) {
+  background: color-mix(in srgb, var(--primary-color) 18%, var(--bg-secondary));
+  border-color: color-mix(in srgb, var(--primary-color) 32%, var(--border-color));
 }

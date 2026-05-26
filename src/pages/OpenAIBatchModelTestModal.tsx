@@ -8,7 +8,10 @@ import { apiCallApi, getApiCallErrorMessage } from '@/services/api';
 import { modelsApi } from '@/services/api';
 import type { ModelInfo } from '@/utils/models';
 import { buildHeaderObject, hasHeader } from '@/utils/headers';
-import { buildOpenAIModelsEndpoint, buildOpenAIChatCompletionsEndpoint } from '@/components/providers/utils';
+import {
+  buildOpenAIModelsEndpoint,
+  buildOpenAIChatCompletionsEndpoint,
+} from '@/components/providers/utils';
 import type { OpenAIFormState } from '@/components/providers/types';
 import styles from './AiProvidersPage.module.scss';
 
@@ -34,7 +37,10 @@ export type OpenAIBatchModelTestModalProps = {
   saving: boolean;
   disableControls: boolean;
   form: OpenAIFormState;
-  onBatchComplete: (payload: { keyIndex: number; results: Record<string, OpenAIBatchModelTestRowResult> }) => void;
+  onBatchComplete: (payload: {
+    keyIndex: number;
+    results: Record<string, OpenAIBatchModelTestRowResult>;
+  }) => void;
 };
 
 export function OpenAIBatchModelTestModal({
@@ -243,7 +249,8 @@ export function OpenAIBatchModelTestModal({
               typeof err === 'object' && err !== null && 'code' in err
                 ? String((err as { code?: string }).code)
                 : '';
-            const isTimeout = errorCode === 'ECONNABORTED' || message.toLowerCase().includes('timeout');
+            const isTimeout =
+              errorCode === 'ECONNABORTED' || message.toLowerCase().includes('timeout');
             results[modelName] = {
               success: false,
               message: isTimeout

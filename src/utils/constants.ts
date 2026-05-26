@@ -46,7 +46,7 @@ export const STORAGE_KEY_AUTH_FILES_PAGE_SIZE = 'cli-proxy-auth-files-page-size'
 export const LANGUAGE_ORDER = defineLanguageOrder(['zh-CN', 'en'] as const);
 export const LANGUAGE_LABEL_KEYS: Record<Language, string> = {
   'zh-CN': 'language.chinese',
-  en: 'language.english'
+  en: 'language.english',
 };
 export const SUPPORTED_LANGUAGES = LANGUAGE_ORDER;
 
@@ -59,14 +59,14 @@ export const OAUTH_CARD_IDS = [
   'anthropic-oauth-card',
   'antigravity-oauth-card',
   'gemini-cli-oauth-card',
-  'kimi-oauth-card'
+  'kimi-oauth-card',
 ];
 export const OAUTH_PROVIDERS = {
   CODEX: 'codex',
   ANTHROPIC: 'anthropic',
   ANTIGRAVITY: 'antigravity',
   GEMINI_CLI: 'gemini-cli',
-  KIMI: 'kimi'
+  KIMI: 'kimi',
 } as const;
 
 // API 端点
@@ -77,5 +77,5 @@ export const API_ENDPOINTS = {
   PROVIDERS: '/providers',
   AUTH_FILES: '/auth-files',
   OAUTH: '/oauth',
-  LOGS: '/logs'
+  LOGS: '/logs',
 } as const;

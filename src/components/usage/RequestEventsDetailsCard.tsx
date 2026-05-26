@@ -167,7 +167,9 @@ const maskRequestEventApiKey = (apiKey: string): string => {
   return `${trimmed.slice(0, API_KEY_EDGE_VISIBLE_CHARS)}${API_KEY_MASK_TEXT}${trimmed.slice(-API_KEY_EDGE_VISIBLE_CHARS)}`;
 };
 
-const formatCredentialKeyLine = (row: Pick<RequestEventRow, 'credentialSubtitle' | 'authFile' | 'authLabel'>): string => {
+const formatCredentialKeyLine = (
+  row: Pick<RequestEventRow, 'credentialSubtitle' | 'authFile' | 'authLabel'>
+): string => {
   if (row.credentialSubtitle) return row.credentialSubtitle;
   if (row.authFile && row.authFile !== '-') return row.authFile;
   if (row.authLabel && row.authLabel !== '-') return row.authLabel;
@@ -206,7 +208,10 @@ const normalizeCustomAutoRefreshSeconds = (value: unknown): number => {
   if (!Number.isFinite(parsed)) {
     return DEFAULT_CUSTOM_AUTO_REFRESH_SECONDS;
   }
-  return Math.min(Math.max(parsed, MIN_CUSTOM_AUTO_REFRESH_SECONDS), MAX_CUSTOM_AUTO_REFRESH_SECONDS);
+  return Math.min(
+    Math.max(parsed, MIN_CUSTOM_AUTO_REFRESH_SECONDS),
+    MAX_CUSTOM_AUTO_REFRESH_SECONDS
+  );
 };
 
 const normalizeThinkingText = (value: unknown): string => {
@@ -373,7 +378,7 @@ export function RequestEventsDetailsCard({
       { value: '30s', label: '30s' },
       { value: '1m', label: '1m' },
       { value: '5m', label: '5m' },
-      { value: AUTO_REFRESH_CUSTOM, label: t('monitoring_center.auto_refresh_custom') }
+      { value: AUTO_REFRESH_CUSTOM, label: t('monitoring_center.auto_refresh_custom') },
     ],
     [t]
   );
@@ -407,16 +412,21 @@ export function RequestEventsDetailsCard({
     setNextRefreshAtMs(nextRefreshAt);
   }, [autoRefreshDelay, lastRefreshedAt]);
 
-  useInterval(() => {
-    setCountdownNowMs(Date.now());
-  }, autoRefreshDelay ? 1000 : null);
+  useInterval(
+    () => {
+      setCountdownNowMs(Date.now());
+    },
+    autoRefreshDelay ? 1000 : null
+  );
 
   const handleCustomAutoRefreshSecondsChange = useCallback((value: string) => {
     setCustomAutoRefreshSeconds(value.replace(/\D/g, ''));
   }, []);
 
   const handleCustomAutoRefreshSecondsBlur = useCallback(() => {
-    setCustomAutoRefreshSeconds(normalizeCustomAutoRefreshSeconds(customAutoRefreshSeconds).toString());
+    setCustomAutoRefreshSeconds(
+      normalizeCustomAutoRefreshSeconds(customAutoRefreshSeconds).toString()
+    );
   }, [customAutoRefreshSeconds]);
 
   useInterval(() => {
@@ -611,7 +621,8 @@ export function RequestEventsDetailsCard({
   }, [rows, timeRange]);
 
   const hasTimingData = useMemo(
-    () => timeFilteredRows.some((row) => row.firstByteLatencyMs !== null || row.generationMs !== null),
+    () =>
+      timeFilteredRows.some((row) => row.firstByteLatencyMs !== null || row.generationMs !== null),
     [timeFilteredRows]
   );
 
@@ -720,7 +731,9 @@ export function RequestEventsDetailsCard({
   );
 
   const effectiveModelFilter = modelOptionSet.has(modelFilter) ? modelFilter : ALL_FILTER;
-  const effectiveProviderFilter = providerOptionSet.has(providerFilter) ? providerFilter : ALL_FILTER;
+  const effectiveProviderFilter = providerOptionSet.has(providerFilter)
+    ? providerFilter
+    : ALL_FILTER;
   const effectiveSourceFilter = sourceOptionSet.has(sourceFilter) ? sourceFilter : ALL_FILTER;
   const effectiveApiKeyFilter = apiKeyOptionSet.has(apiKeyFilter) ? apiKeyFilter : ALL_FILTER;
   const effectiveResultFilter = resultOptionSet.has(resultFilter) ? resultFilter : ALL_FILTER;
@@ -1106,7 +1119,9 @@ export function RequestEventsDetailsCard({
         {onRefresh && showAutoRefreshControls && (
           <div className={styles.requestEventsFilterItem}>
             <span className={styles.requestEventsFilterLabelRow}>
-              <span className={styles.requestEventsFilterLabel}>{t('monitoring_center.auto_refresh')}</span>
+              <span className={styles.requestEventsFilterLabel}>
+                {t('monitoring_center.auto_refresh')}
+              </span>
               {autoRefreshCountdown !== null && (
                 <span className={styles.requestEventsCountdown}>
                   {t('monitoring_center.auto_refresh_countdown', { count: autoRefreshCountdown })}
@@ -1175,241 +1190,253 @@ export function RequestEventsDetailsCard({
               </thead>
               <tbody>
                 {renderedRows.map((row) => {
-                  const endpointHeadline = formatEndpointHeadline(row.endpointMethod, row.endpointPath);
+                  const endpointHeadline = formatEndpointHeadline(
+                    row.endpointMethod,
+                    row.endpointPath
+                  );
                   const endpointSubline = formatEndpointSubline(endpointHeadline, row.endpoint);
 
                   return (
-                  <tr key={row.id}>
-                    <td title={row.timestamp} className={styles.requestEventsTimeResultCell}>
-                      <div className={styles.requestEventsPrimaryText}>{row.timestampLabel}</div>
-                      <div className={styles.requestEventsStatusLine}>
-                        {row.failed ? (
-                          <button
-                            type="button"
-                            className={`${styles.requestEventsResultFailed} ${styles.requestEventsResultButton}`}
-                            onClick={() => setSelectedFailureRow(row)}
-                            aria-label={t('usage_stats.request_events_failure_log_view')}
-                          >
-                            {t('stats.failure')}
-                          </button>
-                        ) : (
-                          <span className={styles.requestEventsResultSuccess}>
-                            {t('stats.success')}
-                          </span>
-                        )}
-                        {row.cacheHitRatio !== null && (
-                          <span className={styles.requestEventsCacheHitBadge}>
-                            {t('usage_stats.request_events_cache_hit_short')}{' '}
-                            {formatCacheHitRatio(row.cacheHitRatio)}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className={styles.requestEventsProviderModelCell}>
-                      <div
-                        className={styles.requestEventsPrimaryText}
-                        title={
-                          [row.provider !== '-' ? row.provider : '', row.modelAlias]
-                            .filter(Boolean)
-                            .join(' · ') || undefined
-                        }
-                      >
-                        {row.providerTag ? (
-                          <>
-                            <span className={styles.requestEventsProviderTag}>{row.providerTag}</span>
-                            {row.providerDisplayName ? (
-                              <span className={styles.requestEventsProviderName}>
-                                {row.providerDisplayName}
-                              </span>
-                            ) : null}
-                            {row.modelAlias ? (
-                              <span className={styles.requestEventsModelAliasTag}>{row.modelAlias}</span>
-                            ) : null}
-                          </>
-                        ) : (
-                          <>
-                            {row.providerDisplayName || row.provider}
-                            {row.modelAlias ? (
-                              <span className={styles.requestEventsModelAliasTag}>{row.modelAlias}</span>
-                            ) : null}
-                          </>
-                        )}
-                      </div>
-                      <div
-                        className={styles.requestEventsSecondaryText}
-                        title={row.model !== '-' ? row.model : undefined}
-                      >
-                        {row.model}
-                      </div>
-                    </td>
-                    <td
-                      className={styles.requestEventsEndpointCell}
-                      title={[row.endpoint, row.requestId].filter(Boolean).join(' · ')}
-                    >
-                      <div className={styles.requestEventsEndpointLine}>
-                        {endpointHeadline}
-                      </div>
-                      {endpointSubline ? (
-                        <div className={styles.requestEventsEndpointSubline}>{endpointSubline}</div>
-                      ) : null}
-                      <div className={styles.requestEventsRequestLine}>
-                        <span className={styles.requestEventsRequestIdText}>
-                          {row.requestId || '-'}
-                        </span>
-                        {requestLogEnabled && row.requestId && (
-                          <Button
-                            className={styles.requestEventsDownloadButton}
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => void handleDownloadRequestLog(row.requestId)}
-                            loading={downloadingRequestId === row.requestId}
-                            title={t('request_monitoring.download_request_log')}
-                            aria-label={t('request_monitoring.download_request_log')}
-                          >
-                            <IconDownload size={14} />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                    <td className={styles.requestEventsCredentialCell}>
-                      <div
-                        className={styles.requestEventsPrimaryText}
-                        title={[row.account, row.credentialBadge].filter(Boolean).join(' · ') || undefined}
-                      >
-                        {row.account}
-                        {row.credentialBadge ? (
-                          <span className={styles.credentialType}>{row.credentialBadge}</span>
-                        ) : null}
-                      </div>
-                      <div
-                        className={styles.requestEventsSecondaryText}
-                        title={
-                          row.resolvedApiKey
-                            ? t('usage_stats.request_events_api_key_copy_title')
-                            : formatCredentialKeyLine(row)
-                        }
-                      >
-                        {renderCredentialSubtitle(
-                          row,
-                          styles,
-                          handleCopyCredentialApiKey,
-                          t('usage_stats.request_events_api_key_copy_title')
-                        )}
-                      </div>
-                    </td>
-                    <td className={styles.requestEventsUsageCell}>
-                      <div className={styles.requestEventsMetricHeadline}>
-                        <span className={styles.requestEventsMetricLabel}>
-                          {t('usage_stats.request_events_total_short')}
-                        </span>
-                        <span className={styles.requestEventsMetricValue}>
-                          {row.totalTokens.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className={styles.requestEventsTokenPair}>
-                        <span
-                          className={`${styles.requestEventsTokenChip} ${styles.requestEventsTokenChipIn}`}
-                          title={t('usage_stats.request_events_input_short')}
-                        >
-                          <span className={styles.requestEventsTokenChipLabel}>
-                            {t('usage_stats.request_events_input_short')}
-                          </span>
-                          <span className={styles.requestEventsTokenChipValue}>
-                            {row.inputTokens.toLocaleString()}
-                          </span>
-                        </span>
-                        <span
-                          className={`${styles.requestEventsTokenChip} ${styles.requestEventsTokenChipOut}`}
-                          title={t('usage_stats.request_events_output_short')}
-                        >
-                          <span className={styles.requestEventsTokenChipLabel}>
-                            {t('usage_stats.request_events_output_short')}
-                          </span>
-                          <span className={styles.requestEventsTokenChipValue}>
-                            {row.outputTokens.toLocaleString()}
-                          </span>
-                        </span>
-                      </div>
-                      {(row.cachedTokens > 0 || row.reasoningTokens > 0) && (
-                        <div className={styles.requestEventsMetricGrid}>
-                          {row.cachedTokens > 0 && (
-                            <span>
-                              <span className={styles.requestEventsMetricLabel}>
-                                {t('usage_stats.request_events_cached_short')}
-                              </span>
-                              <span className={styles.requestEventsMetricValue}>
-                                {row.cachedTokens.toLocaleString()}
-                              </span>
+                    <tr key={row.id}>
+                      <td title={row.timestamp} className={styles.requestEventsTimeResultCell}>
+                        <div className={styles.requestEventsPrimaryText}>{row.timestampLabel}</div>
+                        <div className={styles.requestEventsStatusLine}>
+                          {row.failed ? (
+                            <button
+                              type="button"
+                              className={`${styles.requestEventsResultFailed} ${styles.requestEventsResultButton}`}
+                              onClick={() => setSelectedFailureRow(row)}
+                              aria-label={t('usage_stats.request_events_failure_log_view')}
+                            >
+                              {t('stats.failure')}
+                            </button>
+                          ) : (
+                            <span className={styles.requestEventsResultSuccess}>
+                              {t('stats.success')}
                             </span>
                           )}
-                          {row.reasoningTokens > 0 && (
-                            <span>
-                              <span className={styles.requestEventsMetricLabel}>
-                                {t('usage_stats.request_events_reasoning_short')}
-                              </span>
-                              <span className={styles.requestEventsMetricValue}>
-                                {row.reasoningTokens.toLocaleString()}
-                              </span>
+                          {row.cacheHitRatio !== null && (
+                            <span className={styles.requestEventsCacheHitBadge}>
+                              {t('usage_stats.request_events_cache_hit_short')}{' '}
+                              {formatCacheHitRatio(row.cacheHitRatio)}
                             </span>
                           )}
                         </div>
-                      )}
-                      <div className={styles.requestEventsInlineBadges}>
-                        {row.thinkingLabel !== '-' && (
+                      </td>
+                      <td className={styles.requestEventsProviderModelCell}>
+                        <div
+                          className={styles.requestEventsPrimaryText}
+                          title={
+                            [row.provider !== '-' ? row.provider : '', row.modelAlias]
+                              .filter(Boolean)
+                              .join(' · ') || undefined
+                          }
+                        >
+                          {row.providerTag ? (
+                            <>
+                              <span className={styles.requestEventsProviderTag}>
+                                {row.providerTag}
+                              </span>
+                              {row.providerDisplayName ? (
+                                <span className={styles.requestEventsProviderName}>
+                                  {row.providerDisplayName}
+                                </span>
+                              ) : null}
+                              {row.modelAlias ? (
+                                <span className={styles.requestEventsModelAliasTag}>
+                                  {row.modelAlias}
+                                </span>
+                              ) : null}
+                            </>
+                          ) : (
+                            <>
+                              {row.providerDisplayName || row.provider}
+                              {row.modelAlias ? (
+                                <span className={styles.requestEventsModelAliasTag}>
+                                  {row.modelAlias}
+                                </span>
+                              ) : null}
+                            </>
+                          )}
+                        </div>
+                        <div
+                          className={styles.requestEventsSecondaryText}
+                          title={row.model !== '-' ? row.model : undefined}
+                        >
+                          {row.model}
+                        </div>
+                      </td>
+                      <td
+                        className={styles.requestEventsEndpointCell}
+                        title={[row.endpoint, row.requestId].filter(Boolean).join(' · ')}
+                      >
+                        <div className={styles.requestEventsEndpointLine}>{endpointHeadline}</div>
+                        {endpointSubline ? (
+                          <div className={styles.requestEventsEndpointSubline}>
+                            {endpointSubline}
+                          </div>
+                        ) : null}
+                        <div className={styles.requestEventsRequestLine}>
+                          <span className={styles.requestEventsRequestIdText}>
+                            {row.requestId || '-'}
+                          </span>
+                          {requestLogEnabled && row.requestId && (
+                            <Button
+                              className={styles.requestEventsDownloadButton}
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void handleDownloadRequestLog(row.requestId)}
+                              loading={downloadingRequestId === row.requestId}
+                              title={t('request_monitoring.download_request_log')}
+                              aria-label={t('request_monitoring.download_request_log')}
+                            >
+                              <IconDownload size={14} />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                      <td className={styles.requestEventsCredentialCell}>
+                        <div
+                          className={styles.requestEventsPrimaryText}
+                          title={
+                            [row.account, row.credentialBadge].filter(Boolean).join(' · ') ||
+                            undefined
+                          }
+                        >
+                          {row.account}
+                          {row.credentialBadge ? (
+                            <span className={styles.credentialType}>{row.credentialBadge}</span>
+                          ) : null}
+                        </div>
+                        <div
+                          className={styles.requestEventsSecondaryText}
+                          title={
+                            row.resolvedApiKey
+                              ? t('usage_stats.request_events_api_key_copy_title')
+                              : formatCredentialKeyLine(row)
+                          }
+                        >
+                          {renderCredentialSubtitle(
+                            row,
+                            styles,
+                            handleCopyCredentialApiKey,
+                            t('usage_stats.request_events_api_key_copy_title')
+                          )}
+                        </div>
+                      </td>
+                      <td className={styles.requestEventsUsageCell}>
+                        <div className={styles.requestEventsMetricHeadline}>
+                          <span className={styles.requestEventsMetricLabel}>
+                            {t('usage_stats.request_events_total_short')}
+                          </span>
+                          <span className={styles.requestEventsMetricValue}>
+                            {row.totalTokens.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className={styles.requestEventsTokenPair}>
                           <span
-                            className={styles.requestEventsCompactBadge}
-                            title={
-                              row.thinking
-                                ? [
-                                    row.thinking.mode
-                                      ? `${t('usage_stats.thinking_mode')}: ${row.thinking.mode}`
-                                      : '',
-                                    row.thinking.level
-                                      ? `${t('usage_stats.thinking_level')}: ${row.thinking.level}`
-                                      : '',
-                                    typeof row.thinking.budget === 'number'
-                                      ? `${t('usage_stats.thinking_budget')}: ${row.thinking.budget.toLocaleString()}`
-                                      : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' · ')
-                                : undefined
-                            }
+                            className={`${styles.requestEventsTokenChip} ${styles.requestEventsTokenChipIn}`}
+                            title={t('usage_stats.request_events_input_short')}
                           >
-                            {t('usage_stats.request_events_thinking_short')} {row.thinkingLabel}
+                            <span className={styles.requestEventsTokenChipLabel}>
+                              {t('usage_stats.request_events_input_short')}
+                            </span>
+                            <span className={styles.requestEventsTokenChipValue}>
+                              {row.inputTokens.toLocaleString()}
+                            </span>
                           </span>
+                          <span
+                            className={`${styles.requestEventsTokenChip} ${styles.requestEventsTokenChipOut}`}
+                            title={t('usage_stats.request_events_output_short')}
+                          >
+                            <span className={styles.requestEventsTokenChipLabel}>
+                              {t('usage_stats.request_events_output_short')}
+                            </span>
+                            <span className={styles.requestEventsTokenChipValue}>
+                              {row.outputTokens.toLocaleString()}
+                            </span>
+                          </span>
+                        </div>
+                        {(row.cachedTokens > 0 || row.reasoningTokens > 0) && (
+                          <div className={styles.requestEventsMetricGrid}>
+                            {row.cachedTokens > 0 && (
+                              <span>
+                                <span className={styles.requestEventsMetricLabel}>
+                                  {t('usage_stats.request_events_cached_short')}
+                                </span>
+                                <span className={styles.requestEventsMetricValue}>
+                                  {row.cachedTokens.toLocaleString()}
+                                </span>
+                              </span>
+                            )}
+                            {row.reasoningTokens > 0 && (
+                              <span>
+                                <span className={styles.requestEventsMetricLabel}>
+                                  {t('usage_stats.request_events_reasoning_short')}
+                                </span>
+                                <span className={styles.requestEventsMetricValue}>
+                                  {row.reasoningTokens.toLocaleString()}
+                                </span>
+                              </span>
+                            )}
+                          </div>
                         )}
-                      </div>
-                    </td>
-                    <td className={styles.requestEventsPerformanceCell}>
-                      <div className={styles.requestEventsMetricHeadline}>
-                        <span className={styles.requestEventsMetricLabel}>
-                          {t('usage_stats.request_events_generation_short')}
-                        </span>
-                        <span className={styles.requestEventsMetricValue}>
-                          {formatDurationMs(row.generationMs)}
-                        </span>
-                      </div>
-                      <div className={styles.requestEventsMetricStack}>
-                        <span>
+                        <div className={styles.requestEventsInlineBadges}>
+                          {row.thinkingLabel !== '-' && (
+                            <span
+                              className={styles.requestEventsCompactBadge}
+                              title={
+                                row.thinking
+                                  ? [
+                                      row.thinking.mode
+                                        ? `${t('usage_stats.thinking_mode')}: ${row.thinking.mode}`
+                                        : '',
+                                      row.thinking.level
+                                        ? `${t('usage_stats.thinking_level')}: ${row.thinking.level}`
+                                        : '',
+                                      typeof row.thinking.budget === 'number'
+                                        ? `${t('usage_stats.thinking_budget')}: ${row.thinking.budget.toLocaleString()}`
+                                        : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' · ')
+                                  : undefined
+                              }
+                            >
+                              {t('usage_stats.request_events_thinking_short')} {row.thinkingLabel}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className={styles.requestEventsPerformanceCell}>
+                        <div className={styles.requestEventsMetricHeadline}>
                           <span className={styles.requestEventsMetricLabel}>
-                            {t('usage_stats.request_events_first_byte_short')}
+                            {t('usage_stats.request_events_generation_short')}
                           </span>
                           <span className={styles.requestEventsMetricValue}>
-                            {formatDurationMs(row.firstByteLatencyMs)}
+                            {formatDurationMs(row.generationMs)}
                           </span>
-                        </span>
-                        <span>
-                          <span className={styles.requestEventsMetricLabel}>
-                            {t('usage_stats.request_events_tps')}
+                        </div>
+                        <div className={styles.requestEventsMetricStack}>
+                          <span>
+                            <span className={styles.requestEventsMetricLabel}>
+                              {t('usage_stats.request_events_first_byte_short')}
+                            </span>
+                            <span className={styles.requestEventsMetricValue}>
+                              {formatDurationMs(row.firstByteLatencyMs)}
+                            </span>
                           </span>
-                          <span className={styles.requestEventsMetricValue}>
-                            {row.tps !== null ? row.tps.toFixed(2) : '--'}
+                          <span>
+                            <span className={styles.requestEventsMetricLabel}>
+                              {t('usage_stats.request_events_tps')}
+                            </span>
+                            <span className={styles.requestEventsMetricValue}>
+                              {row.tps !== null ? row.tps.toFixed(2) : '--'}
+                            </span>
                           </span>
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -1452,7 +1479,9 @@ export function RequestEventsDetailsCard({
                 <span className={styles.requestEventsFailureMetaLabel}>
                   {t('usage_stats.request_events_failure_log_credential')}
                 </span>
-                <span className={styles.requestEventsFailureMetaValue}>{selectedCredentialInfo.name}</span>
+                <span className={styles.requestEventsFailureMetaValue}>
+                  {selectedCredentialInfo.name}
+                </span>
               </div>
             )}
 

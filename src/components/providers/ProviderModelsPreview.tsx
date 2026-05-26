@@ -21,7 +21,11 @@ function modelCellKey(model: ProviderModelEntry, index: number) {
   return `${model.name}\u0000${model.alias ?? ''}\u0000${index}`;
 }
 
-export function ProviderModelsPreview({ models, modalTitle, countLabel }: ProviderModelsPreviewProps) {
+export function ProviderModelsPreview({
+  models,
+  modalTitle,
+  countLabel,
+}: ProviderModelsPreviewProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const orderedModels = useMemo(() => sortModelsForDisplayBySlash(models), [models]);
@@ -36,7 +40,10 @@ export function ProviderModelsPreview({ models, modalTitle, countLabel }: Provid
       <div className={styles.modelTagList}>
         {countLabel ? <span className={styles.modelCountLabel}>{countLabel}</span> : null}
         {preview.map((model, idx) => (
-          <span key={`${model.name}\u0000${model.alias ?? ''}\u0000${idx}`} className={styles.modelTag}>
+          <span
+            key={`${model.name}\u0000${model.alias ?? ''}\u0000${idx}`}
+            className={styles.modelTag}
+          >
             <span className={styles.modelName}>{model.name}</span>
             {model.alias && model.alias !== model.name && (
               <span className={styles.modelAlias}>{model.alias}</span>
@@ -44,11 +51,7 @@ export function ProviderModelsPreview({ models, modalTitle, countLabel }: Provid
           </span>
         ))}
         {hiddenCount > 0 ? (
-          <button
-            type="button"
-            className={styles.modelPreviewMore}
-            onClick={() => setOpen(true)}
-          >
+          <button type="button" className={styles.modelPreviewMore} onClick={() => setOpen(true)}>
             {t('ai_providers.models_show_more', { count: hiddenCount })}
           </button>
         ) : null}

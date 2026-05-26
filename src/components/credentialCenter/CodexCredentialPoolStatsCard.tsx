@@ -13,12 +13,9 @@ import {
   CREDENTIAL_COST_WINDOW_GRACE_MS,
   buildCredentialCostBuckets,
   getCredentialRowKeyForFile,
-  sumCostInWindow
+  sumCostInWindow,
 } from '@/utils/credentialUsage';
-import {
-  fetchCodexQuotaWithMeta,
-  type CodexQuotaWindowMeta,
-} from '@/utils/codexQuotaMeta';
+import { fetchCodexQuotaWithMeta, type CodexQuotaWindowMeta } from '@/utils/codexQuotaMeta';
 import { isCodexFile, resolveCodexPlanType } from '@/utils/quota';
 import { formatUsd, type ModelPrice } from '@/utils/usage';
 import styles from '@/pages/CredentialCenterPage.module.scss';
@@ -82,7 +79,7 @@ const emptyProgress = (): BatchProgress => ({
   failed: 0,
   skipped: 0,
   currentName: '',
-  mode: null
+  mode: null,
 });
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -97,7 +94,10 @@ const getRemainingPercentValue = (window: CodexQuotaWindow | undefined): number 
   return Math.max(0, Math.min(100, 100 - window.usedPercent));
 };
 
-const estimateQuotaCost = (cost: number | null | undefined, window: CodexQuotaWindow | undefined): number | null => {
+const estimateQuotaCost = (
+  cost: number | null | undefined,
+  window: CodexQuotaWindow | undefined
+): number | null => {
   if (typeof cost !== 'number' || !Number.isFinite(cost)) return null;
   if (!window || typeof window.usedPercent !== 'number') return null;
   const usedRatio = Math.max(0, Math.min(100, window.usedPercent)) / 100;
@@ -122,7 +122,8 @@ const getPlanType = (file: AuthFileItem, quotaState: CodexQuotaState | undefined
 
 const getRefreshIntervalMs = (value: string): number => {
   const seconds = Number.parseFloat(value);
-  if (!Number.isFinite(seconds) || seconds < 0) return Number.parseFloat(DEFAULT_REFRESH_INTERVAL_SECONDS) * 1000;
+  if (!Number.isFinite(seconds) || seconds < 0)
+    return Number.parseFloat(DEFAULT_REFRESH_INTERVAL_SECONDS) * 1000;
   return seconds * 1000;
 };
 
@@ -144,10 +145,12 @@ const getPercentBucketKey = (remainingPercent: number | null): string => {
 export function CodexCredentialPoolStatsCard({
   usage,
   modelPrices,
-  authFiles
+  authFiles,
 }: CodexCredentialPoolStatsCardProps) {
   const { t } = useTranslation();
-  const [refreshIntervalSeconds, setRefreshIntervalSeconds] = useState(DEFAULT_REFRESH_INTERVAL_SECONDS);
+  const [refreshIntervalSeconds, setRefreshIntervalSeconds] = useState(
+    DEFAULT_REFRESH_INTERVAL_SECONDS
+  );
   const [progress, setProgress] = useState<BatchProgress>(emptyProgress);
   const [batchMessage, setBatchMessage] = useState<string | null>(null);
   const codexQuota = useQuotaStore((state) => state.codexQuota);
@@ -191,17 +194,25 @@ export function CodexCredentialPoolStatsCard({
           weeklyWindow,
           weeklyEstimate,
           remainingPercent,
-          quotaFetched: hasFetchedWeeklyQuota(quotaState)
+          quotaFetched: hasFetchedWeeklyQuota(quotaState),
         };
       }),
     [codexFiles, codexQuota, codexQuotaMeta, costBuckets]
   );
 
   const categoryAverages = useMemo(() => {
-    const grouped = new Map<string, { total: number; remaining: number; totalCount: number; remainingCount: number }>();
+    const grouped = new Map<
+      string,
+      { total: number; remaining: number; totalCount: number; remainingCount: number }
+    >();
 
     rows.forEach((row) => {
-      const bucket = grouped.get(row.planType) ?? { total: 0, remaining: 0, totalCount: 0, remainingCount: 0 };
+      const bucket = grouped.get(row.planType) ?? {
+        total: 0,
+        remaining: 0,
+        totalCount: 0,
+        remainingCount: 0,
+      };
       if (row.weeklyEstimate !== null) {
         bucket.total += row.weeklyEstimate;
         bucket.totalCount += 1;
@@ -217,7 +228,7 @@ export function CodexCredentialPoolStatsCard({
     grouped.forEach((value, key) => {
       result.set(key, {
         totalEstimate: value.totalCount > 0 ? value.total / value.totalCount : null,
-        remainingEstimate: value.remainingCount > 0 ? value.remaining / value.remainingCount : null
+        remainingEstimate: value.remainingCount > 0 ? value.remaining / value.remainingCount : null,
       });
     });
     return result;
@@ -231,11 +242,11 @@ export function CodexCredentialPoolStatsCard({
         const effectiveRemainingEstimate =
           effectiveWeeklyEstimate !== null && row.remainingPercent !== null
             ? effectiveWeeklyEstimate * (row.remainingPercent / 100)
-            : average?.remainingEstimate ?? null;
+            : (average?.remainingEstimate ?? null);
         return {
           ...row,
           effectiveWeeklyEstimate,
-          effectiveRemainingEstimate
+          effectiveRemainingEstimate,
         };
       }),
     [categoryAverages, rows]
@@ -260,7 +271,7 @@ export function CodexCredentialPoolStatsCard({
         fetchedCount: 0,
         totalEstimate: 0,
         remainingEstimate: 0,
-        averageCredentialEstimate: 0
+        averageCredentialEstimate: 0,
       };
       summary.credentialCount += 1;
       if (row.quotaFetched) summary.fetchedCount += 1;
@@ -271,22 +282,61 @@ export function CodexCredentialPoolStatsCard({
       grouped.set(row.planType, summary);
     });
 
-    return Array.from(grouped.values()).sort((left, right) => left.planType.localeCompare(right.planType));
+    return Array.from(grouped.values()).sort((left, right) =>
+      left.planType.localeCompare(right.planType)
+    );
   }, [effectiveRows]);
 
   const percentBuckets = useMemo(
-    () => [
-      { key: 'zero', label: t('credential_center.codex_pool_bucket_zero'), count: 0, className: styles.codexPoolBucketDanger },
-      { key: '1_20', label: t('credential_center.codex_pool_bucket_1_20'), count: 0, className: styles.codexPoolBucketWarning },
-      { key: '20_40', label: t('credential_center.codex_pool_bucket_20_40'), count: 0, className: styles.codexPoolBucketNotice },
-      { key: '40_60', label: t('credential_center.codex_pool_bucket_40_60'), count: 0, className: styles.codexPoolBucketInfo },
-      { key: '60_80', label: t('credential_center.codex_pool_bucket_60_80'), count: 0, className: styles.codexPoolBucketCalm },
-      { key: '80_100', label: t('credential_center.codex_pool_bucket_80_100'), count: 0, className: styles.codexPoolBucketGood },
-      { key: 'unknown', label: t('credential_center.codex_pool_bucket_unknown'), count: 0, className: styles.codexPoolBucketMuted }
-    ].map((bucket) => ({
-      ...bucket,
-      count: rows.filter((row) => getPercentBucketKey(row.remainingPercent) === bucket.key).length
-    })),
+    () =>
+      [
+        {
+          key: 'zero',
+          label: t('credential_center.codex_pool_bucket_zero'),
+          count: 0,
+          className: styles.codexPoolBucketDanger,
+        },
+        {
+          key: '1_20',
+          label: t('credential_center.codex_pool_bucket_1_20'),
+          count: 0,
+          className: styles.codexPoolBucketWarning,
+        },
+        {
+          key: '20_40',
+          label: t('credential_center.codex_pool_bucket_20_40'),
+          count: 0,
+          className: styles.codexPoolBucketNotice,
+        },
+        {
+          key: '40_60',
+          label: t('credential_center.codex_pool_bucket_40_60'),
+          count: 0,
+          className: styles.codexPoolBucketInfo,
+        },
+        {
+          key: '60_80',
+          label: t('credential_center.codex_pool_bucket_60_80'),
+          count: 0,
+          className: styles.codexPoolBucketCalm,
+        },
+        {
+          key: '80_100',
+          label: t('credential_center.codex_pool_bucket_80_100'),
+          count: 0,
+          className: styles.codexPoolBucketGood,
+        },
+        {
+          key: 'unknown',
+          label: t('credential_center.codex_pool_bucket_unknown'),
+          count: 0,
+          className: styles.codexPoolBucketMuted,
+        },
+      ].map((bucket) => ({
+        ...bucket,
+        count: rows.filter((row) => getPercentBucketKey(row.remainingPercent) === bucket.key)
+          .length,
+      })),
     [rows, t]
   );
 
@@ -297,14 +347,14 @@ export function CodexCredentialPoolStatsCard({
 
       setCodexQuota((prev) => ({
         ...prev,
-        [quotaKey]: CODEX_CONFIG.buildLoadingState()
+        [quotaKey]: CODEX_CONFIG.buildLoadingState(),
       }));
 
       try {
         const { data, meta } = await fetchCodexQuotaWithMeta(file, t);
         setCodexQuota((prev) => ({
           ...prev,
-          [quotaKey]: CODEX_CONFIG.buildSuccessState(data)
+          [quotaKey]: CODEX_CONFIG.buildSuccessState(data),
         }));
         setCodexQuotaMeta(quotaKey, meta);
         return 'success' as const;
@@ -319,7 +369,7 @@ export function CodexCredentialPoolStatsCard({
           [quotaKey]: CODEX_CONFIG.buildErrorState(
             message,
             Number.isFinite(status) ? status : undefined
-          )
+          ),
         }));
         return 'failed' as const;
       }
@@ -331,9 +381,12 @@ export function CodexCredentialPoolStatsCard({
     async (mode: RefreshMode) => {
       if (progress.running) return;
 
-      const targetFiles = mode === 'all'
-        ? codexFiles
-        : codexFiles.filter((file) => !hasFetchedWeeklyQuota(codexQuota[file.name] as CodexQuotaState | undefined));
+      const targetFiles =
+        mode === 'all'
+          ? codexFiles
+          : codexFiles.filter(
+              (file) => !hasFetchedWeeklyQuota(codexQuota[file.name] as CodexQuotaState | undefined)
+            );
       const intervalMs = getRefreshIntervalMs(refreshIntervalSeconds);
       const total = targetFiles.length;
 
@@ -346,7 +399,7 @@ export function CodexCredentialPoolStatsCard({
         failed: 0,
         skipped: 0,
         currentName: '',
-        mode
+        mode,
       });
 
       if (total === 0) {
@@ -364,7 +417,7 @@ export function CodexCredentialPoolStatsCard({
           done: current.done + 1,
           success: current.success + (result === 'success' ? 1 : 0),
           failed: current.failed + (result === 'failed' ? 1 : 0),
-          skipped: current.skipped + (result === 'skipped' ? 1 : 0)
+          skipped: current.skipped + (result === 'skipped' ? 1 : 0),
         }));
         if (index < targetFiles.length - 1 && intervalMs > 0) {
           await sleep(intervalMs);
@@ -377,7 +430,8 @@ export function CodexCredentialPoolStatsCard({
     [codexFiles, codexQuota, progress.running, refreshIntervalSeconds, refreshOneFile, t]
   );
 
-  const progressPercent = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+  const progressPercent =
+    progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
   const missingQuotaCount = rows.filter((row) => !row.quotaFetched).length;
 
   return (
@@ -427,16 +481,26 @@ export function CodexCredentialPoolStatsCard({
         <div className={styles.codexPoolContent}>
           <div className={styles.codexPoolOverviewGrid}>
             <div className={styles.codexPoolMetricCard}>
-              <span className={styles.codexPoolMetricLabel}>{t('credential_center.codex_pool_total_estimate')}</span>
+              <span className={styles.codexPoolMetricLabel}>
+                {t('credential_center.codex_pool_total_estimate')}
+              </span>
               <span className={styles.codexPoolMetricValue}>{formatUsd(totalEstimate)}</span>
             </div>
             <div className={styles.codexPoolMetricCard}>
-              <span className={styles.codexPoolMetricLabel}>{t('credential_center.codex_pool_remaining_estimate')}</span>
-              <span className={styles.codexPoolMetricValue}>{formatUsd(totalRemainingEstimate)}</span>
+              <span className={styles.codexPoolMetricLabel}>
+                {t('credential_center.codex_pool_remaining_estimate')}
+              </span>
+              <span className={styles.codexPoolMetricValue}>
+                {formatUsd(totalRemainingEstimate)}
+              </span>
             </div>
             <div className={styles.codexPoolMetricCard}>
-              <span className={styles.codexPoolMetricLabel}>{t('credential_center.codex_pool_credentials')}</span>
-              <span className={styles.codexPoolMetricValue}>{codexFiles.length.toLocaleString()}</span>
+              <span className={styles.codexPoolMetricLabel}>
+                {t('credential_center.codex_pool_credentials')}
+              </span>
+              <span className={styles.codexPoolMetricValue}>
+                {codexFiles.length.toLocaleString()}
+              </span>
               <span className={styles.codexPoolMetricSubtext}>
                 {t('credential_center.codex_pool_missing_count', { count: missingQuotaCount })}
               </span>
@@ -456,14 +520,27 @@ export function CodexCredentialPoolStatsCard({
                 </span>
               </div>
               <div className={styles.codexPoolProgressTrack}>
-                <div className={styles.codexPoolProgressFill} style={{ width: `${progressPercent}%` }} />
+                <div
+                  className={styles.codexPoolProgressFill}
+                  style={{ width: `${progressPercent}%` }}
+                />
               </div>
               <div className={styles.codexPoolProgressMeta}>
-                <span>{t('credential_center.codex_pool_progress_success', { count: progress.success })}</span>
-                <span>{t('credential_center.codex_pool_progress_failed', { count: progress.failed })}</span>
-                <span>{t('credential_center.codex_pool_progress_skipped', { count: progress.skipped })}</span>
+                <span>
+                  {t('credential_center.codex_pool_progress_success', { count: progress.success })}
+                </span>
+                <span>
+                  {t('credential_center.codex_pool_progress_failed', { count: progress.failed })}
+                </span>
+                <span>
+                  {t('credential_center.codex_pool_progress_skipped', { count: progress.skipped })}
+                </span>
                 {progress.currentName && (
-                  <span>{t('credential_center.codex_pool_progress_current', { name: progress.currentName })}</span>
+                  <span>
+                    {t('credential_center.codex_pool_progress_current', {
+                      name: progress.currentName,
+                    })}
+                  </span>
                 )}
                 {batchMessage && <span>{batchMessage}</span>}
               </div>
@@ -471,21 +548,41 @@ export function CodexCredentialPoolStatsCard({
           )}
 
           <div className={styles.codexPoolSection}>
-            <div className={styles.codexPoolSectionTitle}>{t('credential_center.codex_pool_category_title')}</div>
+            <div className={styles.codexPoolSectionTitle}>
+              {t('credential_center.codex_pool_category_title')}
+            </div>
             <div className={styles.codexPoolCategoryGrid}>
               {categorySummaries.map((summary) => (
                 <div key={summary.planType} className={styles.codexPoolCategoryCard}>
                   <div className={styles.codexPoolCategoryHeader}>
                     <span className={styles.codexPoolCategoryName}>{summary.planType}</span>
                     <span className={styles.codexPoolCategoryCount}>
-                      {t('credential_center.codex_pool_category_count', { count: summary.credentialCount })}
+                      {t('credential_center.codex_pool_category_count', {
+                        count: summary.credentialCount,
+                      })}
                     </span>
                   </div>
                   <div className={styles.codexPoolCategoryStats}>
-                    <span>{t('credential_center.codex_pool_category_fetched', { count: summary.fetchedCount })}</span>
-                    <span>{t('credential_center.codex_pool_category_total', { value: formatUsd(summary.totalEstimate) })}</span>
-                    <span>{t('credential_center.codex_pool_category_remaining', { value: formatUsd(summary.remainingEstimate) })}</span>
-                    <span>{t('credential_center.codex_pool_category_average', { value: formatUsd(summary.averageCredentialEstimate) })}</span>
+                    <span>
+                      {t('credential_center.codex_pool_category_fetched', {
+                        count: summary.fetchedCount,
+                      })}
+                    </span>
+                    <span>
+                      {t('credential_center.codex_pool_category_total', {
+                        value: formatUsd(summary.totalEstimate),
+                      })}
+                    </span>
+                    <span>
+                      {t('credential_center.codex_pool_category_remaining', {
+                        value: formatUsd(summary.remainingEstimate),
+                      })}
+                    </span>
+                    <span>
+                      {t('credential_center.codex_pool_category_average', {
+                        value: formatUsd(summary.averageCredentialEstimate),
+                      })}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -493,11 +590,15 @@ export function CodexCredentialPoolStatsCard({
           </div>
 
           <div className={styles.codexPoolSection}>
-            <div className={styles.codexPoolSectionTitle}>{t('credential_center.codex_pool_distribution_title')}</div>
+            <div className={styles.codexPoolSectionTitle}>
+              {t('credential_center.codex_pool_distribution_title')}
+            </div>
             <div className={styles.codexPoolBucketGrid}>
               {percentBuckets.map((bucket) => (
                 <div key={bucket.key} className={`${styles.codexPoolBucket} ${bucket.className}`}>
-                  <span className={styles.codexPoolBucketCount}>{bucket.count.toLocaleString()}</span>
+                  <span className={styles.codexPoolBucketCount}>
+                    {bucket.count.toLocaleString()}
+                  </span>
                   <span className={styles.codexPoolBucketLabel}>{bucket.label}</span>
                 </div>
               ))}

@@ -134,10 +134,13 @@ export const usageServiceApi = {
 
   getUsage: async (base: string, managementKey?: string): Promise<UsageServicePayload> =>
     withUsageServiceError(async () => {
-      const response = await axios.get<UsageServicePayload>(buildUrl(base, '/v0/management/usage'), {
-        timeout: USAGE_SERVICE_USAGE_TIMEOUT_MS,
-        headers: authHeaders(managementKey),
-      });
+      const response = await axios.get<UsageServicePayload>(
+        buildUrl(base, '/v0/management/usage'),
+        {
+          timeout: USAGE_SERVICE_USAGE_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+        }
+      );
       return response.data;
     }),
 };

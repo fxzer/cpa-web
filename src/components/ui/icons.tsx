@@ -350,8 +350,6 @@ export function IconCode({ size = 20, ...props }: IconProps) {
   );
 }
 
-
-
 export function IconSidebarConfig({ size = 20, ...props }: IconProps) {
   return (
     <svg {...sidebarSvgProps} width={size} height={size} {...props}>
@@ -449,6 +447,15 @@ export function IconSidebarSystem({ size = 20, ...props }: IconProps) {
       <path d="M14 6V3" />
       <path d="M10 21v-3" />
       <path d="M14 21v-3" />
+    </svg>
+  );
+}
+
+export function IconCopy({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...baseSvgProps} width={size} height={size} {...props}>
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
     </svg>
   );
 }

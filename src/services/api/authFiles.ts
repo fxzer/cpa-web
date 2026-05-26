@@ -4,10 +4,7 @@
 
 import { apiClient } from './client';
 import type { AuthFilesResponse } from '@/types/authFile';
-import type {
-  AuthFileModelConfigRow,
-  AuthFileModelsConfigResponse,
-} from '@/types';
+import type { AuthFileModelConfigRow, AuthFileModelsConfigResponse } from '@/types';
 import { parseTimestampMs } from '@/utils/timestamp';
 
 type AuthFileStatusResponse = { status: string; disabled: boolean };
@@ -86,12 +83,11 @@ const normalizeBatchFailures = (value: unknown): AuthFileBatchFailure[] => {
   }, []);
 };
 
-const deriveSuccessfulFileNames = (requestedNames: string[], failed: AuthFileBatchFailure[]): string[] => {
-  const failedNames = new Set(
-    failed
-      .map((entry) => entry.name.trim())
-      .filter(Boolean)
-  );
+const deriveSuccessfulFileNames = (
+  requestedNames: string[],
+  failed: AuthFileBatchFailure[]
+): string[] => {
+  const failedNames = new Set(failed.map((entry) => entry.name.trim()).filter(Boolean));
 
   if (failedNames.size === 0) {
     return [...requestedNames];
@@ -128,7 +124,8 @@ const normalizeBatchUploadResponse = (
   }
 
   return {
-    status: typeof payload?.status === 'string' ? payload.status : failed.length > 0 ? 'partial' : 'ok',
+    status:
+      typeof payload?.status === 'string' ? payload.status : failed.length > 0 ? 'partial' : 'ok',
     uploaded,
     files: uploadedFiles,
     failed,
@@ -163,7 +160,8 @@ const normalizeBatchDeleteResponse = (
   }
 
   return {
-    status: typeof payload?.status === 'string' ? payload.status : failed.length > 0 ? 'partial' : 'ok',
+    status:
+      typeof payload?.status === 'string' ? payload.status : failed.length > 0 ? 'partial' : 'ok',
     deleted,
     files: deletedFiles,
     failed,
@@ -382,9 +380,12 @@ export const authFilesApi = {
   deleteAll: () => apiClient.delete('/auth-files', { params: { all: true } }),
 
   downloadText: async (name: string): Promise<string> => {
-    const response = await apiClient.getRaw(`/auth-files/download?name=${encodeURIComponent(name)}`, {
-      responseType: 'blob'
-    });
+    const response = await apiClient.getRaw(
+      `/auth-files/download?name=${encodeURIComponent(name)}`,
+      {
+        responseType: 'blob',
+      }
+    );
     const blob = response.data as Blob;
     return blob.text();
   },

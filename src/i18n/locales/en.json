@@ -114,13 +114,13 @@
     "ai_providers": "AI Providers",
     "auth_files": "Auth Files",
     "oauth": "OAuth Login",
-    "quota_management": "Quota Management",
+    "quota_management": "Quota Dashboard",
     "config_management": "Config Panel",
     "logs": "Request logs",
     "models": "Models",
     "monitoring_center": "Monitoring Dashboard",
     "request_monitoring": "Request Details",
-    "credential_center": "Credential Center"
+    "credential_center": "Credential Dashboard"
   },
   "basic_settings": {
     "title": "Basic Settings",
@@ -1212,7 +1212,9 @@
         "input_placeholder": "Paste your API key",
         "input_hint": "This only modifies the local config file content, it will not sync to the API Key Management interface",
         "error_empty": "Please enter an API key",
-        "error_invalid": "API key contains invalid characters"
+        "error_invalid": "API key contains invalid characters",
+        "examples": "Usage Examples",
+        "examples_title": "Usage Examples"
       },
       "payload_rules": {
         "rule": "Rule",
@@ -1267,12 +1269,14 @@
     }
   },
   "quota_management": {
-    "title": "Quota Management",
+    "title": "Quota Dashboard",
     "description": "Monitor OAuth quota status for Antigravity, Codex, and Gemini CLI credentials.",
     "refresh_files": "Refresh auth files",
     "refresh_files_and_quota": "Refresh files & quota",
     "refresh_all_credentials": "Refresh all credentials",
-    "card_idle_hint": "Use the top \"Refresh all credentials\" button to fetch the latest quota data."
+    "card_idle_hint": "Use the top \"Refresh all credentials\" button to fetch the latest quota data.",
+    "empty_title": "No Quota Data Available",
+    "empty_desc": "No enabled auth files supporting quota check were found."
   },
   "system_info": {
     "title": "Management Center Info",
@@ -1695,7 +1699,7 @@
     "download_failed": "Failed to download request log"
   },
   "credential_center": {
-    "title": "Credential Center",
+    "title": "Credential Dashboard",
     "codex_quota_title": "Codex Credential Quota",
     "codex_quota_empty_title": "No Codex credentials",
     "codex_quota_empty_desc": "Upload a Codex credential to view quota.",

@@ -31,7 +31,9 @@ export const isAuthFilesSortMode = (value: unknown): value is AuthFilesSortMode 
 export const isAuthFilesStatusFilter = (value: unknown): value is AuthFilesStatusFilter =>
   typeof value === 'string' && AUTH_FILES_STATUS_FILTER_SET.has(value as AuthFilesStatusFilter);
 
-export const resolveAuthFilesStatusFilter = (state: AuthFilesUiState | null | undefined): AuthFilesStatusFilter => {
+export const resolveAuthFilesStatusFilter = (
+  state: AuthFilesUiState | null | undefined
+): AuthFilesStatusFilter => {
   if (isAuthFilesStatusFilter(state?.statusFilter)) {
     return state.statusFilter;
   }

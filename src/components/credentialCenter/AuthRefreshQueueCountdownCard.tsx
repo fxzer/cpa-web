@@ -13,7 +13,13 @@ const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
 const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 const SEVEN_DAYS_MS = 7 * ONE_DAY_MS;
 
-type RefreshBucketId = 'within_1m' | 'within_10m' | 'within_1h' | 'within_1d' | 'within_7d' | 'longer';
+type RefreshBucketId =
+  | 'within_1m'
+  | 'within_10m'
+  | 'within_1h'
+  | 'within_1d'
+  | 'within_7d'
+  | 'longer';
 
 interface RefreshBucketDefinition {
   id: RefreshBucketId;
@@ -55,14 +61,14 @@ const formatClockTime = (timestampMs: number): string =>
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit'
+    second: '2-digit',
   }).format(new Date(timestampMs));
 
 /** 与 RequestMonitoringPage `REQUEST_MONITORING_STATUS_ACCENTS[0]` 一致，用于「最早刷新」与「更长时间」中性格 */
 const STATUS_CARD_NEUTRAL = {
   accent: '#8b8680',
   accentSoft: 'rgba(139, 134, 128, 0.18)',
-  accentBorder: 'rgba(139, 134, 128, 0.35)'
+  accentBorder: 'rgba(139, 134, 128, 0.35)',
 } as const;
 
 /**
@@ -76,36 +82,38 @@ const REFRESH_QUEUE_BUCKET_CARD_ACCENTS: Record<
   within_1m: {
     accent: '#dc2626',
     accentSoft: 'rgba(220, 38, 38, 0.18)',
-    accentBorder: 'rgba(220, 38, 38, 0.35)'
+    accentBorder: 'rgba(220, 38, 38, 0.35)',
   },
   within_10m: {
     accent: '#f97316',
     accentSoft: 'rgba(249, 115, 22, 0.18)',
-    accentBorder: 'rgba(249, 115, 22, 0.32)'
+    accentBorder: 'rgba(249, 115, 22, 0.32)',
   },
   within_1h: {
     accent: '#d97706',
     accentSoft: 'rgba(217, 119, 6, 0.18)',
-    accentBorder: 'rgba(217, 119, 6, 0.32)'
+    accentBorder: 'rgba(217, 119, 6, 0.32)',
   },
   within_1d: {
     accent: '#2563eb',
     accentSoft: 'rgba(37, 99, 235, 0.16)',
-    accentBorder: 'rgba(37, 99, 235, 0.3)'
+    accentBorder: 'rgba(37, 99, 235, 0.3)',
   },
   within_7d: {
     accent: '#7c3aed',
     accentSoft: 'rgba(124, 58, 237, 0.16)',
-    accentBorder: 'rgba(124, 58, 237, 0.3)'
+    accentBorder: 'rgba(124, 58, 237, 0.3)',
   },
-  longer: STATUS_CARD_NEUTRAL
+  longer: STATUS_CARD_NEUTRAL,
 };
 
-const bucketCardAccentStyle = (accent: (typeof REFRESH_QUEUE_BUCKET_CARD_ACCENTS)[RefreshBucketId]): CSSProperties =>
+const bucketCardAccentStyle = (
+  accent: (typeof REFRESH_QUEUE_BUCKET_CARD_ACCENTS)[RefreshBucketId]
+): CSSProperties =>
   ({
     '--accent': accent.accent,
     '--accent-soft': accent.accentSoft,
-    '--accent-border': accent.accentBorder
+    '--accent-border': accent.accentBorder,
   }) as CSSProperties;
 
 export function AuthRefreshQueueCountdownCard({
@@ -113,7 +121,7 @@ export function AuthRefreshQueueCountdownCard({
   loading,
   error,
   generatedAt,
-  onRefresh
+  onRefresh,
 }: AuthRefreshQueueCountdownCardProps) {
   const { t } = useTranslation();
   const [now, setNow] = useState(() => Date.now());
@@ -157,38 +165,38 @@ export function AuthRefreshQueueCountdownCard({
         id: 'within_1m',
         labelKey: 'credential_center.refresh_queue_bucket_1m',
         maxMs: ONE_MINUTE_MS,
-        toneClass: styles.refreshQueueBucketDanger
+        toneClass: styles.refreshQueueBucketDanger,
       },
       {
         id: 'within_10m',
         labelKey: 'credential_center.refresh_queue_bucket_10m',
         maxMs: TEN_MINUTES_MS,
-        toneClass: styles.refreshQueueBucketWarning
+        toneClass: styles.refreshQueueBucketWarning,
       },
       {
         id: 'within_1h',
         labelKey: 'credential_center.refresh_queue_bucket_1h',
         maxMs: ONE_HOUR_MS,
-        toneClass: styles.refreshQueueBucketNotice
+        toneClass: styles.refreshQueueBucketNotice,
       },
       {
         id: 'within_1d',
         labelKey: 'credential_center.refresh_queue_bucket_1d',
         maxMs: ONE_DAY_MS,
-        toneClass: styles.refreshQueueBucketInfo
+        toneClass: styles.refreshQueueBucketInfo,
       },
       {
         id: 'within_7d',
         labelKey: 'credential_center.refresh_queue_bucket_7d',
         maxMs: SEVEN_DAYS_MS,
-        toneClass: styles.refreshQueueBucketCalm
+        toneClass: styles.refreshQueueBucketCalm,
       },
       {
         id: 'longer',
         labelKey: 'credential_center.refresh_queue_bucket_longer',
         maxMs: Number.POSITIVE_INFINITY,
-        toneClass: styles.refreshQueueBucketMuted
-      }
+        toneClass: styles.refreshQueueBucketMuted,
+      },
     ],
     []
   );
@@ -204,7 +212,7 @@ export function AuthRefreshQueueCountdownCard({
             item,
             refreshAtMs,
             deltaMs,
-            bucketId: getBucketId(deltaMs)
+            bucketId: getBucketId(deltaMs),
           };
         })
         .filter((entry): entry is RefreshQueueEntry => entry !== null)
@@ -216,7 +224,7 @@ export function AuthRefreshQueueCountdownCard({
     () =>
       bucketDefinitions.map((definition) => ({
         ...definition,
-        entries: entries.filter((entry) => entry.bucketId === definition.id)
+        entries: entries.filter((entry) => entry.bucketId === definition.id),
       })),
     [bucketDefinitions, entries]
   );
@@ -234,9 +242,12 @@ export function AuthRefreshQueueCountdownCard({
       const minutes = Math.floor((totalSeconds % 3600) / 60);
       const seconds = totalSeconds % 60;
 
-      if (days > 0) return `${days}${t('usage_stats.duration_unit_d')} ${hours}${t('usage_stats.duration_unit_h')}`;
-      if (hours > 0) return `${hours}${t('usage_stats.duration_unit_h')} ${minutes}${t('usage_stats.duration_unit_m')}`;
-      if (minutes > 0) return `${minutes}${t('usage_stats.duration_unit_m')} ${seconds}${t('usage_stats.duration_unit_s')}`;
+      if (days > 0)
+        return `${days}${t('usage_stats.duration_unit_d')} ${hours}${t('usage_stats.duration_unit_h')}`;
+      if (hours > 0)
+        return `${hours}${t('usage_stats.duration_unit_h')} ${minutes}${t('usage_stats.duration_unit_m')}`;
+      if (minutes > 0)
+        return `${minutes}${t('usage_stats.duration_unit_m')} ${seconds}${t('usage_stats.duration_unit_s')}`;
       return `${seconds}${t('usage_stats.duration_unit_s')}`;
     },
     [t]
@@ -262,7 +273,11 @@ export function AuthRefreshQueueCountdownCard({
         <div className={styles.refreshQueueHeaderMeta}>
           <span>{t('credential_center.refresh_queue_total', { count: entries.length })}</span>
           {Number.isFinite(generatedAtMs) && (
-            <span>{t('credential_center.refresh_queue_snapshot', { time: formatClockTime(generatedAtMs) })}</span>
+            <span>
+              {t('credential_center.refresh_queue_snapshot', {
+                time: formatClockTime(generatedAtMs),
+              })}
+            </span>
           )}
           <Button variant="secondary" size="sm" onClick={onRefresh} loading={loading}>
             {t('credential_center.refresh_queue_refresh')}
@@ -311,7 +326,7 @@ export function AuthRefreshQueueCountdownCard({
                   styles.refreshQueueStatusCard,
                   styles.refreshQueueStatusCardInteractive,
                   isActive ? styles.refreshQueueStatusCardActive : '',
-                  isEmpty ? styles.refreshQueueBucketEmpty : ''
+                  isEmpty ? styles.refreshQueueBucketEmpty : '',
                 ]
                   .filter(Boolean)
                   .join(' ');
@@ -326,28 +341,43 @@ export function AuthRefreshQueueCountdownCard({
                       aria-pressed={isActive}
                     >
                       <div className={styles.refreshQueueStatusCardLabel}>{t(bucket.labelKey)}</div>
-                      <div className={styles.refreshQueueStatusCardValue}>{bucket.entries.length}</div>
+                      <div className={styles.refreshQueueStatusCardValue}>
+                        {bucket.entries.length}
+                      </div>
                     </button>
                     {isActive && (
                       <div className={styles.refreshQueueDetails} ref={detailsRef}>
                         <div className={styles.refreshQueueDetailsTitle}>
                           {t('credential_center.refresh_queue_details_title', {
                             bucket: t(bucket.labelKey),
-                            count: bucket.entries.length
+                            count: bucket.entries.length,
                           })}
                         </div>
                         {bucket.entries.length === 0 ? (
-                          <div className={styles.hint}>{t('credential_center.refresh_queue_bucket_empty')}</div>
+                          <div className={styles.hint}>
+                            {t('credential_center.refresh_queue_bucket_empty')}
+                          </div>
                         ) : (
                           <div className={styles.refreshQueueDetailList}>
                             {bucket.entries.map((entry) => (
-                              <div key={`${entry.item.id}:${entry.item.auth_index}:${entry.item.next_refresh_at}`} className={styles.refreshQueueDetailRow}>
+                              <div
+                                key={`${entry.item.id}:${entry.item.auth_index}:${entry.item.next_refresh_at}`}
+                                className={styles.refreshQueueDetailRow}
+                              >
                                 <div className={styles.refreshQueueDetailNameBlock}>
-                                  <span className={styles.refreshQueueDetailName}>{getDisplayName(entry.item)}</span>
-                                  <span className={styles.credentialType}>{entry.item.provider || '--'}</span>
+                                  <span className={styles.refreshQueueDetailName}>
+                                    {getDisplayName(entry.item)}
+                                  </span>
+                                  <span className={styles.credentialType}>
+                                    {entry.item.provider || '--'}
+                                  </span>
                                 </div>
-                                <div className={styles.refreshQueueDetailTime}>{formatClockTime(entry.refreshAtMs)}</div>
-                                <div className={styles.refreshQueueDetailCountdown}>{formatDuration(entry.deltaMs)}</div>
+                                <div className={styles.refreshQueueDetailTime}>
+                                  {formatClockTime(entry.refreshAtMs)}
+                                </div>
+                                <div className={styles.refreshQueueDetailCountdown}>
+                                  {formatDuration(entry.deltaMs)}
+                                </div>
                               </div>
                             ))}
                           </div>

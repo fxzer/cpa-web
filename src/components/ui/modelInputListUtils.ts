@@ -11,7 +11,7 @@ export const modelsToEntries = (models?: ModelAlias[]): ModelEntry[] => {
   }
   return models.map((model) => ({
     name: model.name || '',
-    alias: model.alias || ''
+    alias: model.alias || '',
   }));
 };
 

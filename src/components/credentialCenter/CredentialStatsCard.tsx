@@ -9,7 +9,7 @@ import type { AuthFileItem } from '@/types/authFile';
 import {
   buildCredentialUsageRows,
   normalizeCredentialType,
-  type CredentialUsageRow
+  type CredentialUsageRow,
 } from '@/utils/credentialUsage';
 import { formatCompactNumber, formatUsd, type ModelPrice } from '@/utils/usage';
 import styles from '@/pages/CredentialCenterPage.module.scss';
@@ -30,7 +30,7 @@ export function CredentialStatsCard({
   usage,
   loading,
   modelPrices,
-  authFiles
+  authFiles,
 }: CredentialStatsCardProps) {
   const { t } = useTranslation();
   const [sortKey, setSortKey] = useState<SortKey>('displayName');
@@ -48,7 +48,7 @@ export function CredentialStatsCard({
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
       ...Array.from(new Set(authFiles.map((file) => normalizeCredentialType(file))))
         .sort((a, b) => a.localeCompare(b))
-        .map((type) => ({ value: type, label: type }))
+        .map((type) => ({ value: type, label: type })),
     ],
     [authFiles, t]
   );
@@ -99,8 +99,7 @@ export function CredentialStatsCard({
     });
   }, [filteredRows, getSortValue, sortDir, sortKey]);
 
-  const arrow = (key: SortKey) =>
-    sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+  const arrow = (key: SortKey) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
 
   const ariaSort = (key: SortKey): 'none' | 'ascending' | 'descending' =>
     sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
@@ -145,43 +144,60 @@ export function CredentialStatsCard({
                       className={styles.sortHeaderButton}
                       onClick={() => handleSort('displayName')}
                     >
-                      {t('usage_stats.credential_name')}{arrow('displayName')}
+                      {t('usage_stats.credential_name')}
+                      {arrow('displayName')}
                     </button>
                   </th>
-                  <th className={`${styles.sortableHeader} ${styles.metricColumn}`} aria-sort={ariaSort('requests')}>
+                  <th
+                    className={`${styles.sortableHeader} ${styles.metricColumn}`}
+                    aria-sort={ariaSort('requests')}
+                  >
                     <button
                       type="button"
                       className={styles.sortHeaderButton}
                       onClick={() => handleSort('requests')}
                     >
-                      {t('usage_stats.requests_count')}{arrow('requests')}
+                      {t('usage_stats.requests_count')}
+                      {arrow('requests')}
                     </button>
                   </th>
-                  <th className={`${styles.sortableHeader} ${styles.metricColumn}`} aria-sort={ariaSort('tokens')}>
+                  <th
+                    className={`${styles.sortableHeader} ${styles.metricColumn}`}
+                    aria-sort={ariaSort('tokens')}
+                  >
                     <button
                       type="button"
                       className={styles.sortHeaderButton}
                       onClick={() => handleSort('tokens')}
                     >
-                      {t('usage_stats.tokens_count')}{arrow('tokens')}
+                      {t('usage_stats.tokens_count')}
+                      {arrow('tokens')}
                     </button>
                   </th>
-                  <th className={`${styles.sortableHeader} ${styles.compactMetricColumn}`} aria-sort={ariaSort('successRate')}>
+                  <th
+                    className={`${styles.sortableHeader} ${styles.compactMetricColumn}`}
+                    aria-sort={ariaSort('successRate')}
+                  >
                     <button
                       type="button"
                       className={styles.sortHeaderButton}
                       onClick={() => handleSort('successRate')}
                     >
-                      {t('usage_stats.success_rate')}{arrow('successRate')}
+                      {t('usage_stats.success_rate')}
+                      {arrow('successRate')}
                     </button>
                   </th>
-                  <th className={`${styles.sortableHeader} ${styles.metricColumn}`} aria-sort={ariaSort('cost')}>
+                  <th
+                    className={`${styles.sortableHeader} ${styles.metricColumn}`}
+                    aria-sort={ariaSort('cost')}
+                  >
                     <button
                       type="button"
                       className={styles.sortHeaderButton}
                       onClick={() => handleSort('cost')}
                     >
-                      {t('usage_stats.total_cost')}{arrow('cost')}
+                      {t('usage_stats.total_cost')}
+                      {arrow('cost')}
                     </button>
                   </th>
                 </tr>
@@ -199,8 +215,14 @@ export function CredentialStatsCard({
                       <span className={styles.requestCountCell}>
                         <span>{row.requests.toLocaleString()}</span>
                         <span className={styles.requestBreakdown}>
-                          (<span className={styles.statSuccess}>{row.successCount.toLocaleString()}</span>{' '}
-                          <span className={styles.statFailure}>{row.failureCount.toLocaleString()}</span>)
+                          (
+                          <span className={styles.statSuccess}>
+                            {row.successCount.toLocaleString()}
+                          </span>{' '}
+                          <span className={styles.statFailure}>
+                            {row.failureCount.toLocaleString()}
+                          </span>
+                          )
                         </span>
                       </span>
                     </td>

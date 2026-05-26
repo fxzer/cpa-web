@@ -421,13 +421,12 @@
       right: auto;
       z-index: $z-dropdown + 2;
       border: 1px solid color-mix(in srgb, var(--border-color) 74%, transparent);
-      background:
-        linear-gradient(
-          90deg,
-          color-mix(in srgb, var(--bg-primary) 55%, transparent) 0%,
-          color-mix(in srgb, var(--bg-primary) 92%, transparent) 42%,
-          color-mix(in srgb, var(--bg-primary) 88%, transparent) 100%
-        );
+      background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--bg-primary) 55%, transparent) 0%,
+        color-mix(in srgb, var(--bg-primary) 92%, transparent) 42%,
+        color-mix(in srgb, var(--bg-primary) 88%, transparent) 100%
+      );
       box-shadow: 0 20px 48px rgb(0 0 0 / 0.22);
       --glass-blur: 16px;
       backdrop-filter: var(--glass-backdrop-filter);
@@ -654,7 +653,6 @@
         color: var(--text-primary);
       }
 
-
       &:focus-visible {
         outline: none;
         box-shadow:
@@ -828,7 +826,6 @@
     --floating-control-size: 36px;
   }
 
-
   .main-header {
     .mobile-sidebar-actions {
       display: inline-flex;
@@ -849,7 +846,7 @@
     min-height: 100vh;
     padding: 0;
     overflow: visible;
- 
+
     @supports (min-height: 100dvh) {
       min-height: 100dvh;
     }

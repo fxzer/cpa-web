@@ -25,7 +25,7 @@ export function ProviderColumn({
   onContextMenu,
   label,
   expandLabel,
-  collapseLabel
+  collapseLabel,
 }: ProviderColumnProps) {
   return (
     <div
@@ -117,7 +117,7 @@ export function SourceColumn({
   onDragLeave,
   onDrop,
   onContextMenu,
-  label
+  label,
 }: SourceColumnProps) {
   return (
     <div
@@ -170,7 +170,7 @@ export function SourceColumn({
                   className={styles.dot}
                   style={{
                     background: getProviderColor(source.provider),
-                    opacity: source.aliases.length > 0 ? 1 : 0.3
+                    opacity: source.aliases.length > 0 ? 1 : 0.3,
                   }}
                 />
               </div>
@@ -213,7 +213,7 @@ export function AliasColumn({
   onDragLeave,
   onDrop,
   onContextMenu,
-  label
+  label,
 }: AliasColumnProps) {
   return (
     <div

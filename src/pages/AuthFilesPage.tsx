@@ -61,8 +61,7 @@ const BATCH_BAR_HIDDEN_TRANSFORM = 'translateX(-50%) translateY(56px)';
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
 const DEFAULT_COMPACT_PAGE_SIZE = 12;
 
-const escapeWildcardSearchSegment = (value: string) =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeWildcardSearchSegment = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const buildWildcardSearch = (value: string): RegExp | null => {
   if (!value.includes('*')) return null;
@@ -190,10 +189,7 @@ export function AuthFilesPage() {
         setFilter(persisted.filter);
       }
       setStatusFilter(resolveAuthFilesStatusFilter(persisted));
-      if (
-        typeof persistedCompactMode !== 'boolean' &&
-        typeof persisted.compactMode === 'boolean'
-      ) {
+      if (typeof persistedCompactMode !== 'boolean' && typeof persisted.compactMode === 'boolean') {
         setCompactMode(persisted.compactMode);
       }
       if (typeof persisted.search === 'string') {
@@ -209,11 +205,11 @@ export function AuthFilesPage() {
       const regularPageSize =
         typeof persisted.regularPageSize === 'number' && Number.isFinite(persisted.regularPageSize)
           ? clampCardPageSize(persisted.regularPageSize)
-          : legacyPageSize ?? DEFAULT_REGULAR_PAGE_SIZE;
+          : (legacyPageSize ?? DEFAULT_REGULAR_PAGE_SIZE);
       const compactPageSize =
         typeof persisted.compactPageSize === 'number' && Number.isFinite(persisted.compactPageSize)
           ? clampCardPageSize(persisted.compactPageSize)
-          : legacyPageSize ?? DEFAULT_COMPACT_PAGE_SIZE;
+          : (legacyPageSize ?? DEFAULT_COMPACT_PAGE_SIZE);
       setPageSizeByMode({
         regular: regularPageSize,
         compact: compactPageSize,
@@ -575,9 +571,7 @@ export function AuthFilesPage() {
         <div className={styles.titleMain}>
           <h1 className={styles.pageTitle}>{t('auth_files.title')}</h1>
           {files.length > 0 && (
-            <span className={`status-badge success ${styles.titleRowStatus}`}>
-              {files.length}
-            </span>
+            <span className={`status-badge success ${styles.titleRowStatus}`}>{files.length}</span>
           )}
         </div>
         <div className={styles.headerActions}>
@@ -648,7 +642,9 @@ export function AuthFilesPage() {
             />
           </label>
           <label className={styles.globalToolbarField}>
-            <span className={styles.globalToolbarFieldLabel}>{t('auth_files.page_size_short')}</span>
+            <span className={styles.globalToolbarFieldLabel}>
+              {t('auth_files.page_size_short')}
+            </span>
             <input
               className={styles.globalToolbarPageSize}
               type="number"
@@ -718,25 +714,25 @@ export function AuthFilesPage() {
             role="tablist"
             aria-label={t('auth_files.view_density_label')}
           >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={compactMode}
-                className={`${styles.densitySwitchItem} ${compactMode ? styles.densitySwitchItemActive : ''}`}
-                onClick={() => setCompactMode(true)}
-              >
-                {t('auth_files.view_compact')}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={!compactMode}
-                className={`${styles.densitySwitchItem} ${!compactMode ? styles.densitySwitchItemActive : ''}`}
-                onClick={() => setCompactMode(false)}
-              >
-                {t('auth_files.view_detailed')}
-              </button>
-            </div>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={compactMode}
+              className={`${styles.densitySwitchItem} ${compactMode ? styles.densitySwitchItemActive : ''}`}
+              onClick={() => setCompactMode(true)}
+            >
+              {t('auth_files.view_compact')}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!compactMode}
+              className={`${styles.densitySwitchItem} ${!compactMode ? styles.densitySwitchItemActive : ''}`}
+              onClick={() => setCompactMode(false)}
+            >
+              {t('auth_files.view_detailed')}
+            </button>
+          </div>
         </div>
       </div>
 

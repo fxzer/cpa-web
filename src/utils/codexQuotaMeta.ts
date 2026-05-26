@@ -27,8 +27,14 @@ const WEEK_SECONDS = 604800;
 const WINDOW_META = {
   codeFiveHour: { id: 'five-hour', labelKey: 'codex_quota.primary_window' },
   codeWeekly: { id: 'weekly', labelKey: 'codex_quota.secondary_window' },
-  codeReviewFiveHour: { id: 'code-review-five-hour', labelKey: 'codex_quota.code_review_primary_window' },
-  codeReviewWeekly: { id: 'code-review-weekly', labelKey: 'codex_quota.code_review_secondary_window' },
+  codeReviewFiveHour: {
+    id: 'code-review-five-hour',
+    labelKey: 'codex_quota.code_review_primary_window',
+  },
+  codeReviewWeekly: {
+    id: 'code-review-weekly',
+    labelKey: 'codex_quota.code_review_secondary_window',
+  },
 } as const;
 
 export type CodexQuotaWindowKind = 'five-hour' | 'weekly' | 'other';
@@ -60,7 +66,9 @@ const getWindowSeconds = (window?: CodexUsageWindow | null): number | null => {
 const buildWindowMeta = (window: CodexUsageWindow): CodexQuotaWindowMeta => {
   const windowSeconds = getWindowSeconds(window);
   const resetAtRaw = normalizeNumberValue(window.reset_at ?? window.resetAt);
-  const resetAfterRaw = normalizeNumberValue(window.reset_after_seconds ?? window.resetAfterSeconds);
+  const resetAfterRaw = normalizeNumberValue(
+    window.reset_after_seconds ?? window.resetAfterSeconds
+  );
   const resetAtUnix =
     resetAtRaw !== null && resetAtRaw > 0
       ? resetAtRaw
@@ -123,7 +131,8 @@ export const buildCodexQuotaWindowsWithMeta = (
   t: TFunction
 ): { windows: CodexQuotaWindow[]; meta: CodexQuotaMeta } => {
   const rateLimit = payload.rate_limit ?? payload.rateLimit ?? undefined;
-  const codeReviewLimit = payload.code_review_rate_limit ?? payload.codeReviewRateLimit ?? undefined;
+  const codeReviewLimit =
+    payload.code_review_rate_limit ?? payload.codeReviewRateLimit ?? undefined;
   const additionalRateLimits = payload.additional_rate_limits ?? payload.additionalRateLimits ?? [];
   const windows: CodexQuotaWindow[] = [];
   const windowMeta: Record<string, CodexQuotaWindowMeta> = {};
@@ -210,7 +219,8 @@ export const buildCodexQuotaWindowsWithMeta = (
 
       const idPrefix = normalizeWindowId(limitName) || `additional-${index + 1}`;
       const additionalPrimaryWindow = rateInfo.primary_window ?? rateInfo.primaryWindow ?? null;
-      const additionalSecondaryWindow = rateInfo.secondary_window ?? rateInfo.secondaryWindow ?? null;
+      const additionalSecondaryWindow =
+        rateInfo.secondary_window ?? rateInfo.secondaryWindow ?? null;
       const additionalLimitReached = rateInfo.limit_reached ?? rateInfo.limitReached;
       const additionalAllowed = rateInfo.allowed;
 

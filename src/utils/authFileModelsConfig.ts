@@ -121,7 +121,9 @@ export function removeAliasLink(
 
   return rows.map((row) => {
     const rowName = row.id.trim().toLowerCase();
-    const rowAlias = String(row.alias ?? '').trim().toLowerCase();
+    const rowAlias = String(row.alias ?? '')
+      .trim()
+      .toLowerCase();
     if (rowName === nameKey && rowAlias === aliasKey) {
       return { ...row, alias: '' };
     }
@@ -140,7 +142,9 @@ export function toggleRowFork(
 
   return rows.map((row) => {
     const rowName = row.id.trim().toLowerCase();
-    const rowAlias = String(row.alias ?? '').trim().toLowerCase();
+    const rowAlias = String(row.alias ?? '')
+      .trim()
+      .toLowerCase();
     if (rowName !== nameKey || rowAlias !== aliasKey) return row;
     return fork ? { ...row, fork: true } : { ...row, fork: false };
   });
@@ -182,7 +186,9 @@ export function applyAliasEntriesToRows(
 ): AuthFileModelConfigRow[] {
   const aliasByName = new Map<string, OAuthModelAliasEntry>();
   entries.forEach((entry) => {
-    const key = String(entry.name ?? '').trim().toLowerCase();
+    const key = String(entry.name ?? '')
+      .trim()
+      .toLowerCase();
     if (key) aliasByName.set(key, entry);
   });
 

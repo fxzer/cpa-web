@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { useNotificationStore } from '@/stores';
+import { IconCopy, IconCheck } from '@/components/ui/icons';
 import styles from './VisualConfigEditor.module.scss';
 import { copyToClipboard } from '@/utils/clipboard';
 import type {
@@ -194,6 +195,18 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const [editingApiKeyId, setEditingApiKeyId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [formError, setFormError] = useState('');
+  const [examplesModalOpen, setExamplesModalOpen] = useState(false);
+  const [exampleTab, setExampleTab] = useState<'curl' | 'codex' | 'claude'>('curl');
+  const [copiedState, setCopiedState] = useState(false);
+  const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
+
+  const handleCopyExample = useCallback(async (text: string) => {
+    const copied = await copyToClipboard(text);
+    if (copied) {
+      setCopiedState(true);
+      setTimeout(() => setCopiedState(false), 2000);
+    }
+  }, []);
 
   function generateSecureApiKey(): string {
     const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -260,22 +273,62 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     closeModal();
   };
 
-  const handleCopy = async (apiKey: string) => {
-    const copied = await copyToClipboard(apiKey);
-    showNotification(
-      t(copied ? 'notification.link_copied' : 'notification.copy_failed'),
-      copied ? 'success' : 'error'
-    );
-  };
+  const handleCopy = useCallback(
+    async (apiKey: string, keyId: string) => {
+      const copied = await copyToClipboard(apiKey);
+      if (copied) {
+        setCopiedKeyId(keyId);
+        setTimeout(() => setCopiedKeyId(null), 2000);
+      }
+      showNotification(
+        t(copied ? 'notification.link_copied' : 'notification.copy_failed'),
+        copied ? 'success' : 'error'
+      );
+    },
+    [showNotification, t]
+  );
 
   const handleGenerate = () => {
     setInputValue(generateSecureApiKey());
     setFormError('');
   };
 
+  const currentKey = apiKeys[0] || 'sk-abc';
+
+  const curlExample = `curl -sS -X POST 'http://localhost:8317/v1/chat/completions' \\
+  -H 'Authorization: Bearer ${currentKey}' \\
+  -H 'Content-Type: application/json' \\
+  -d '{"model":"fast","messages":[{"role":"user","content":"your model id is?"}],"max_tokens":64}'`;
+
+  const codexExample = `# /Users/fxj/.codex/config.toml
+model = "gpt-5.5"
+
+[model_providers.local]
+  name = "local"
+  base_url = "http://localhost:8317/v1"
+  env_key = "LOCAL_API_KEY"`;
+
+  const claudeExample = `# /Users/fxj/.claude/settings.json
+"env": {
+  "ANTHROPIC_AUTH_TOKEN": "${currentKey}",
+  "ANTHROPIC_BASE_URL": "http://localhost:8317",
+  "ANTHROPIC_MODEL": "gemini-3-flash",
+},`;
+
+  const activeCode =
+    exampleTab === 'curl' ? curlExample : exampleTab === 'codex' ? codexExample : claudeExample;
+
   return (
     <div className="form-group" style={{ marginBottom: 0 }}>
       <div className={styles.apiKeyToolbar}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setExamplesModalOpen(true)}
+          disabled={disabled}
+        >
+          {t('config_management.visual.api_keys.examples', { defaultValue: '使用示例' })}
+        </Button>
         <Button size="sm" onClick={openAddModal} disabled={disabled}>
           {t('config_management.visual.api_keys.add')}
         </Button>
@@ -295,18 +348,26 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
               className={styles.apiKeyRow}
               role="listitem"
             >
-              <div className={styles.apiKeyMask} title={maskApiKey(String(key || ''))}>
-                {maskApiKey(String(key || ''))}
+              <div className={styles.apiKeyMaskContainer}>
+                <div className={styles.apiKeyMask} title={maskApiKey(String(key || ''))}>
+                  {maskApiKey(String(key || ''))}
+                </div>
+                <button
+                  type="button"
+                  className={styles.rowCopyIconBtn}
+                  onClick={() => handleCopy(key, renderApiKeyIds[index] ?? '')}
+                  disabled={disabled}
+                  title={t('common.copy')}
+                  aria-label={t('common.copy')}
+                >
+                  {copiedKeyId === renderApiKeyIds[index] ? (
+                    <IconCheck size={14} className={styles.copiedIcon} />
+                  ) : (
+                    <IconCopy size={14} />
+                  )}
+                </button>
               </div>
               <div className={styles.apiKeyRowActions}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleCopy(key)}
-                  disabled={disabled}
-                >
-                  {t('common.copy')}
-                </Button>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -383,6 +444,67 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
               {formError}
             </div>
           )}
+        </div>
+      </Modal>
+
+      <Modal
+        open={examplesModalOpen}
+        onClose={() => setExamplesModalOpen(false)}
+        title={t('config_management.visual.api_keys.examples_title', { defaultValue: '使用示例' })}
+        footer={
+          <Button onClick={() => setExamplesModalOpen(false)}>
+            {t('config_management.visual.common.close', { defaultValue: '关闭' })}
+          </Button>
+        }
+      >
+        <div className={styles.exampleModalBody}>
+          <div className={styles.exampleTabBar} role="tablist">
+            <button
+              type="button"
+              className={`${styles.exampleTabItem} ${exampleTab === 'curl' ? styles.exampleTabActive : ''}`}
+              onClick={() => setExampleTab('curl')}
+            >
+              CURL
+            </button>
+            <button
+              type="button"
+              className={`${styles.exampleTabItem} ${exampleTab === 'codex' ? styles.exampleTabActive : ''}`}
+              onClick={() => setExampleTab('codex')}
+            >
+              Codex
+            </button>
+            <button
+              type="button"
+              className={`${styles.exampleTabItem} ${exampleTab === 'claude' ? styles.exampleTabActive : ''}`}
+              onClick={() => setExampleTab('claude')}
+            >
+              Claude Code
+            </button>
+          </div>
+
+          <div className={styles.exampleCodeContainer}>
+            <div className={styles.exampleCodeHeader}>
+              <span className={styles.exampleCodeType}>
+                {exampleTab === 'curl' ? 'Shell' : exampleTab === 'codex' ? 'TOML' : 'JSON'}
+              </span>
+              <button
+                type="button"
+                className={styles.exampleCopyIconButton}
+                onClick={() => handleCopyExample(activeCode)}
+                title={t('common.copy')}
+                aria-label={t('common.copy')}
+              >
+                {copiedState ? (
+                  <IconCheck size={16} className={styles.copiedIcon} />
+                ) : (
+                  <IconCopy size={16} />
+                )}
+              </button>
+            </div>
+            <pre className={styles.examplePre}>
+              <code>{activeCode}</code>
+            </pre>
+          </div>
         </div>
       </Modal>
     </div>
@@ -669,7 +791,9 @@ export const PayloadRulesEditor = memo(function PayloadRulesEditor({
                       placeholder={t('config_management.visual.payload_rules.model_name')}
                       ariaLabel={t('config_management.visual.payload_rules.model_name')}
                       value={model.name}
-                      onChange={(nextValue) => updateModel(ruleIndex, modelIndex, { name: nextValue })}
+                      onChange={(nextValue) =>
+                        updateModel(ruleIndex, modelIndex, { name: nextValue })
+                      }
                       disabled={disabled}
                     />
                   </>
@@ -679,7 +803,9 @@ export const PayloadRulesEditor = memo(function PayloadRulesEditor({
                       placeholder={t('config_management.visual.payload_rules.model_name')}
                       ariaLabel={t('config_management.visual.payload_rules.model_name')}
                       value={model.name}
-                      onChange={(nextValue) => updateModel(ruleIndex, modelIndex, { name: nextValue })}
+                      onChange={(nextValue) =>
+                        updateModel(ruleIndex, modelIndex, { name: nextValue })
+                      }
                       disabled={disabled}
                     />
                     <Select
@@ -732,7 +858,9 @@ export const PayloadRulesEditor = memo(function PayloadRulesEditor({
                       placeholder={t('config_management.visual.payload_rules.json_path')}
                       ariaLabel={t('config_management.visual.payload_rules.json_path')}
                       value={param.path}
-                      onChange={(nextValue) => updateParam(ruleIndex, paramIndex, { path: nextValue })}
+                      onChange={(nextValue) =>
+                        updateParam(ruleIndex, paramIndex, { path: nextValue })
+                      }
                       disabled={disabled}
                     />
                     {rawJsonValues ? null : (

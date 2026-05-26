@@ -1,4 +1,9 @@
-import type { ApiKeyEntry, GeminiKeyConfig, OpenAIProviderConfig, ProviderKeyConfig } from '@/types';
+import type {
+  ApiKeyEntry,
+  GeminiKeyConfig,
+  OpenAIProviderConfig,
+  ProviderKeyConfig,
+} from '@/types';
 import type { CredentialInfo, SourceInfo } from '@/types/sourceInfo';
 import {
   buildProviderOverviewLabel,
@@ -79,8 +84,8 @@ const buildProviderSourceCandidates = (item: ProviderConfigItem): string[] => {
     prefix: item.prefix,
   }).forEach((candidate) => candidates.add(candidate));
   getProviderApiKeyEntries(item).forEach((entry) => {
-    buildCandidateUsageSourceIds({ apiKey: entry.apiKey, prefix: item.prefix }).forEach((candidate) =>
-      candidates.add(candidate)
+    buildCandidateUsageSourceIds({ apiKey: entry.apiKey, prefix: item.prefix }).forEach(
+      (candidate) => candidates.add(candidate)
     );
   });
   return Array.from(candidates);

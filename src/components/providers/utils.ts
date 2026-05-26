@@ -52,8 +52,9 @@ export const parseExcludedModels = parseTextList;
 export const excludedModelsToText = (models?: string[]) =>
   Array.isArray(models) ? models.join('\n') : '';
 
-export const getProviderApiKeyEntries = (config: { apiKeyEntries?: ApiKeyEntry[] }): ApiKeyEntry[] =>
-  Array.isArray(config.apiKeyEntries) ? config.apiKeyEntries : [];
+export const getProviderApiKeyEntries = (config: {
+  apiKeyEntries?: ApiKeyEntry[];
+}): ApiKeyEntry[] => (Array.isArray(config.apiKeyEntries) ? config.apiKeyEntries : []);
 
 export const getPrimaryApiKey = (config: { apiKeyEntries?: ApiKeyEntry[] }): string => {
   const entry = getProviderApiKeyEntries(config).find((item) => String(item.apiKey ?? '').trim());
@@ -189,7 +190,9 @@ const EMPTY_RECENT_USAGE_ENTRY: RecentRequestUsageEntry = {
 };
 
 const normalizeProviderRecentKey = (value: unknown): string =>
-  String(value ?? '').trim().toLowerCase();
+  String(value ?? '')
+    .trim()
+    .toLowerCase();
 
 export function getProviderRecentUsageEntry(
   usageByProvider: ProviderRecentUsageMap,
@@ -212,12 +215,7 @@ export function getProviderRecentBuckets(
   apiKey?: string,
   baseUrl?: string
 ): RecentRequestBucket[] {
-  return getProviderRecentUsageEntry(
-    usageByProvider,
-    provider,
-    apiKey,
-    baseUrl
-  ).recentRequests;
+  return getProviderRecentUsageEntry(usageByProvider, provider, apiKey, baseUrl).recentRequests;
 }
 
 export function getProviderTotalStats(

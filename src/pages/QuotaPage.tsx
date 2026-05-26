@@ -5,8 +5,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useAuthStore } from '@/stores';
 import { authFilesApi, configFileApi } from '@/services/api';
+import { Button } from '@/components/ui/Button';
+import { IconRefreshCw } from '@/components/ui/icons';
 import {
   QuotaSection,
   ANTIGRAVITY_CONFIG,
@@ -26,7 +29,7 @@ const QUOTA_TAB_CONFIGS = [
   KIMI_CONFIG,
 ] as const;
 
-type QuotaTabType = (typeof QUOTA_TAB_CONFIGS)[number]['type'];
+type QuotaTabType = 'all' | (typeof QUOTA_TAB_CONFIGS)[number]['type'];
 
 export function QuotaPage() {
   const { t } = useTranslation();
@@ -35,9 +38,17 @@ export function QuotaPage() {
   const [files, setFiles] = useState<AuthFileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<QuotaTabType>('codex');
+  const [activeTab, setActiveTab] = useState<QuotaTabType>('all');
+  const [globalRefreshTrigger, setGlobalRefreshTrigger] = useState(0);
 
   const disableControls = connectionStatus !== 'connected';
+
+  const hasCodex = files.some(CODEX_CONFIG.filterFn);
+  const hasClaude = files.some(CLAUDE_CONFIG.filterFn);
+  const hasAntigravity = files.some(ANTIGRAVITY_CONFIG.filterFn);
+  const hasGeminiCli = files.some(GEMINI_CLI_CONFIG.filterFn);
+  const hasKimi = files.some(KIMI_CONFIG.filterFn);
+  const hasAnyQuota = hasCodex || hasClaude || hasAntigravity || hasGeminiCli || hasKimi;
 
   const loadConfig = useCallback(async () => {
     try {
@@ -66,6 +77,11 @@ export function QuotaPage() {
     await Promise.all([loadConfig(), loadFiles()]);
   }, [loadConfig, loadFiles]);
 
+  const handleGlobalRefresh = useCallback(() => {
+    setGlobalRefreshTrigger((prev) => prev + 1);
+    void handleHeaderRefresh();
+  }, [handleHeaderRefresh]);
+
   useHeaderRefresh(handleHeaderRefresh);
 
   useEffect(() => {
@@ -76,13 +92,37 @@ export function QuotaPage() {
   return (
     <div className={styles.container}>
       <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>{t('quota_management.title')}</h1>
+        <div className={styles.pageTitleRow}>
+          <h1 className={styles.pageTitle}>{t('quota_management.title')}</h1>
+          {activeTab === 'all' && hasAnyQuota && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className={styles.globalRefreshButton}
+              onClick={handleGlobalRefresh}
+              disabled={loading}
+              loading={loading}
+            >
+              {!loading && <IconRefreshCw size={16} />}
+              {t('quota_management.refresh_all_credentials')}
+            </Button>
+          )}
+        </div>
         <p className={styles.description}>{t('quota_management.description')}</p>
       </div>
 
       {error && <div className={styles.errorBox}>{error}</div>}
 
       <div className={styles.tabBar} role="tablist" aria-label={t('quota_management.title')}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'all'}
+          className={`${styles.tabItem} ${activeTab === 'all' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('all')}
+        >
+          {t('auth_files.filter_all')}
+        </button>
         {QUOTA_TAB_CONFIGS.map((cfg) => (
           <button
             key={cfg.type}
@@ -98,20 +138,104 @@ export function QuotaPage() {
       </div>
 
       <div className={styles.tabPanel} role="tabpanel">
-        {activeTab === 'codex' && (
-          <QuotaSection config={CODEX_CONFIG} files={files} loading={loading} disabled={disableControls} />
-        )}
-        {activeTab === 'claude' && (
-          <QuotaSection config={CLAUDE_CONFIG} files={files} loading={loading} disabled={disableControls} />
-        )}
-        {activeTab === 'antigravity' && (
-          <QuotaSection config={ANTIGRAVITY_CONFIG} files={files} loading={loading} disabled={disableControls} />
-        )}
-        {activeTab === 'gemini-cli' && (
-          <QuotaSection config={GEMINI_CLI_CONFIG} files={files} loading={loading} disabled={disableControls} />
-        )}
-        {activeTab === 'kimi' && (
-          <QuotaSection config={KIMI_CONFIG} files={files} loading={loading} disabled={disableControls} />
+        {activeTab === 'all' ? (
+          hasAnyQuota ? (
+            <div className={styles.allSectionsWrapper}>
+              {hasCodex && (
+                <QuotaSection
+                  config={CODEX_CONFIG}
+                  files={files}
+                  loading={loading}
+                  disabled={disableControls}
+                  globalRefreshTrigger={globalRefreshTrigger}
+                />
+              )}
+              {hasClaude && (
+                <QuotaSection
+                  config={CLAUDE_CONFIG}
+                  files={files}
+                  loading={loading}
+                  disabled={disableControls}
+                  globalRefreshTrigger={globalRefreshTrigger}
+                />
+              )}
+              {hasAntigravity && (
+                <QuotaSection
+                  config={ANTIGRAVITY_CONFIG}
+                  files={files}
+                  loading={loading}
+                  disabled={disableControls}
+                  globalRefreshTrigger={globalRefreshTrigger}
+                />
+              )}
+              {hasGeminiCli && (
+                <QuotaSection
+                  config={GEMINI_CLI_CONFIG}
+                  files={files}
+                  loading={loading}
+                  disabled={disableControls}
+                  globalRefreshTrigger={globalRefreshTrigger}
+                />
+              )}
+              {hasKimi && (
+                <QuotaSection
+                  config={KIMI_CONFIG}
+                  files={files}
+                  loading={loading}
+                  disabled={disableControls}
+                  globalRefreshTrigger={globalRefreshTrigger}
+                />
+              )}
+            </div>
+          ) : (
+            <EmptyState
+              title={t('quota_management.empty_title')}
+              description={t('quota_management.empty_desc')}
+            />
+          )
+        ) : (
+          <>
+            {activeTab === 'codex' && (
+              <QuotaSection
+                config={CODEX_CONFIG}
+                files={files}
+                loading={loading}
+                disabled={disableControls}
+              />
+            )}
+            {activeTab === 'claude' && (
+              <QuotaSection
+                config={CLAUDE_CONFIG}
+                files={files}
+                loading={loading}
+                disabled={disableControls}
+              />
+            )}
+            {activeTab === 'antigravity' && (
+              <QuotaSection
+                config={ANTIGRAVITY_CONFIG}
+                files={files}
+                loading={loading}
+                disabled={disableControls}
+              />
+            )}
+            {activeTab === 'gemini-cli' && (
+              <QuotaSection
+                config={GEMINI_CLI_CONFIG}
+                files={files}
+                loading={loading}
+                disabled={disableControls}
+              />
+            )}
+            {activeTab === 'kimi' && (
+              <QuotaSection
+                config={KIMI_CONFIG}
+                files={files}
+                loading={loading}
+                disabled={disableControls}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

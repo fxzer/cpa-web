@@ -119,9 +119,7 @@ export function ProviderApiKeyEntriesEditor({
                       variant="secondary"
                       size="sm"
                       onClick={() => onBatchTest?.(index)}
-                      disabled={
-                        controlsDisabled || !entry.apiKey?.trim() || !baseUrl.trim()
-                      }
+                      disabled={controlsDisabled || !entry.apiKey?.trim() || !baseUrl.trim()}
                     >
                       {t('ai_providers.openai_batch_model_test_btn')}
                     </Button>
