@@ -319,7 +319,7 @@ export function OpenAIModelDiscoveryModal({
             <span className={styles.sectionHint}>{t('ai_providers.openai_models_search_empty')}</span>
           </div>
         ) : (
-          <div className={styles.modelDiscoveryContainer}>
+          <div className={styles.modelDiscoveryContainer} data-group-mode={groupMode}>
             <div className={styles.modelDiscoverySidebar}>
               {groups.map((group) => (
                 <button

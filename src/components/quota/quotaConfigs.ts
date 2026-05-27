@@ -30,7 +30,8 @@ import type {
   KimiQuotaState,
 } from '@/types';
 import { apiCallApi, authFilesApi, getApiCallErrorMessage } from '@/services/api';
-import { useQuotaStore } from '@/stores';
+import { useQuotaStore, useNotificationStore } from '@/stores';
+import { copyToClipboard } from '@/utils/clipboard';
 import {
   ANTIGRAVITY_QUOTA_URLS,
   ANTIGRAVITY_REQUEST_HEADERS,
@@ -717,13 +718,53 @@ const renderAntigravityItems = (
     const percent = Math.round(clamped * 100);
     const resetLabel = formatQuotaResetTime(group.resetTime);
 
+    const hasModels = group.models && group.models.length > 0;
+    const title = hasModels
+      ? `${group.label} (点击复制: ${group.models.join(', ')})`
+      : group.label;
+
+    const handleCopy = async () => {
+      if (hasModels) {
+        const textToCopy = group.models.join(' / ');
+        const ok = await copyToClipboard(textToCopy);
+        useNotificationStore.getState().showNotification(
+          t(ok ? 'notification.link_copied' : 'notification.copy_failed'),
+          ok ? 'success' : 'error'
+        );
+      }
+    };
+
+    const modelClassName = hasModels
+      ? `${styleMap.quotaModel} ${styleMap.quotaModelCopyable}`
+      : styleMap.quotaModel;
+
     return h(
       'div',
       { key: group.id, className: styleMap.quotaRow },
       h(
         'div',
         { className: styleMap.quotaRowHeader },
-        h('span', { className: styleMap.quotaModel, title: group.models.join(', ') }, group.label),
+        h(
+          'span',
+          {
+            className: modelClassName,
+            title,
+            ...(hasModels
+              ? {
+                  role: 'button',
+                  tabIndex: 0,
+                  onClick: () => void handleCopy(),
+                  onKeyDown: (e: React.KeyboardEvent) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      void handleCopy();
+                    }
+                  },
+                }
+              : {}),
+          },
+          group.label
+        ),
         h(
           'div',
           { className: styleMap.quotaMeta },
@@ -889,9 +930,27 @@ const renderGeminiCliItems = (
           : t('gemini_cli_quota.remaining_amount', {
               count: bucket.remainingAmount,
             });
-      const titleBase =
-        bucket.modelIds && bucket.modelIds.length > 0 ? bucket.modelIds.join(', ') : bucket.label;
-      const title = bucket.tokenType ? `${titleBase} (${bucket.tokenType})` : titleBase;
+      const modelIds = bucket.modelIds;
+      const hasModels = modelIds !== undefined && modelIds.length > 0;
+      const titleBase = bucket.tokenType ? `${bucket.label} (${bucket.tokenType})` : bucket.label;
+      const title = hasModels
+        ? `${titleBase} (点击复制: ${modelIds.join(', ')})`
+        : titleBase;
+
+      const handleCopy = async () => {
+        if (modelIds && modelIds.length > 0) {
+          const textToCopy = modelIds.join(' / ');
+          const ok = await copyToClipboard(textToCopy);
+          useNotificationStore.getState().showNotification(
+            t(ok ? 'notification.link_copied' : 'notification.copy_failed'),
+            ok ? 'success' : 'error'
+          );
+        }
+      };
+
+      const modelClassName = hasModels
+        ? `${styleMap.quotaModel} ${styleMap.quotaModelCopyable}`
+        : styleMap.quotaModel;
 
       const resetLabel = formatQuotaResetTime(bucket.resetTime);
 
@@ -901,7 +960,27 @@ const renderGeminiCliItems = (
         h(
           'div',
           { className: styleMap.quotaRowHeader },
-          h('span', { className: styleMap.quotaModel, title }, bucket.label),
+          h(
+            'span',
+            {
+              className: modelClassName,
+              title,
+              ...(hasModels
+                ? {
+                    role: 'button',
+                    tabIndex: 0,
+                    onClick: () => void handleCopy(),
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        void handleCopy();
+                      }
+                    },
+                  }
+                : {}),
+            },
+            bucket.label
+          ),
           h(
             'div',
             { className: styleMap.quotaMeta },

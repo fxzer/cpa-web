@@ -20,12 +20,36 @@
 | **本仓库（前端）** | <https://github.com/fxzer/cliproxyapi-management.git> |
 | **后端仓库** | <https://github.com/fxzer/CLIProxyAPI> · `git clone https://github.com/fxzer/CLIProxyAPI.git` |
 | **后端改动摘要** | 见该仓库 README **「fxzer fork」**小节（位于 **Sponsor / 赞助商** 上方），含 `GET /v0/management/usage`、`GET /v0/management/auth-refresh-queue` 等。 |
-| **部署提示** | Homebrew 默认 `cliproxyapi` bottle 可能尚未包含上述路由；需使用含改动的构建（参见后端仓库内 `scripts/deploy-brew-service.sh` 或自行 `go build` 并配置与 brew 一致的 `DefaultConfigPath`）。 |
+| **部署提示** | Homebrew 默认 `cliproxyapi` bottle 可能尚未包含上述路由；需使用含改动的构建（参见后端仓库内 `scripts/deploy-brew-service.sh` 或本仓库 `deploy.sh`）。 |
+| **usage-service** | 本仓库 `usage-service/`（可选）；长期请求监控见下文 **「usage-service 与请求监控」**。 |
 
 ## 这是什么（以及不是什么）
 
-- 本仓库只包含 Web 管理界面本身，通过 CLI Proxy API 的 **Management API**（`/v0/management`）读取/修改配置、上传凭据与查看日志。
-- 它 **不是** 代理本体，不参与流量转发。
+- 本仓库以 **Web 管理界面**（React）为主，通过 CLI Proxy API 的 **Management API**（`/v0/management`）读取/修改配置、上传凭据与查看日志。
+- 仓库内还包含可选的 **usage-service**（`usage-service/`，进程名 `cpa-manager`）：从 CPA 采集请求用量并写入 SQLite，供「请求监控」等页面做长期持久化与费用估算。
+- 它们 **不是** 代理本体，不参与流量转发；代理服务仍由 [CLIProxyAPI](https://github.com/fxzer/CLIProxyAPI) 提供。
+
+### 组件关系
+
+```
+cliproxyapi-management (React)
+    │  大部分页面 → /v0/management/*
+    ▼
+CLIProxyAPI :8317                 主后端（代理 + Management API）
+
+usage-service (cpa-manager) :18317   可选 sidecar
+    │  轮询 CPA usage-queue → SQLite
+    ▼
+「请求监控」页（可配置直连此服务）
+```
+
+| 组件 | 是否必需 | 说明 |
+|------|----------|------|
+| CLIProxyAPI | 是 | 代理与管理 API |
+| 本仓库前端 | 是（若使用 Web UI） | 构建为 `management.html` |
+| usage-service | 否 | 需要长期请求级监控、导入导出、模型定价时启用 |
+
+不部署 usage-service 时，「请求监控」会降级为读取 CPA 内存队列的短期数据（retention 有限）；监控中心、凭证中心等其它页面不受影响。
 
 
 
@@ -60,7 +84,9 @@
 
 ### 部署与工程化
 
-- **deploy.sh**：支持仅前端、仅后端等部署模式；部署前可备份 `management.html` 与后端二进制；补充用法说明、注释与依赖/配置检查。
+- **DEPLOY.md**：完整部署指南（架构、手动/一键部署、usage-service、验证与排错）。
+- **deploy.sh**：一键部署前端、CLIProxyAPI 与 usage-service；支持本地（Homebrew + LaunchAgent）与服务器（SSH + systemd）。
+- **usage-service**：位于 `usage-service/`，默认监听 `:18317`；部署模板见 `usage-service/deploy/`。
 - **站点标题**：`index.html` / `main.tsx` 中应用标题为 **cliproxyapi-management**。
 
 ### 文档
@@ -99,6 +125,20 @@ npm run build
 
 提示：直接用 `file://` 打开 `dist/index.html` 可能遇到浏览器 CORS 限制；更稳妥的方式是用预览/静态服务器打开。
 
+### 方式 D：生产部署
+
+完整部署步骤（最简手动、一键 `deploy.sh`、usage-service 配置、服务器 SSH、验证清单）见 **[DEPLOY.md](./DEPLOY.md)**。
+
+```bash
+./deploy.sh                    # 本地：前端 + CPA + usage-service
+./deploy.sh --skip-usage-service   # 跳过 usage-service
+./deploy.sh --target server    # 部署到远程服务器
+```
+
+## usage-service 与请求监控
+
+「请求监控」页支持 **usage-service**（SQLite 长期持久化）与 **management-api**（CPA 短期队列）两种数据源。配置方式、密钥设置与故障排查见 **[DEPLOY.md](./DEPLOY.md#usage-service-与请求监控)**。
+
 ## 连接说明
 
 ### API 地址怎么填
@@ -136,6 +176,7 @@ npm run build
 - **配额管理**：管理 Claude、Antigravity、Codex、Gemini CLI 等提供商的配额上限与使用情况。
 - **配置文件**：浏览器内编辑 `/config.yaml`（YAML 高亮 + 搜索），保存/重载。
 - **日志**：增量拉取日志、自动刷新、搜索、隐藏管理端流量、清空日志；下载请求错误日志文件。
+- **请求监控**（需 usage-service 或 CPA 短期队列）：逐条请求列表、模型定价与费用估算、用量导入导出；可切换 usage-service / management-api 数据源。
 - **系统信息**：快捷链接 + 拉取 `/v1/models` 并分组展示（需要至少一个代理 API Key 才能查询模型）。
 
 ## 技术栈
@@ -152,11 +193,10 @@ npm run build
 
 ## 多语言支持
 
-目前支持三种语言：
+目前支持两种语言：
 
 - 英文 (en)
 - 简体中文 (zh-CN)
-- 俄文 (ru)
 
 界面语言会根据浏览器设置自动切换，也可在页面底部手动切换。
 
@@ -184,6 +224,7 @@ npm run build
 - **日志页面不显示**：需要在“基础设置”里开启“写入日志文件”，导航项才会出现。
 - **功能提示不支持**：多为后端版本较旧或接口未启用/不存在（如：认证文件模型列表、排除模型、日志相关接口）。
 - **OpenAI 提供商测试失败**：测试在浏览器侧执行，会受网络与 CORS 影响；这里失败不一定代表服务端不可用。
+- **部署与 usage-service 问题**：见 [DEPLOY.md](./DEPLOY.md#常见问题)。
 
 ## 开发命令
 

@@ -347,6 +347,16 @@
   }
 }
 
+.quotaModelCopyable {
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+  }
+}
+
 .quotaBar {
   height: 8px;
   background-color: var(--bg-tertiary);

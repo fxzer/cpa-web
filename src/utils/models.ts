@@ -166,17 +166,26 @@ const COMMON_PREFIX_LABELS: Record<string, string> = {
   'huggingfaceh4': 'Hugging Face',
   'carperai': 'CarperAI',
   'eleutherai': 'EleutherAI',
+  'moonshotai': 'Moonshot AI',
+  'moonshot': 'Moonshot AI',
 };
 
 function formatBrandPrefix(prefix: string): string {
-  const lower = prefix.toLowerCase();
+  const hasTilde = prefix.startsWith('~');
+  const cleanPrefix = hasTilde ? prefix.slice(1) : prefix;
+  const lower = cleanPrefix.toLowerCase();
+
+  let formatted = '';
   if (COMMON_PREFIX_LABELS[lower]) {
-    return COMMON_PREFIX_LABELS[lower];
+    formatted = COMMON_PREFIX_LABELS[lower];
+  } else {
+    formatted = cleanPrefix
+      .split(/[-_/]/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
-  return prefix
-    .split(/[-_/]/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+
+  return formatted;
 }
 
 export function classifyModels(

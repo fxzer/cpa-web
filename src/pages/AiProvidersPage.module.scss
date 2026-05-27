@@ -605,7 +605,6 @@ $openai-toolbar-control-height: 36px;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px;
-  margin-bottom: 4px;
   min-width: 0;
   font-size: 14px;
   line-height: 1.4;
@@ -693,15 +692,14 @@ $openai-toolbar-control-height: 36px;
 .headerBadge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   flex-wrap: wrap;
   min-width: 0;
   max-width: 100%;
   background: var(--accent-tertiary, #f3f4f6);
-  border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  padding: 4px 10px;
-  font-size: 12px;
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 10px;
   color: var(--text-secondary);
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -718,7 +716,6 @@ $openai-toolbar-control-height: 36px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 8px;
   align-items: center;
   min-width: 0;
   max-width: 100%;
@@ -747,7 +744,7 @@ $openai-toolbar-control-height: 36px;
   color: var(--text-secondary);
   border: 1px solid var(--border-secondary);
   border-radius: 14px;
-  padding: 4px 10px;
+  padding: 2px 6px;
   font-size: 12px;
   transition: all 0.15s ease;
 
@@ -872,85 +869,63 @@ $openai-toolbar-control-height: 36px;
 
 .apiKeyEntryList {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.apiKeyEntryCard {
-  display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
-  align-items: center;
   gap: 8px;
   min-width: 0;
   max-width: 100%;
-  padding: 8px 12px;
-  background: var(--bg-secondary, #f9fafb);
-  border: 1px solid var(--border-secondary);
-  border-radius: 8px;
-  font-size: 12px;
 }
 
-.apiKeyEntryIndex {
+.apiKeyPill {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-  flex-shrink: 0;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--bg-tertiary, #f3f4f6);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+  cursor: default;
+  width: calc(50% - 4px);
+  box-sizing: border-box;
+
+  &:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+  }
 }
 
-.apiKeyEntryKey {
+.apiKeyPillIndex {
+  color: var(--text-tertiary);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.apiKeyPillKey {
   font-family: 'Monaco', 'Menlo', 'Consolas', 'Ubuntu Mono', monospace;
   font-weight: 600;
-  color: var(--text-primary);
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-all;
 }
 
-.apiKeyEntryRemark {
-  color: var(--text-tertiary);
-  font-size: 12px;
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-
-  &::before {
-    content: '| ';
-    color: var(--text-quaternary);
-    margin-right: 2px;
-  }
-}
-
-.apiKeyEntryProxy {
-  color: var(--text-tertiary);
-  font-size: 12px;
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-
-  &::before {
-    content: '| Proxy: ';
-    color: var(--text-quaternary);
-  }
-}
-
-.apiKeyEntryStats {
-  display: flex;
-  gap: 6px;
+.apiKeyPillStats {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin-left: auto;
+  border-left: 1px solid var(--border-color);
+  padding-left: 6px;
 }
 
+.apiKeyPillSuccess {
+  color: var(--success-color);
+  font-weight: 700;
+}
+
+.apiKeyPillFailure {
+  color: var(--error-color);
+  font-weight: 700;
+}
 .apiKeyEntryStat {
   display: inline-flex;
   align-items: center;
@@ -984,7 +959,8 @@ $openai-toolbar-control-height: 36px;
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
-  max-height: min(52vh, 520px);
+  height: 100%;
+  max-height: 100%;
   overflow-y: auto;
   margin-top: 0;
   padding-right: 4px;
@@ -992,7 +968,8 @@ $openai-toolbar-control-height: 36px;
 
 .modelDiscoveryListLoading,
 .modelDiscoveryListEmpty {
-  min-height: 280px;
+  flex: 1;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1211,6 +1188,17 @@ $openai-toolbar-control-height: 36px;
 
 // 「选择模型」弹窗：标题区左对齐，让副标题 hint 正常排列
 .openaiModelDiscoveryModal {
+  height: 96vh;
+  max-height: 96vh;
+
+  :global(.modal-body) {
+    flex: 1;
+    max-height: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
   :global(.modal-header) {
     align-items: flex-start;
   }
@@ -1227,6 +1215,8 @@ $openai-toolbar-control-height: 36px;
   flex-direction: column;
   gap: $spacing-md;
   margin-top: 0;
+  flex: 1;
+  min-height: 0;
 }
 
 .openaiModelsDiscoveryTopGrid {
@@ -1309,6 +1299,16 @@ $openai-toolbar-control-height: 36px;
 
 .batchModelTestModal {
   --checkbox-active-color: var(--success-color);
+  height: 96vh;
+  max-height: 96vh;
+
+  :global(.modal-body) {
+    flex: 1;
+    max-height: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
 
   .modelDiscoveryRow {
     &:hover {
@@ -1537,8 +1537,8 @@ $openai-toolbar-control-height: 36px;
 }
 
 // 状态监测栏（位于卡片标题下方）
-$provider-status-bar-height: 24px;
-$provider-status-bar-small-height: 16px;
+$provider-status-bar-height: 20px;
+$provider-status-bar-small-height: 14px;
 
 .providerCardHeader .statusBar {
   margin-top: 0;
@@ -1918,13 +1918,13 @@ $provider-status-bar-small-height: 16px;
 
 // 与 ModelInputList 的全局类 header-input-list 同节点，提高优先级以覆盖 flex 列布局
 .modelInputList:global(.header-input-list) {
-  gap: $spacing-xs;
+  gap: 2px 8px;
 
   @media (min-width: #{$breakpoint-tablet + 1px}) {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    column-gap: $spacing-md;
-    row-gap: $spacing-xs;
+    column-gap: 8px;
+    row-gap: 2px;
     align-items: start;
 
     > .modelInputRow {
@@ -1942,12 +1942,12 @@ $provider-status-bar-small-height: 16px;
 .modelInputRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
-  gap: $spacing-sm;
+  gap: 2px 8px;
   align-items: center;
 
   @include mobile {
     grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: $spacing-xs;
+    row-gap: 2px;
 
     > :nth-child(2) {
       display: none;
@@ -1966,10 +1966,31 @@ $provider-status-bar-small-height: 16px;
 
 .modelInputField {
   min-width: 0;
+  padding: 4px 8px;
+  height: 30px;
+  box-sizing: border-box;
+  font-size: 13px;
+
+  &::placeholder {
+    font-size: 12px;
+  }
 }
 
 .modelRowRemoveButton {
   justify-self: center;
+
+  &:global(.btn) {
+    height: 30px;
+    width: 30px;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 .modelBatchStatusRow {
@@ -2336,13 +2357,9 @@ $provider-status-bar-small-height: 16px;
     color: var(--warning-color);
   }
 
-  .apiKeyEntryCard {
+  .apiKeyPill {
     background: var(--bg-tertiary);
     border-color: var(--border-primary);
-  }
-
-  .apiKeyEntryIndex {
-    background: var(--primary-color);
   }
 
   .statusBlockIdle {
@@ -2417,8 +2434,8 @@ $provider-status-bar-small-height: 16px;
   grid-template-columns: 140px 1fr;
   gap: 16px;
   align-items: stretch;
-  min-height: 280px;
-  max-height: min(52vh, 520px);
+  flex: 1;
+  min-height: 0;
 
   // 按厂商分类时，厂商名较长，侧边栏加宽
   &[data-group-mode='vendor'] {
@@ -2429,6 +2446,7 @@ $provider-status-bar-small-height: 16px;
     grid-template-columns: 1fr;
     max-height: none;
     min-height: 0;
+    flex: none;
 
     &[data-group-mode='vendor'] {
       grid-template-columns: 1fr;
@@ -2445,6 +2463,7 @@ $provider-status-bar-small-height: 16px;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
   background: color-mix(in srgb, var(--bg-primary) 76%, transparent);
+  height: 100%;
   max-height: 100%;
   scrollbar-width: none;
 
@@ -2457,6 +2476,7 @@ $provider-status-bar-small-height: 16px;
     overflow-x: auto;
     overflow-y: hidden;
     max-height: none;
+    height: auto;
     border-radius: 8px;
     border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
     background: color-mix(in srgb, var(--bg-primary) 76%, transparent);

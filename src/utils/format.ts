@@ -21,15 +21,12 @@ export function maskApiKey(key: string): string {
   if (!trimmed) {
     return '';
   }
-
-  const MASKED_LENGTH = 10;
-  const visibleChars = trimmed.length < 4 ? 1 : 2;
-  const start = trimmed.slice(0, visibleChars);
-  const end = trimmed.slice(-visibleChars);
-  const maskedLength = Math.max(MASKED_LENGTH - visibleChars * 2, 1);
-  const masked = '*'.repeat(maskedLength);
-
-  return `${start}${masked}${end}`;
+  if (trimmed.length <= 6) {
+    return trimmed;
+  }
+  const start = trimmed.slice(0, 3);
+  const end = trimmed.slice(-3);
+  return `${start}...${end}`;
 }
 
 /** 将过长文本拆成「可省略头部 + 固定尾部」，便于在窄列中保留前缀与后缀 */

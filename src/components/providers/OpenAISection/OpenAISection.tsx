@@ -7,7 +7,6 @@ import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { Select } from '@/components/ui/Select';
 import { ProviderConfigToggle } from '../ProviderConfigToggle';
 import {
-  IconCheck,
   IconChevronDown,
   IconChevronUp,
   IconSlidersHorizontal,
@@ -528,28 +527,31 @@ export function OpenAISection({
                   return (
                     <div
                       key={getApiKeyEntryRenderKey(entry, entryIndex)}
-                      className={styles.apiKeyEntryCard}
+                      className={styles.apiKeyPill}
+                      title={
+                        [
+                          entry.proxyUrl ? `${t('common.proxy_url')}: ${entry.proxyUrl}` : '',
+                          `${t('common.status')}: ${t('common.success')}: ${entryStats.success} / ${t('common.failure')}: ${entryStats.failure}`,
+                        ]
+                          .filter(Boolean)
+                          .join(' | ') || undefined
+                      }
                     >
-                      <span className={styles.apiKeyEntryIndex}>{entryIndex + 1}</span>
-                      <span className={styles.apiKeyEntryKey}>{maskApiKey(entry.apiKey)}</span>
-                      {entry.remark && (
-                        <span className={styles.apiKeyEntryRemark}>[{entry.remark}]</span>
-                      )}
-                      {entry.proxyUrl && (
-                        <span className={styles.apiKeyEntryProxy}>{entry.proxyUrl}</span>
-                      )}
-                      <div className={styles.apiKeyEntryStats}>
-                        <span
-                          className={`${styles.apiKeyEntryStat} ${styles.apiKeyEntryStatSuccess}`}
-                        >
-                          <IconCheck size={12} /> {entryStats.success}
+                      <span className={styles.apiKeyPillKey}>{maskApiKey(entry.apiKey)}</span>
+                      {((entryStats.success || 0) > 0 || (entryStats.failure || 0) > 0) && (
+                        <span className={styles.apiKeyPillStats}>
+                          {(entryStats.success || 0) > 0 ? (
+                            <span className={styles.apiKeyPillSuccess}>✓{entryStats.success}</span>
+                          ) : (
+                            <span className={styles.apiKeyPillSuccess} style={{ visibility: 'hidden' }}>✓0</span>
+                          )}
+                          {(entryStats.failure || 0) > 0 ? (
+                            <span className={styles.apiKeyPillFailure}>✗{entryStats.failure}</span>
+                          ) : (
+                            <span className={styles.apiKeyPillFailure} style={{ visibility: 'hidden' }}>✗0</span>
+                          )}
                         </span>
-                        <span
-                          className={`${styles.apiKeyEntryStat} ${styles.apiKeyEntryStatFailure}`}
-                        >
-                          <IconX size={12} /> {entryStats.failure}
-                        </span>
-                      </div>
+                      )}
                     </div>
                   );
                 })}
