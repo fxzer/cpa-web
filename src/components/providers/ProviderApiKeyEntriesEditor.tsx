@@ -72,6 +72,7 @@ export function ProviderApiKeyEntriesEditor({
           <div className={styles.keyTableColIndex}>#</div>
           {testingEnabled && <div className={styles.keyTableColStatus}>{t('common.status')}</div>}
           <div className={styles.keyTableColKey}>{t('common.api_key')}</div>
+          <div className={styles.keyTableColRemark}>{t('common.remark')}</div>
           <div className={styles.keyTableColProxy}>{t('common.proxy_url')}</div>
           <div className={styles.keyTableColAction}>{t('common.action')}</div>
         </div>
@@ -100,6 +101,16 @@ export function ProviderApiKeyEntriesEditor({
                   disabled={controlsDisabled}
                   className={`input ${styles.keyTableInput}`}
                   placeholder={t('ai_providers.provider_key_placeholder')}
+                />
+              </div>
+              <div className={styles.keyTableColRemark}>
+                <input
+                  type="text"
+                  value={entry.remark ?? ''}
+                  onChange={(e) => updateEntry(index, 'remark', e.target.value)}
+                  disabled={controlsDisabled}
+                  className={`input ${styles.keyTableInput}`}
+                  placeholder={t('ai_providers.provider_remark_placeholder')}
                 />
               </div>
               <div className={styles.keyTableColProxy}>

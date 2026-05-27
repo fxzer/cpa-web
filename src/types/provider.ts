@@ -13,6 +13,7 @@ export interface ModelAlias {
 export interface ApiKeyEntry {
   apiKey: string;
   proxyUrl?: string;
+  remark?: string;
   headers?: Record<string, string>;
   authIndex?: string;
 }

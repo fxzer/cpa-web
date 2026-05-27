@@ -242,8 +242,8 @@ export function AiProvidersClaudeEditPage() {
       const maskedKey = (() => {
         const rawKey = resolvedApiKey.trim();
         if (!rawKey) return '';
-        return rawKey.length > 10
-          ? `${rawKey.slice(0, 5)}...${rawKey.slice(-5)}`
+        return rawKey.length > 6
+          ? `${rawKey.slice(0, 3)}...${rawKey.slice(-3)}`
           : rawKey;
       })();
       const message = t('ai_providers.claude_test_success', { model: modelName, key: maskedKey });

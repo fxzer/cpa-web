@@ -100,14 +100,16 @@ const normalizeApiKeyEntries = (entries: ApiKeyEntry[]) =>
     Array<{
       apiKey: string;
       proxyUrl: string;
+      remark: string;
       headers: Array<{ key: string; value: string }>;
     }>
   >((acc, entry) => {
     const apiKey = String(entry?.apiKey ?? '').trim();
     const proxyUrl = String(entry?.proxyUrl ?? '').trim();
+    const remark = String(entry?.remark ?? '').trim();
     const headers = normalizeKeyHeaders(entry?.headers);
-    if (!apiKey && !proxyUrl && headers.length === 0) return acc;
-    acc.push({ apiKey, proxyUrl, headers });
+    if (!apiKey && !proxyUrl && !remark && headers.length === 0) return acc;
+    acc.push({ apiKey, proxyUrl, remark, headers });
     return acc;
   }, []);
 
@@ -135,7 +137,7 @@ const areNormalizedApiKeyEntriesEqual = (
     const left = a[i];
     const right = b[i];
     if (!left || !right) return false;
-    if (left.apiKey !== right.apiKey || left.proxyUrl !== right.proxyUrl) return false;
+    if (left.apiKey !== right.apiKey || left.proxyUrl !== right.proxyUrl || left.remark !== right.remark) return false;
     if (!areKeyValueEntriesEqual(left.headers, right.headers)) return false;
   }
   return true;
@@ -488,6 +490,7 @@ export function AiProvidersOpenAIEditLayout() {
         apiKeyEntries: form.apiKeyEntries.map((entry: ApiKeyEntry) => ({
           apiKey: entry.apiKey.trim(),
           proxyUrl: entry.proxyUrl?.trim() || undefined,
+          remark: entry.remark?.trim() || undefined,
           headers: entry.headers,
         })),
       };

@@ -387,7 +387,7 @@ export const getProviderApiKeyEntryKey = (entry: ApiKeyEntry, index: number): st
   if (authIndexKey) {
     return authIndexKey;
   }
-  return `${entry.apiKey}::${entry.proxyUrl ?? ''}::${index}`;
+  return `${entry.apiKey}::${entry.proxyUrl ?? ''}::${entry.remark ?? ''}::${index}`;
 };
 
 export const getOpenAIProviderKey = (provider: OpenAIProviderConfig, index: number): string => {
@@ -403,12 +403,13 @@ export const getOpenAIEntryKey = (entry: ApiKeyEntry, index: number): string => 
   if (authIndexKey) {
     return authIndexKey;
   }
-  return `${entry.apiKey}::${entry.proxyUrl ?? ''}::${index}`;
+  return `${entry.apiKey}::${entry.proxyUrl ?? ''}::${entry.remark ?? ''}::${index}`;
 };
 
 export const buildApiKeyEntry = (input?: Partial<ApiKeyEntry>): ApiKeyEntry => ({
   apiKey: input?.apiKey ?? '',
   proxyUrl: input?.proxyUrl ?? '',
+  remark: input?.remark ?? '',
   headers: input?.headers ?? {},
 });
 
@@ -428,14 +429,16 @@ export const normalizeApiKeyEntriesForBaseline = (entries: ApiKeyEntry[]) =>
     Array<{
       apiKey: string;
       proxyUrl: string;
+      remark: string;
       headers: Array<{ key: string; value: string }>;
     }>
   >((acc, entry) => {
     const apiKey = String(entry?.apiKey ?? '').trim();
     const proxyUrl = String(entry?.proxyUrl ?? '').trim();
+    const remark = String(entry?.remark ?? '').trim();
     const headers = normalizeKeyHeaders(entry?.headers);
-    if (!apiKey && !proxyUrl && headers.length === 0) return acc;
-    acc.push({ apiKey, proxyUrl, headers });
+    if (!apiKey && !proxyUrl && !remark && headers.length === 0) return acc;
+    acc.push({ apiKey, proxyUrl, remark, headers });
     return acc;
   }, []);
 
@@ -449,7 +452,7 @@ export const areNormalizedApiKeyEntriesEqual = (
     const left = a[i];
     const right = b[i];
     if (!left || !right) return false;
-    if (left.apiKey !== right.apiKey || left.proxyUrl !== right.proxyUrl) return false;
+    if (left.apiKey !== right.apiKey || left.proxyUrl !== right.proxyUrl || left.remark !== right.remark) return false;
     if (!areKeyValueEntriesEqual(left.headers, right.headers)) return false;
   }
   return true;
@@ -459,6 +462,7 @@ export const serializeApiKeyEntriesForSave = (entries: ApiKeyEntry[]): ApiKeyEnt
   normalizeApiKeyEntriesForBaseline(entries).map((entry) => ({
     apiKey: entry.apiKey,
     proxyUrl: entry.proxyUrl || undefined,
+    remark: entry.remark || undefined,
     headers: buildHeaderObject(entry.headers),
   }));
 

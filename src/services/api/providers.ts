@@ -65,6 +65,7 @@ const serializeModelAliases = (models?: ModelAlias[]) =>
 const serializeApiKeyEntry = (entry: ApiKeyEntry) => {
   const payload: Record<string, unknown> = { 'api-key': entry.apiKey };
   if (entry.proxyUrl) payload['proxy-url'] = entry.proxyUrl;
+  if (entry.remark) payload['remark'] = entry.remark;
   const headers = serializeHeaders(entry.headers);
   if (headers) payload.headers = headers;
   return payload;

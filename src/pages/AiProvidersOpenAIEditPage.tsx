@@ -400,8 +400,8 @@ export function AiProvidersOpenAIEditPage() {
           const modelName = testModel.trim() || availableModels[0] || '';
           const rawKey = form.apiKeyEntries[keyIndex]?.apiKey?.trim() ?? '';
           const maskedKey =
-            rawKey.length > 10
-              ? `${rawKey.slice(0, 5)}...${rawKey.slice(-5)}`
+            rawKey.length > 6
+              ? `${rawKey.slice(0, 3)}...${rawKey.slice(-3)}`
               : rawKey;
           showNotification(
             t('ai_providers.openai_test_single_success', { model: modelName, key: maskedKey }),
@@ -567,6 +567,7 @@ export function AiProvidersOpenAIEditPage() {
             <div className={styles.keyTableColIndex}>#</div>
             <div className={styles.keyTableColStatus}>{t('common.status')}</div>
             <div className={styles.keyTableColKey}>{t('common.api_key')}</div>
+            <div className={styles.keyTableColRemark}>{t('common.remark')}</div>
             <div className={styles.keyTableColProxy}>{t('common.proxy_url')}</div>
             <div className={styles.keyTableColAction}>{t('common.action')}</div>
           </div>
@@ -596,6 +597,17 @@ export function AiProvidersOpenAIEditPage() {
                     disabled={saving || disableControls || isTestingKeys}
                     className={`input ${styles.keyTableInput}`}
                     placeholder={t('ai_providers.openai_key_placeholder')}
+                  />
+                </div>
+
+                <div className={styles.keyTableColRemark}>
+                  <input
+                    type="text"
+                    value={entry.remark ?? ''}
+                    onChange={(e) => updateEntry(index, 'remark', e.target.value)}
+                    disabled={saving || disableControls || isTestingKeys}
+                    className={`input ${styles.keyTableInput}`}
+                    placeholder={t('ai_providers.openai_remark_placeholder')}
                   />
                 </div>
 

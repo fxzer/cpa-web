@@ -47,6 +47,7 @@ export function ProviderConfigApiKeyEntriesList({
             >
               <span className={styles.apiKeyEntryIndex}>{entryIndex + 1}</span>
               <span className={styles.apiKeyEntryKey}>{maskApiKey(entry.apiKey)}</span>
+              {entry.remark && <span className={styles.apiKeyEntryRemark}>[{entry.remark}]</span>}
               {entry.proxyUrl && <span className={styles.apiKeyEntryProxy}>{entry.proxyUrl}</span>}
               <div className={styles.apiKeyEntryStats}>
                 <span className={`${styles.apiKeyEntryStat} ${styles.apiKeyEntryStatSuccess}`}>

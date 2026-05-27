@@ -575,8 +575,8 @@ export function AiProvidersGeminiEditPage() {
           const modelName = testModel.trim() || availableModels[0] || '';
           const rawKey = form.apiKeyEntries[keyIndex]?.apiKey?.trim() ?? '';
           const maskedKey =
-            rawKey.length > 10
-              ? `${rawKey.slice(0, 5)}...${rawKey.slice(-5)}`
+            rawKey.length > 6
+              ? `${rawKey.slice(0, 3)}...${rawKey.slice(-3)}`
               : rawKey;
           showNotification(
             t('ai_providers.openai_test_single_success', { model: modelName, key: maskedKey }),

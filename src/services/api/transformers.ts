@@ -122,6 +122,7 @@ const normalizeApiKeyEntry = (entry: unknown): ApiKeyEntry | null => {
   if (!trimmed) return null;
 
   const proxyUrl = record ? (record['proxy-url'] ?? record.proxyUrl) : undefined;
+  const remark = record ? (record['remark'] ?? record.remark) : undefined;
   const headers = record ? normalizeHeaders(record.headers) : undefined;
   const authIndex = normalizeAuthIndex(
     record?.['auth-index'] ?? record?.authIndex ?? record?.['auth_index']
@@ -130,6 +131,7 @@ const normalizeApiKeyEntry = (entry: unknown): ApiKeyEntry | null => {
   const result: ApiKeyEntry = {
     apiKey: trimmed,
     proxyUrl: proxyUrl ? String(proxyUrl) : undefined,
+    remark: remark ? String(remark) : undefined,
     headers,
   };
   if (authIndex) result.authIndex = authIndex;
