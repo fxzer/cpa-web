@@ -397,7 +397,16 @@ export function AiProvidersOpenAIEditPage() {
       try {
         const result = await runSingleKeyTest(keyIndex);
         if (result.ok) {
-          showNotification(t('ai_providers.openai_test_single_success'), 'success');
+          const modelName = testModel.trim() || availableModels[0] || '';
+          const rawKey = form.apiKeyEntries[keyIndex]?.apiKey?.trim() ?? '';
+          const maskedKey =
+            rawKey.length > 10
+              ? `${rawKey.slice(0, 5)}...${rawKey.slice(-5)}`
+              : rawKey;
+          showNotification(
+            t('ai_providers.openai_test_single_success', { model: modelName, key: maskedKey }),
+            'success'
+          );
         } else if (result.message) {
           showNotification(t('ai_providers.openai_test_single_failed'), 'error');
         }
@@ -406,7 +415,7 @@ export function AiProvidersOpenAIEditPage() {
         setIsTestingKeys(false);
       }
     },
-    [isTestingKeys, runSingleKeyTest, showNotification, t]
+    [isTestingKeys, runSingleKeyTest, showNotification, t, testModel, availableModels, form.apiKeyEntries]
   );
 
   // Test all keys
@@ -717,6 +726,7 @@ export function AiProvidersOpenAIEditPage() {
                 />
                 <Input
                   label={t('ai_providers.openai_add_modal_url_label')}
+                  placeholder={t('ai_providers.openai_add_modal_url_placeholder')}
                   value={form.baseUrl}
                   onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
                   disabled={saving || disableControls || isTestingKeys}

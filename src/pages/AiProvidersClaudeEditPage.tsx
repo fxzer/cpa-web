@@ -239,7 +239,14 @@ export function AiProvidersClaudeEditPage() {
         throw new Error(getApiCallErrorMessage(result));
       }
 
-      const message = t('ai_providers.claude_test_success');
+      const maskedKey = (() => {
+        const rawKey = resolvedApiKey.trim();
+        if (!rawKey) return '';
+        return rawKey.length > 10
+          ? `${rawKey.slice(0, 5)}...${rawKey.slice(-5)}`
+          : rawKey;
+      })();
+      const message = t('ai_providers.claude_test_success', { model: modelName, key: maskedKey });
       setTestStatus('success');
       setTestMessage(message);
       showNotification(message, 'success');

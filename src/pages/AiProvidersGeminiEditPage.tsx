@@ -572,7 +572,16 @@ export function AiProvidersGeminiEditPage() {
       try {
         const result = await runSingleKeyTest(keyIndex);
         if (result.ok) {
-          showNotification(t('ai_providers.openai_test_single_success'), 'success');
+          const modelName = testModel.trim() || availableModels[0] || '';
+          const rawKey = form.apiKeyEntries[keyIndex]?.apiKey?.trim() ?? '';
+          const maskedKey =
+            rawKey.length > 10
+              ? `${rawKey.slice(0, 5)}...${rawKey.slice(-5)}`
+              : rawKey;
+          showNotification(
+            t('ai_providers.openai_test_single_success', { model: modelName, key: maskedKey }),
+            'success'
+          );
         } else if (result.message) {
           showNotification(t('ai_providers.openai_test_single_failed'), 'error');
         }
@@ -581,7 +590,7 @@ export function AiProvidersGeminiEditPage() {
         setIsTestingKeys(false);
       }
     },
-    [isTestingKeys, runSingleKeyTest, showNotification, t]
+    [isTestingKeys, runSingleKeyTest, showNotification, t, testModel, availableModels, form.apiKeyEntries]
   );
 
   const testAllKeys = useCallback(async () => {
