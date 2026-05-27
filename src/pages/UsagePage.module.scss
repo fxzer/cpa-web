@@ -102,7 +102,7 @@
 }
 
 .loadingOverlayText {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -207,7 +207,7 @@
   display: grid;
   place-items: center;
   color: #fff;
-  font-size: 13px;
+  font-size: 14px;
   background: var(--accent);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.25);
@@ -423,7 +423,7 @@
 .apiEndpoint {
   font-weight: 600;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 14px;
   word-break: break-all;
 }
 
@@ -763,7 +763,7 @@
 }
 
 .syncDesc {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.6;
   margin: 0;
@@ -776,7 +776,7 @@
 }
 
 .syncFieldLabel {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -814,7 +814,7 @@
 }
 
 .syncStatus {
-  font-size: 13px;
+  font-size: 14px;
   min-height: 20px;
   line-height: 1.5;
 
@@ -1117,7 +1117,7 @@
   padding: 7px 10px;
   line-height: 24px;
   box-sizing: border-box;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   background-color: var(--bg-primary);
   box-shadow: var(--shadow);

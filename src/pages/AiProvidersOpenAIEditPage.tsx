@@ -12,6 +12,7 @@ import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useNotificationStore } from '@/stores';
 import { apiCallApi, getApiCallErrorMessage } from '@/services/api';
 import type { ApiKeyEntry } from '@/types';
+import type { ModelInfo } from '@/utils/models';
 import { buildHeaderObject, hasHeader } from '@/utils/headers';
 import { buildApiKeyEntry, buildOpenAIChatCompletionsEndpoint } from '@/components/providers/utils';
 import { KeyTestStatusIcon } from '@/components/providers/KeyTestStatusIcon';
@@ -155,7 +156,7 @@ export function AiProvidersOpenAIEditPage() {
     }) => {
       setBatchModelTestByKey((prev) => ({
         ...prev,
-        [ki]: { ...(prev[ki] ?? {}), ...results },
+        [ki]: { ...results },
       }));
       showNotification(
         t('ai_providers.openai_batch_model_test_done', { count: Object.keys(results).length }),
@@ -163,6 +164,74 @@ export function AiProvidersOpenAIEditPage() {
       );
     },
     [showNotification, t]
+  );
+
+  const handleAddBatchAvailableModels = useCallback(
+    ({
+      keyIndex: ki,
+      results,
+      models,
+    }: {
+      keyIndex: number;
+      results: Record<string, OpenAIBatchModelTestRowResult>;
+      models: ModelInfo[];
+    }) => {
+      const usableNames = new Set(
+        Object.entries(results)
+          .filter(([, result]) => result.success)
+          .map(([name]) => name.trim())
+          .filter(Boolean)
+      );
+
+      if (usableNames.size === 0) {
+        showNotification(t('ai_providers.openai_batch_model_add_available_empty'), 'warning');
+        return;
+      }
+
+      setBatchModelTestByKey((prev) => ({
+        ...prev,
+        [ki]: { ...results },
+      }));
+
+      let addedCount = 0;
+
+      setForm((prev) => {
+        const mergedMap = new Map<string, { name: string; alias: string }>();
+        prev.modelEntries.forEach((entry) => {
+          const name = entry.name.trim();
+          if (!name) return;
+          mergedMap.set(name, { name, alias: entry.alias?.trim() || '' });
+        });
+
+        models.forEach((model) => {
+          const name = model.name.trim();
+          if (!name || !usableNames.has(name) || mergedMap.has(name)) return;
+          mergedMap.set(name, { name, alias: model.alias ?? '' });
+          addedCount += 1;
+        });
+
+        if (addedCount === 0) {
+          return prev;
+        }
+
+        const mergedEntries = Array.from(mergedMap.values());
+        return {
+          ...prev,
+          modelEntries: mergedEntries.length ? mergedEntries : [{ name: '', alias: '' }],
+        };
+      });
+
+      if (addedCount === 0) {
+        showNotification(t('ai_providers.openai_batch_model_add_available_none_new'), 'warning');
+        return;
+      }
+
+      showNotification(
+        t('ai_providers.openai_batch_model_add_available_done', { count: addedCount }),
+        'success'
+      );
+    },
+    [setForm, showNotification, t]
   );
 
   const openBatchModelTest = useCallback(
@@ -671,10 +740,33 @@ export function AiProvidersOpenAIEditPage() {
                 <div className={styles.modelConfigHeader}>
                   <label className={styles.modelConfigTitle}>
                     {hasIndexParam
-                      ? t('ai_providers.openai_edit_modal_models_label')
-                      : t('ai_providers.openai_add_modal_models_label')}
+                      ? t('ai_providers.openai_edit_modal_models_label', {
+                          count: availableModels.length,
+                        })
+                      : t('ai_providers.openai_add_modal_models_label', {
+                          count: availableModels.length,
+                        })}
                   </label>
                   <div className={styles.modelConfigToolbar}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className={styles.modelClearButton}
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          modelEntries: [{ name: '', alias: '' }],
+                        }))
+                      }
+                      disabled={
+                        saving ||
+                        disableControls ||
+                        isTestingKeys ||
+                        availableModels.length === 0
+                      }
+                    >
+                      {t('ai_providers.models_clear_btn')}
+                    </Button>
                     <Button
                       variant="secondary"
                       size="sm"
@@ -803,6 +895,7 @@ export function AiProvidersOpenAIEditPage() {
           disableControls={disableControls}
           form={form}
           onBatchComplete={handleBatchTestComplete}
+          onAddAvailableModels={handleAddBatchAvailableModels}
         />
       </>
     </SecondaryScreenShell>

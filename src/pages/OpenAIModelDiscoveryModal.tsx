@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { modelsApi } from '@/services/api';
-import type { ModelInfo } from '@/utils/models';
+import { classifyModelsByMode, type ModelGroupingMode, type ModelInfo } from '@/utils/models';
 import { buildHeaderObject, hasHeader } from '@/utils/headers';
 import { buildOpenAIModelsEndpoint } from '@/components/providers/utils';
 import type { OpenAIFormState } from '@/components/providers/types';
@@ -36,13 +36,14 @@ export function OpenAIModelDiscoveryModal({
   form,
   mergeDiscoveredModels,
 }: OpenAIModelDiscoveryModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [endpoint, setEndpoint] = useState('');
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [groupMode, setGroupMode] = useState<ModelGroupingMode>('type');
 
   const fetchOpenaiModelDiscovery = useCallback(
     async ({ allowFallback = true }: { allowFallback?: boolean } = {}) => {
@@ -90,6 +91,7 @@ export function OpenAIModelDiscoveryModal({
     setModels([]);
     setSearch('');
     setSelected(new Set());
+    setGroupMode('type');
     setError('');
     void fetchOpenaiModelDiscovery();
   }, [open, loading, form.baseUrl, fetchOpenaiModelDiscovery]);
@@ -121,6 +123,34 @@ export function OpenAIModelDiscoveryModal({
       return name.includes(filter) || alias.includes(filter) || desc.includes(filter);
     });
   }, [models, search]);
+
+  const groups = useMemo(() => {
+    return classifyModelsByMode(filteredModels, groupMode, {
+      otherLabel: t('common.other') || 'Other',
+    });
+  }, [filteredModels, groupMode, t]);
+
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const groupRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [activeGroupId, setActiveGroupId] = useState<string>('');
+
+  useEffect(() => {
+    if (groups.length > 0) {
+      if (!activeGroupId || !groups.some((g) => g.id === activeGroupId)) {
+        setActiveGroupId(groups[0].id);
+      }
+    } else {
+      setActiveGroupId('');
+    }
+  }, [groups, activeGroupId]);
+
+  const handleCategoryClick = (groupId: string) => {
+    setActiveGroupId(groupId);
+    const el = groupRefs.current[groupId];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const visibleModelNames = useMemo(
     () => filteredModels.map((model) => model.name),
@@ -170,8 +200,18 @@ export function OpenAIModelDiscoveryModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={t('ai_providers.openai_models_fetch_title')}
-      width="min(1120px, 94vw)"
+      title={
+        <div className={styles.batchModelTestModalHeader}>
+          <div className={styles.batchModelTestModalTitle}>
+            {t('ai_providers.openai_models_fetch_title')}
+          </div>
+          <div className={styles.batchModelTestModalHint}>
+            {t('ai_providers.openai_models_fetch_hint')}
+          </div>
+        </div>
+      }
+      width="96vw"
+      className={styles.openaiModelDiscoveryModal}
       footer={
         <>
           <Button variant="secondary" size="sm" onClick={onClose} disabled={fetching}>
@@ -184,7 +224,6 @@ export function OpenAIModelDiscoveryModal({
       }
     >
       <div className={styles.openaiModelDiscoveryModalBody}>
-        <div className={styles.sectionHint}>{t('ai_providers.openai_models_fetch_hint')}</div>
 
         <div className={styles.openaiModelsDiscoveryTopGrid}>
           <div className={styles.openaiModelsEndpointSection}>
@@ -219,6 +258,22 @@ export function OpenAIModelDiscoveryModal({
 
         {models.length > 0 && (
           <div className={styles.modelDiscoveryToolbar}>
+            <div className={styles.segmentBar}>
+              <button
+                type="button"
+                className={`${styles.segmentItem} ${groupMode === 'type' ? styles.segmentItemActive : ''}`}
+                onClick={() => setGroupMode('type')}
+              >
+                {t('ai_providers.group_by_type')}
+              </button>
+              <button
+                type="button"
+                className={`${styles.segmentItem} ${groupMode === 'vendor' ? styles.segmentItemActive : ''}`}
+                onClick={() => setGroupMode('vendor')}
+              >
+                {t('ai_providers.group_by_vendor')}
+              </button>
+            </div>
             <div className={styles.modelDiscoveryToolbarActions}>
               <Button
                 variant="secondary"
@@ -232,7 +287,7 @@ export function OpenAIModelDiscoveryModal({
                   allVisibleSelected
                 }
               >
-                {t('ai_providers.model_discovery_select_visible')}
+                {t('ai_providers.model_discovery_select_all')}
               </Button>
               <Button
                 variant="secondary"
@@ -240,14 +295,8 @@ export function OpenAIModelDiscoveryModal({
                 onClick={handleClearSelection}
                 disabled={disableControls || saving || fetching || selected.size === 0}
               >
-                {t('ai_providers.model_discovery_clear_selection')}
+                {t('ai_providers.model_discovery_clear_selection_with_count', { count: selected.size })}
               </Button>
-            </div>
-            <div className={styles.modelDiscoverySelectionSummary}>
-              {t('ai_providers.openai_models_discovery_summary', {
-                total: models.length,
-                selected: selected.size,
-              })}
             </div>
           </div>
         )}
@@ -255,40 +304,89 @@ export function OpenAIModelDiscoveryModal({
         {error && <div className="error-box">{error}</div>}
 
         {fetching ? (
-          <div className={styles.sectionHint}>{t('ai_providers.openai_models_fetch_loading')}</div>
+          <div className={`${styles.modelDiscoveryList} ${styles.modelDiscoveryListLoading}`}>
+            <div className={styles.loadingWrapper}>
+              <span className="loading-spinner" />
+              <span className={styles.sectionHint}>{t('ai_providers.openai_models_fetch_loading')}</span>
+            </div>
+          </div>
         ) : models.length === 0 ? (
-          <div className={styles.sectionHint}>{t('ai_providers.openai_models_fetch_empty')}</div>
+          <div className={`${styles.modelDiscoveryList} ${styles.modelDiscoveryListEmpty}`}>
+            <span className={styles.sectionHint}>{t('ai_providers.openai_models_fetch_empty')}</span>
+          </div>
         ) : filteredModels.length === 0 ? (
-          <div className={styles.sectionHint}>{t('ai_providers.openai_models_search_empty')}</div>
+          <div className={`${styles.modelDiscoveryList} ${styles.modelDiscoveryListEmpty}`}>
+            <span className={styles.sectionHint}>{t('ai_providers.openai_models_search_empty')}</span>
+          </div>
         ) : (
-          <div className={`${styles.modelDiscoveryList} ${styles.openaiModelDiscoveryGrid}`}>
-            {filteredModels.map((model) => {
-              const checked = selected.has(model.name);
-              return (
-                <SelectionCheckbox
-                  key={model.name}
-                  checked={checked}
-                  onChange={() => toggleSelection(model.name)}
-                  disabled={disableControls || saving || fetching}
-                  ariaLabel={model.name}
-                  className={`${styles.modelDiscoveryRow} ${checked ? styles.modelDiscoveryRowSelected : ''}`}
-                  labelClassName={styles.modelDiscoverySelectionLabel}
-                  label={
-                    <div className={styles.modelDiscoveryMeta}>
-                      <div className={styles.modelDiscoveryName}>
-                        {model.name}
-                        {model.alias && (
-                          <span className={styles.modelDiscoveryAlias}>{model.alias}</span>
-                        )}
-                      </div>
-                      {model.description && (
-                        <div className={styles.modelDiscoveryDesc}>{model.description}</div>
-                      )}
-                    </div>
-                  }
-                />
-              );
-            })}
+          <div className={styles.modelDiscoveryContainer}>
+            <div className={styles.modelDiscoverySidebar}>
+              {groups.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  className={`${styles.sidebarNavButton} ${
+                    activeGroupId === group.id ? styles.sidebarNavButtonActive : ''
+                  }`}
+                  onClick={() => handleCategoryClick(group.id)}
+                >
+                  <span className={styles.sidebarNavLabel}>
+                    {i18n.exists(`ai_providers.model_type_${group.id}`)
+                      ? t(`ai_providers.model_type_${group.id}`)
+                      : group.label}
+                  </span>
+                  <span className={styles.sidebarNavBadge}>{group.items.length}</span>
+                </button>
+              ))}
+            </div>
+            <div ref={scrollContainerRef} className={styles.modelDiscoveryList}>
+              {groups.map((group) => (
+                <div
+                  key={group.id}
+                  ref={(el) => {
+                    groupRefs.current[group.id] = el;
+                  }}
+                  className={`${styles.modelDiscoveryGroup} ${
+                    activeGroupId === group.id ? styles.modelDiscoveryGroupActive : ''
+                  }`}
+                >
+                  <div className={styles.modelDiscoveryGroupHeader}>
+                    <span className={styles.modelDiscoveryGroupTitle}>
+                      {i18n.exists(`ai_providers.model_type_${group.id}`)
+                        ? t(`ai_providers.model_type_${group.id}`)
+                        : group.label}
+                    </span>
+                    <span className={styles.modelDiscoveryGroupCount}>({group.items.length})</span>
+                  </div>
+                  <div className={styles.modelDiscoveryGroupGrid}>
+                    {group.items.map((model) => {
+                      const checked = selected.has(model.name);
+                      return (
+                        <SelectionCheckbox
+                          key={model.name}
+                          checked={checked}
+                          onChange={() => toggleSelection(model.name)}
+                          disabled={disableControls || saving || fetching}
+                          ariaLabel={model.name}
+                          className={`${styles.modelDiscoveryRow} ${checked ? styles.modelDiscoveryRowSelected : ''}`}
+                          labelClassName={styles.modelDiscoverySelectionLabel}
+                          label={
+                            <div className={styles.modelDiscoveryMeta}>
+                              <div className={styles.modelDiscoveryName} title={model.description}>
+                                {model.name}
+                                {model.alias && (
+                                  <span className={styles.modelDiscoveryAlias}>{model.alias}</span>
+                                )}
+                              </div>
+                            </div>
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

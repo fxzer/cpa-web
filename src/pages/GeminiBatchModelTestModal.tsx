@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
-import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { apiCallApi, getApiCallErrorMessage, modelsApi } from '@/services/api';
 import type { ModelInfo } from '@/utils/models';
 import { buildHeaderObject, hasHeader } from '@/utils/headers';
@@ -12,15 +8,16 @@ import {
   buildGeminiGenerateContentEndpoint,
   buildGeminiModelsEndpoint,
 } from '@/components/providers/utils';
-import styles from './AiProvidersPage.module.scss';
+import {
+  BatchModelTestModalShell,
+  type BatchModelTestProgress,
+  type BatchModelTestRowResult,
+} from './BatchModelTestModalShell';
+import { buildBatchModelTestFailure, runBatchModelTestsConcurrent } from './batchModelTestConcurrent';
 
 const GEMINI_TEST_TIMEOUT_MS = 30_000;
 
-export type GeminiBatchModelTestRowResult = {
-  success: boolean;
-  statusCode?: number;
-  message?: string;
-};
+export type GeminiBatchModelTestRowResult = BatchModelTestRowResult;
 
 const getErrorMessage = (err: unknown) => {
   if (err instanceof Error) return err.message;
@@ -40,6 +37,11 @@ export type GeminiBatchModelTestModalProps = {
     keyIndex: number;
     results: Record<string, GeminiBatchModelTestRowResult>;
   }) => void;
+  onAddAvailableModels: (payload: {
+    keyIndex: number;
+    results: Record<string, GeminiBatchModelTestRowResult>;
+    models: ModelInfo[];
+  }) => void;
 };
 
 export function GeminiBatchModelTestModal({
@@ -51,6 +53,7 @@ export function GeminiBatchModelTestModal({
   disableControls,
   form,
   onBatchComplete,
+  onAddAvailableModels,
 }: GeminiBatchModelTestModalProps) {
   const { t } = useTranslation();
   const [endpoint, setEndpoint] = useState('');
@@ -60,7 +63,10 @@ export function GeminiBatchModelTestModal({
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [testing, setTesting] = useState(false);
-  const [testProgress, setTestProgress] = useState('');
+  const [testProgress, setTestProgress] = useState<BatchModelTestProgress>(null);
+  const [testResults, setTestResults] = useState<Record<string, GeminiBatchModelTestRowResult>>(
+    {}
+  );
 
   const rowKey = keyIndex !== null ? form.apiKeyEntries[keyIndex]?.apiKey?.trim() : '';
 
@@ -94,7 +100,8 @@ export function GeminiBatchModelTestModal({
     setSearch('');
     setSelected(new Set());
     setError('');
-    setTestProgress('');
+    setTestProgress(null);
+    setTestResults({});
     void fetchModels();
   }, [open, loading, keyIndex, form.baseUrl, fetchModels]);
 
@@ -160,55 +167,54 @@ export function GeminiBatchModelTestModal({
     setSelected(new Set());
   }, []);
 
-  const runBatchTests = useCallback(
-    async (modelNames: string[]) => {
-      if (keyIndex === null || !rowKey) {
-        return;
-      }
-      const baseUrl = form.baseUrl?.trim() ?? '';
-      if (!baseUrl) {
-        setError(t('notification.openai_test_url_required'));
-        return;
-      }
+  const availableTestedModels = useMemo(
+    () => models.filter((model) => testResults[model.name]?.success),
+    [models, testResults]
+  );
 
-      if (modelNames.length === 0) return;
+  const runBatchTests = useCallback(async () => {
+    if (keyIndex === null || !rowKey) {
+      return;
+    }
+    const baseUrl = form.baseUrl?.trim() ?? '';
+    if (!baseUrl) {
+      setError(t('notification.openai_test_url_required'));
+      return;
+    }
 
-      const keyEntry = form.apiKeyEntries[keyIndex];
-      if (!keyEntry?.apiKey?.trim()) {
-        setError(t('notification.openai_test_key_required'));
-        return;
-      }
+    const modelNames = Array.from(selected);
+    if (modelNames.length === 0) return;
 
-      const customHeaders = buildHeaderObject(form.headers);
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...customHeaders,
-      };
-      if (!hasHeader(headers, 'x-goog-api-key')) {
-        headers['x-goog-api-key'] = keyEntry.apiKey.trim();
-      }
+    const keyEntry = form.apiKeyEntries[keyIndex];
+    if (!keyEntry?.apiKey?.trim()) {
+      setError(t('notification.openai_test_key_required'));
+      return;
+    }
 
-      setTesting(true);
-      setError('');
-      const results: Record<string, GeminiBatchModelTestRowResult> = {};
+    const customHeaders = buildHeaderObject(form.headers);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...customHeaders,
+    };
+    if (!hasHeader(headers, 'x-goog-api-key')) {
+      headers['x-goog-api-key'] = keyEntry.apiKey.trim();
+    }
 
-      try {
-        for (let i = 0; i < modelNames.length; i += 1) {
-          const modelName = modelNames[i];
-          setTestProgress(
-            t('ai_providers.openai_batch_model_test_progress', {
-              current: i + 1,
-              total: modelNames.length,
-              model: modelName,
-            })
-          );
+    setTesting(true);
+    setError('');
+    setTestResults({});
+    setTestProgress(null);
+
+    try {
+      const results = await runBatchModelTestsConcurrent({
+        modelNames,
+        testModel: async (modelName) => {
           const endpointUrl = buildGeminiGenerateContentEndpoint(baseUrl, modelName);
           if (!endpointUrl) {
-            results[modelName] = {
+            return {
               success: false,
               message: t('notification.openai_test_model_required'),
             };
-            continue;
           }
 
           try {
@@ -225,37 +231,37 @@ export function GeminiBatchModelTestModal({
             );
 
             const ok = result.statusCode >= 200 && result.statusCode < 300;
-            results[modelName] = {
+            return {
               success: ok,
               statusCode: result.statusCode,
               message: ok ? '' : getApiCallErrorMessage(result),
             };
           } catch (err: unknown) {
-            const message = getErrorMessage(err);
-            const errorCode =
-              typeof err === 'object' && err !== null && 'code' in err
-                ? String((err as { code?: string }).code)
-                : '';
-            const isTimeout =
-              errorCode === 'ECONNABORTED' || message.toLowerCase().includes('timeout');
-            results[modelName] = {
-              success: false,
-              message: isTimeout
-                ? t('ai_providers.openai_test_timeout', { seconds: GEMINI_TEST_TIMEOUT_MS / 1000 })
-                : message,
-            };
+            return buildBatchModelTestFailure(err, GEMINI_TEST_TIMEOUT_MS, (seconds) =>
+              t('ai_providers.openai_test_timeout', { seconds })
+            );
           }
-        }
+        },
+        onProgress: setTestProgress,
+        onResult: setTestResults,
+      });
 
-        onBatchComplete({ keyIndex, results });
-        onClose();
-      } finally {
-        setTesting(false);
-        setTestProgress('');
-      }
-    },
-    [form.apiKeyEntries, form.baseUrl, form.headers, keyIndex, onBatchComplete, onClose, rowKey, t]
-  );
+      onBatchComplete({ keyIndex, results });
+    } finally {
+      setTesting(false);
+      setTestProgress(null);
+    }
+  }, [form.apiKeyEntries, form.baseUrl, form.headers, keyIndex, onBatchComplete, rowKey, selected, t]);
+
+  const handleAddAvailableModels = useCallback(() => {
+    if (keyIndex === null || availableTestedModels.length === 0) return;
+    onAddAvailableModels({
+      keyIndex,
+      results: testResults,
+      models,
+    });
+    onClose();
+  }, [availableTestedModels.length, keyIndex, models, onAddAvailableModels, onClose, testResults]);
 
   const canRun =
     !disableControls &&
@@ -265,145 +271,47 @@ export function GeminiBatchModelTestModal({
     selected.size > 0 &&
     Boolean(rowKey) &&
     keyIndex !== null;
+  const canAddAvailable =
+    !disableControls && !saving && !fetching && !testing && availableTestedModels.length > 0;
 
   if (!open || keyIndex === null) {
     return null;
   }
 
   return (
-    <Modal
+    <BatchModelTestModalShell
       open={open}
       onClose={onClose}
-      title={t('ai_providers.openai_batch_model_test_title', { index: keyIndex + 1 })}
-      width="min(1120px, 94vw)"
-      closeDisabled={testing}
-      footer={
-        <>
-          <Button variant="secondary" size="sm" onClick={onClose} disabled={fetching || testing}>
-            {t('common.cancel')}
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => void runBatchTests(Array.from(selected))}
-            disabled={!canRun}
-            loading={testing}
-          >
-            {t('ai_providers.openai_batch_model_test_run')}
-          </Button>
-        </>
-      }
-    >
-      <div className={styles.openaiModelDiscoveryModalBody}>
-        <div className={styles.sectionHint}>{t('ai_providers.gemini_batch_model_test_hint')}</div>
-
-        <div className={styles.openaiModelsDiscoveryTopGrid}>
-          <div className={styles.openaiModelsEndpointSection}>
-            <label className={styles.openaiModelsEndpointLabel}>
-              {t('ai_providers.gemini_models_fetch_url_label')}
-            </label>
-            <div className={styles.openaiModelsEndpointControls}>
-              <input
-                className={`input ${styles.openaiModelsEndpointInput}`}
-                readOnly
-                value={endpoint}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => void fetchModels()}
-                loading={fetching}
-                disabled={disableControls || saving || testing}
-              >
-                {t('ai_providers.gemini_models_fetch_refresh')}
-              </Button>
-            </div>
-          </div>
-          <Input
-            label={t('ai_providers.openai_models_search_label')}
-            placeholder={t('ai_providers.openai_models_search_placeholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            disabled={fetching || testing}
-          />
-        </div>
-
-        {models.length > 0 && (
-          <div className={styles.modelDiscoveryToolbar}>
-            <div className={styles.modelDiscoveryToolbarActions}>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleSelectVisible}
-                disabled={
-                  disableControls ||
-                  saving ||
-                  fetching ||
-                  testing ||
-                  filteredModels.length === 0 ||
-                  allVisibleSelected
-                }
-              >
-                {t('ai_providers.model_discovery_select_visible')}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleClearSelection}
-                disabled={disableControls || saving || fetching || testing || selected.size === 0}
-              >
-                {t('ai_providers.model_discovery_clear_selection')}
-              </Button>
-            </div>
-            <div className={styles.modelDiscoverySelectionSummary}>
-              {t('ai_providers.openai_models_discovery_summary', {
-                total: models.length,
-                selected: selected.size,
-              })}
-            </div>
-          </div>
-        )}
-
-        {testProgress ? <div className={styles.sectionHint}>{testProgress}</div> : null}
-        {error && <div className="error-box">{error}</div>}
-
-        {fetching ? (
-          <div className={styles.sectionHint}>{t('ai_providers.gemini_models_fetch_loading')}</div>
-        ) : models.length === 0 ? (
-          <div className={styles.sectionHint}>{t('ai_providers.gemini_models_fetch_empty')}</div>
-        ) : filteredModels.length === 0 ? (
-          <div className={styles.sectionHint}>{t('ai_providers.gemini_models_search_empty')}</div>
-        ) : (
-          <div className={`${styles.modelDiscoveryList} ${styles.openaiModelDiscoveryGrid}`}>
-            {filteredModels.map((model) => {
-              const checked = selected.has(model.name);
-              return (
-                <SelectionCheckbox
-                  key={model.name}
-                  checked={checked}
-                  onChange={() => toggleSelection(model.name)}
-                  disabled={disableControls || saving || fetching || testing}
-                  ariaLabel={model.name}
-                  className={`${styles.modelDiscoveryRow} ${checked ? styles.modelDiscoveryRowSelected : ''}`}
-                  labelClassName={styles.modelDiscoverySelectionLabel}
-                  label={
-                    <div className={styles.modelDiscoveryMeta}>
-                      <div className={styles.modelDiscoveryName}>
-                        {model.name}
-                        {model.alias && (
-                          <span className={styles.modelDiscoveryAlias}>{model.alias}</span>
-                        )}
-                      </div>
-                      {model.description && (
-                        <div className={styles.modelDiscoveryDesc}>{model.description}</div>
-                      )}
-                    </div>
-                  }
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </Modal>
+      keyIndex={keyIndex}
+      hint={t('ai_providers.gemini_batch_model_test_hint')}
+      modelCount={models.length}
+      endpoint={endpoint}
+      endpointLabel={t('ai_providers.gemini_models_fetch_url_label')}
+      refreshLabel={t('ai_providers.gemini_models_fetch_refresh')}
+      onRefresh={() => void fetchModels()}
+      fetching={fetching}
+      fetchingLoadingText={t('ai_providers.gemini_models_fetch_loading')}
+      fetchingEmptyText={t('ai_providers.gemini_models_fetch_empty')}
+      searchEmptyText={t('ai_providers.gemini_models_search_empty')}
+      error={error}
+      search={search}
+      onSearchChange={setSearch}
+      models={models}
+      filteredModels={filteredModels}
+      selected={selected}
+      onToggleSelection={toggleSelection}
+      onSelectVisible={handleSelectVisible}
+      onClearSelection={handleClearSelection}
+      allVisibleSelected={allVisibleSelected}
+      disableControls={disableControls}
+      saving={saving}
+      testing={testing}
+      testProgress={testProgress}
+      testResults={testResults}
+      onRunBatchTests={() => void runBatchTests()}
+      onAddAvailableModels={handleAddAvailableModels}
+      canRun={canRun}
+      canAddAvailable={canAddAvailable}
+    />
   );
 }

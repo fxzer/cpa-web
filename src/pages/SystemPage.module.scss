@@ -95,7 +95,7 @@
 }
 
 .tileLabel {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -266,7 +266,7 @@
   background-color: var(--bg-secondary);
   border-radius: $radius-md;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 13px;
+  font-size: 14px;
 
   &:hover {
     background-color: var(--bg-hover);
@@ -417,7 +417,7 @@
 }
 
 .linkDesc {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;

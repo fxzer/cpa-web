@@ -31,7 +31,7 @@
   background: var(--bg-primary);
   color: var(--text-secondary);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .containerPending {
@@ -130,7 +130,7 @@
 }
 
 .columnHeader {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -184,7 +184,7 @@
 
   .providerLabel {
     font-weight: 600;
-    font-size: 13px;
+    font-size: 14px;
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -335,7 +335,7 @@
 
   .menuItem {
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-primary);
     cursor: pointer;
     transition: background-color 0.1s;
@@ -383,7 +383,7 @@
 
 .settingsEmpty {
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
   padding: $spacing-lg 0;
 }
@@ -414,7 +414,7 @@
   display: flex;
   align-items: center;
   gap: $spacing-xs;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-primary);
   min-width: 0;
 }

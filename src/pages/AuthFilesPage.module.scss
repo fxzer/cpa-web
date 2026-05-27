@@ -65,7 +65,7 @@
   :global(.input) {
     height: 32px;
     padding: 4px 10px;
-    font-size: 13px;
+    font-size: 14px;
     box-sizing: border-box;
   }
 
@@ -121,7 +121,7 @@
   border-radius: 8px;
   background-color: var(--bg-secondary);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 14px;
   box-sizing: border-box;
 
   &:focus {
@@ -283,7 +283,7 @@
   border-radius: 999px;
   border: 1px solid transparent;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
   transition:
@@ -491,7 +491,7 @@
 }
 
 .quotaModel {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -764,7 +764,7 @@
   }
 
   .fileName {
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.3;
     -webkit-line-clamp: 1;
   }
@@ -1132,7 +1132,7 @@
 }
 
 .statValue {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -1641,7 +1641,7 @@
 }
 
 .batchSelectionText {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   margin-right: 2px;
@@ -1666,7 +1666,7 @@
 }
 
 .pageInfo {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary);
   padding: $spacing-xs $spacing-md;
   background-color: var(--bg-secondary);
@@ -2052,7 +2052,7 @@
 
 .modelsModalHint {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--text-secondary);
   flex: 1;
@@ -2150,7 +2150,7 @@
 }
 
 .modelsModalModelId {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   word-break: break-all;
@@ -2170,7 +2170,7 @@
 }
 
 .modelsModalAliasReadonly {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary);
 }
 
@@ -2225,7 +2225,7 @@
 
 .modelId {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   word-break: break-all;
@@ -2310,7 +2310,7 @@
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-  font-size: 13px;
+  font-size: 14px;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   color: var(--text-primary);
   word-break: break-all;

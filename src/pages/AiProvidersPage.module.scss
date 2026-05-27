@@ -93,7 +93,7 @@ $openai-toolbar-control-height: 36px;
   border-radius: 999px;
   border: 1px solid transparent;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
   transition:
@@ -288,7 +288,7 @@ $openai-toolbar-control-height: 36px;
     border-radius: 6px;
     background: var(--bg-secondary);
     box-shadow: none;
-    font-size: 13px;
+    font-size: 14px;
   }
 }
 
@@ -410,7 +410,7 @@ $openai-toolbar-control-height: 36px;
 }
 
 .modelFilterText {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   flex: 1;
   min-width: 0;
@@ -547,7 +547,7 @@ $openai-toolbar-control-height: 36px;
 
   span {
     display: block;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
@@ -559,7 +559,7 @@ $openai-toolbar-control-height: 36px;
   padding: 18px 12px;
   text-align: center;
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 // 成功失败次数统计样式
@@ -578,7 +578,7 @@ $openai-toolbar-control-height: 36px;
   gap: 6px;
   padding: 6px 12px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1;
   border: 1px solid transparent;
@@ -607,7 +607,7 @@ $openai-toolbar-control-height: 36px;
   gap: 6px;
   margin-bottom: 4px;
   min-width: 0;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -619,7 +619,7 @@ $openai-toolbar-control-height: 36px;
   width: 100%;
   min-width: 0;
   margin-bottom: 4px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -727,7 +727,7 @@ $openai-toolbar-control-height: 36px;
 .modelCountLabel {
   display: inline-flex;
   align-items: center;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.4;
   color: var(--text-tertiary);
@@ -968,11 +968,146 @@ $openai-toolbar-control-height: 36px;
 .modelDiscoveryList {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 360px;
+  gap: $spacing-md;
+  max-height: min(52vh, 520px);
   overflow-y: auto;
   margin-top: 0;
   padding-right: 4px;
+}
+
+.modelDiscoveryListLoading,
+.modelDiscoveryListEmpty {
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border-color);
+  border-radius: $radius-lg;
+  background: var(--bg-secondary);
+}
+
+.loadingWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  color: var(--text-secondary);
+
+  :global(.loading-spinner) {
+    width: 24px;
+    height: 24px;
+    border-width: 3px;
+    color: var(--success-color);
+  }
+}
+
+.segmentBar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  width: fit-content;
+  flex-shrink: 0;
+}
+
+.segmentItem {
+  border: none;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover, var(--bg-tertiary));
+  }
+
+  &.segmentItemActive {
+    color: var(--primary-contrast, #fff);
+    background: var(--success-color);
+
+    &:hover {
+      color: var(--primary-contrast, #fff);
+      background: var(--success-color);
+    }
+  }
+}
+
+.modelDiscoveryGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: 10px 12px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.modelDiscoveryGroupActive {
+  background-color: color-mix(in srgb, var(--success-color) 4%, var(--bg-secondary));
+  border-color: color-mix(in srgb, var(--success-color) 12%, var(--border-color));
+}
+
+.modelDiscoveryGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: sticky;
+  top: -10px;
+  background: var(--bg-primary);
+  z-index: 2;
+  padding: 8px 4px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--success-color) 20%, var(--border-color));
+  transition: background-color 0.2s ease;
+
+  .modelDiscoveryGroupActive & {
+    background: color-mix(in srgb, var(--success-color) 4%, var(--bg-secondary));
+  }
+}
+
+.modelDiscoveryGroupTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--success-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modelDiscoveryGroupCount {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.modelDiscoveryGroupGrid {
+  display: grid;
+  gap: $spacing-sm;
+  grid-template-columns: 1fr;
+  padding: 4px 0;
+
+  @include tablet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include desktop {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .modelDiscoveryRow {
+    min-width: 0;
+  }
+
+  .modelDiscoveryName {
+    word-break: break-word;
+  }
 }
 
 .modelDiscoveryRow {
@@ -1031,13 +1166,18 @@ $openai-toolbar-control-height: 36px;
   font-size: 12px;
   color: var(--text-secondary);
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .modelDiscoveryToolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: $spacing-sm;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -1052,6 +1192,19 @@ $openai-toolbar-control-height: 36px;
   font-size: 12px;
   color: var(--text-tertiary);
   line-height: 1.4;
+}
+
+// 「选择模型」弹窗：标题区左对齐，让副标题 hint 正常排列
+.openaiModelDiscoveryModal {
+  :global(.modal-header) {
+    align-items: flex-start;
+  }
+
+  :global(.modal-title) {
+    width: 100%;
+    font-weight: inherit;
+    font-size: inherit;
+  }
 }
 
 .openaiModelDiscoveryModalBody {
@@ -1074,28 +1227,286 @@ $openai-toolbar-control-height: 36px;
   }
 }
 
-.modelDiscoveryList.openaiModelDiscoveryGrid {
-  flex-direction: unset;
-  display: grid;
-  gap: $spacing-sm;
-  max-height: min(52vh, 520px);
-  margin-top: 0;
-  grid-template-columns: 1fr;
+.openaiBatchResultSummary {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-sm;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
 
-  @include tablet {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.openaiBatchModelResultOk {
+  border-color: var(--success-badge-border, rgba(16, 185, 129, 0.55));
 
-  @include desktop {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+  &:hover {
+    border-color: var(--success-badge-border, rgba(16, 185, 129, 0.75));
   }
+}
+
+.openaiBatchModelResultFail {
+  border-color: var(--failure-badge-border, rgba(198, 87, 70, 0.55));
+  background: var(--failure-badge-bg);
+
+  &:hover {
+    border-color: var(--failure-badge-border, rgba(198, 87, 70, 0.75));
+    background: var(--failure-badge-bg);
+  }
+}
+
+.openaiBatchModelResultPill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border: 1px solid transparent;
+  border-radius: $radius-full;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.openaiBatchModelResultPillOk {
+  color: var(--success-badge-text, #065f46);
+  border-color: var(--success-badge-border, rgba(16, 185, 129, 0.35));
+}
+
+.openaiBatchModelResultPillFail {
+  color: var(--failure-badge-text);
+  border-color: var(--failure-badge-border, rgba(198, 87, 70, 0.35));
+}
+
+.openaiBatchModelResultMessage {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.batchModelTestModal {
+  --checkbox-active-color: var(--success-color);
 
   .modelDiscoveryRow {
+    &:hover {
+      border-color: var(--success-color);
+    }
+  }
+
+  :global(.modal-header) {
+    align-items: flex-start;
+  }
+
+  :global(.modal-title) {
+    width: 100%;
+    font-weight: inherit;
+    font-size: inherit;
+  }
+
+  :global(.modal-footer) {
+    justify-content: space-between;
+    align-items: center;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+  }
+}
+
+.batchModelTestModalHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.batchModelTestModalTitle {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.batchModelTestModalHint {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.batchModelTestModalHintProgress {
+  color: var(--text-primary);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.batchModelTestToolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: $spacing-md;
+  flex-wrap: nowrap;
+}
+
+.batchModelTestToolbarField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.batchModelTestToolbarLabel {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.batchModelTestToolbarEndpoint {
+  flex: 1 1 280px;
+  min-width: 160px;
+}
+
+.batchModelTestToolbarEndpointInput {
+  width: 100%;
+  min-width: 0;
+}
+
+.batchModelTestToolbarSearch {
+  flex: 0 1 220px;
+  min-width: 140px;
+}
+
+.batchModelTestToolbarSep {
+  align-self: stretch;
+  width: 1px;
+  margin: 0 4px 10px;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+
+.batchModelTestToolbarActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-shrink: 0;
+  padding-bottom: 2px;
+}
+
+.batchModelTestFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.batchModelTestFooterActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.batchModelTestFooterStatus {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  flex: 1 1 280px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.batchModelTestFooterResults {
+  white-space: nowrap;
+}
+
+.batchModelTestFooterResultsLabel {
+  color: var(--text-secondary);
+}
+
+.batchModelTestFooterResultsAvailable {
+  color: var(--success-badge-text, #065f46);
+}
+
+.batchModelTestFooterResultsSep {
+  color: var(--text-secondary);
+}
+
+.batchModelTestFooterResultsUnavailable {
+  color: var(--failure-badge-text, #b42318);
+}
+
+@media (max-width: $breakpoint-mobile) {
+  .batchModelTestModal {
+    :global(.modal-footer) {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+
+  .batchModelTestFooter {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .batchModelTestFooterActions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    margin-left: 0;
+
+    :global(.btn) {
+      width: 100%;
+    }
+  }
+
+  .batchModelTestFooterStatus {
+    justify-content: flex-start;
+    text-align: left;
+    flex: none;
+  }
+
+  .batchModelTestFooterResults {
+    white-space: normal;
+  }
+
+  .batchModelTestToolbar {
+    flex-wrap: wrap;
+    row-gap: $spacing-sm;
+  }
+
+  .batchModelTestToolbarEndpoint,
+  .batchModelTestToolbarSearch {
+    flex: 1 1 100%;
     min-width: 0;
   }
 
-  .modelDiscoveryName {
-    word-break: break-word;
+  .batchModelTestToolbarSep {
+    display: none;
+  }
+
+  .batchModelTestToolbarActions {
+    width: 100%;
+    padding-bottom: 0;
+
+    :global(.btn) {
+      flex: 1 1 0;
+    }
   }
 }
 
@@ -1373,7 +1784,7 @@ $provider-status-bar-small-height: 16px;
 
 .sectionHint {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--text-secondary);
 }
@@ -1604,7 +2015,7 @@ $provider-status-bar-small-height: 16px;
 }
 
 .modelTestLabel {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
   line-height: 1.5;
@@ -1656,7 +2067,7 @@ $provider-status-bar-small-height: 16px;
 }
 
 .keyEntriesHint {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--text-secondary);
 }
@@ -1676,7 +2087,7 @@ $provider-status-bar-small-height: 16px;
 }
 
 .keyEntriesCount {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -1783,6 +2194,27 @@ $provider-status-bar-small-height: 16px;
   gap: $spacing-xs;
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+// 模型列表：清空为描边 + danger 色文字
+.modelClearButton:global(.btn.btn-secondary) {
+  color: var(--danger-color, var(--error-color, #c65746));
+  border-color: var(--failure-badge-border, rgba(198, 87, 70, 0.35));
+  background-color: var(--bg-tertiary);
+
+  &:hover:not(:disabled) {
+    color: var(--danger-color, var(--error-color));
+    border-color: var(--danger-color, var(--error-color));
+    background-color: var(--bg-error-light, rgba(198, 87, 70, 0.1));
+  }
+}
+
+[data-theme='dark'] .modelClearButton:global(.btn.btn-secondary) {
+  color: var(--danger-color, var(--error-color));
+
+  &:hover:not(:disabled) {
+    color: var(--danger-color, var(--error-color));
+  }
 }
 
 // 卡片底部 / API 密钥表：删除为描边 + danger 色文字（不用实心红底）
@@ -1965,4 +2397,132 @@ $provider-status-bar-small-height: 16px;
 
 .aliasOverviewDiagramWrap {
   min-height: 420px;
+}
+
+.modelDiscoveryContainer {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 16px;
+  align-items: stretch;
+  min-height: 280px;
+  max-height: min(52vh, 520px);
+
+  // 按厂商分类时，厂商名较长，侧边栏加宽
+  &[data-group-mode='vendor'] {
+    grid-template-columns: 168px 1fr;
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    max-height: none;
+    min-height: 0;
+
+    &[data-group-mode='vendor'] {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.modelDiscoverySidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
+  background: color-mix(in srgb, var(--bg-primary) 76%, transparent);
+  max-height: 100%;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-height: none;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
+    background: color-mix(in srgb, var(--bg-primary) 76%, transparent);
+    padding: 6px;
+    margin-bottom: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+}
+
+.sidebarNavButton {
+  @include button-reset;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  transition: all 0.15s ease;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
+    border-color: color-mix(in srgb, var(--border-color) 60%, transparent);
+  }
+
+  &:focus,
+  &:focus-visible,
+  &:active {
+    outline: none;
+    box-shadow: none;
+  }
+
+  &.sidebarNavButtonActive {
+    color: var(--success-color);
+    background: color-mix(in srgb, var(--success-color) 8%, var(--bg-primary));
+    border-color: color-mix(in srgb, var(--success-color) 24%, var(--border-color));
+    box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.08);
+  }
+
+  @media (max-width: 768px) {
+    width: auto;
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+}
+
+.sidebarNavLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebarNavBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+  transition: all 0.15s ease;
+
+  .sidebarNavButtonActive & {
+    background: color-mix(in srgb, var(--success-color) 20%, transparent);
+    color: var(--success-color);
+  }
 }

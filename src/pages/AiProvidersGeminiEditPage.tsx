@@ -350,6 +350,74 @@ export function AiProvidersGeminiEditPage() {
     [showNotification, t]
   );
 
+  const handleAddBatchAvailableModels = useCallback(
+    ({
+      keyIndex: ki,
+      results,
+      models,
+    }: {
+      keyIndex: number;
+      results: Record<string, GeminiBatchModelTestRowResult>;
+      models: ModelInfo[];
+    }) => {
+      const usableNames = new Set(
+        Object.entries(results)
+          .filter(([, result]) => result.success)
+          .map(([name]) => stripGeminiModelResourceName(name).trim())
+          .filter(Boolean)
+      );
+
+      if (usableNames.size === 0) {
+        showNotification(t('ai_providers.openai_batch_model_add_available_empty'), 'warning');
+        return;
+      }
+
+      setBatchModelTestByKey((prev) => ({
+        ...prev,
+        [ki]: { ...results },
+      }));
+
+      let addedCount = 0;
+
+      setForm((prev) => {
+        const mergedMap = new Map<string, { name: string; alias: string }>();
+        prev.modelEntries.forEach((entry) => {
+          const name = stripGeminiModelResourceName(entry.name).trim();
+          if (!name) return;
+          mergedMap.set(name, { name, alias: entry.alias?.trim() || '' });
+        });
+
+        models.forEach((model) => {
+          const name = stripGeminiModelResourceName(model.name).trim();
+          if (!name || !usableNames.has(name) || mergedMap.has(name)) return;
+          mergedMap.set(name, { name, alias: model.alias ?? '' });
+          addedCount += 1;
+        });
+
+        if (addedCount === 0) {
+          return prev;
+        }
+
+        const mergedEntries = Array.from(mergedMap.values());
+        return {
+          ...prev,
+          modelEntries: mergedEntries.length ? mergedEntries : [{ name: '', alias: '' }],
+        };
+      });
+
+      if (addedCount === 0) {
+        showNotification(t('ai_providers.openai_batch_model_add_available_none_new'), 'warning');
+        return;
+      }
+
+      showNotification(
+        t('ai_providers.openai_batch_model_add_available_done', { count: addedCount }),
+        'success'
+      );
+    },
+    [setForm, showNotification, t]
+  );
+
   const openBatchModelTest = useCallback(
     (keyIdx: number) => {
       if (!form.baseUrl?.trim()) {
@@ -1038,9 +1106,28 @@ export function AiProvidersGeminiEditPage() {
               <div className={styles.modelConfigSection}>
                 <div className={styles.modelConfigHeader}>
                   <label className={styles.modelConfigTitle}>
-                    {t('ai_providers.gemini_models_label')}
+                    {t('ai_providers.gemini_models_label', { count: availableModels.length })}
                   </label>
                   <div className={styles.modelConfigToolbar}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className={styles.modelClearButton}
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          modelEntries: [{ name: '', alias: '' }],
+                        }))
+                      }
+                      disabled={
+                        disableControls ||
+                        saving ||
+                        isTestingKeys ||
+                        availableModels.length === 0
+                      }
+                    >
+                      {t('ai_providers.models_clear_btn')}
+                    </Button>
                     <Button
                       variant="secondary"
                       size="sm"
@@ -1307,6 +1394,7 @@ export function AiProvidersGeminiEditPage() {
               disableControls={disableControls}
               form={form}
               onBatchComplete={handleBatchTestComplete}
+              onAddAvailableModels={handleAddBatchAvailableModels}
             />
           </>
         )}

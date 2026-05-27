@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全网交换机互联拓扑图</title>
+    <!-- 引入 Vue 3 和 AntV G6 的 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/@antv/g6@4.8.24/dist/g6.min.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #f4f7f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 10px 20px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #mountNode {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 悬浮提示框样式 */
+        .g6-tooltip {
+            border: 1px solid #e2e2e2;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #545454;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 10px;
+            box-shadow: rgb(174, 174, 174) 0px 0px 10px;
+            pointer-events: none;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="header">
+        <h3 style="margin:0">全设备互联可视化 (G6 + Vue3)</h3>
+        <div>
+            <button @click="refreshLayout">重新布局</button>
+            <span style="margin-left: 15px; font-size: 14px; color: #666;">滚动鼠标缩放，拖拽画布平移</span>
+        </div>
+    </div>
+    
+    <div id="mountNode"></div>
+
+    <div class="legend">
+        <div><strong>图例:</strong></div>
+        <div style="margin-top:5px">
+            <span style="display:inline-block; width:12px; height:12px; background:#C6E5FF; border:1px solid #5B8FF9; border-radius:2px"></span> 交换机 (Node)
+        </div>
+        <div>
+            <span style="display:inline-block; width:20px; height:2px; background:#409EFF; vertical-align:middle"></span> 互联链路 (Edge)
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, onMounted, ref } = Vue;
+
+    createApp({
+        setup() {
+            const graph = ref(null);
+
+            // 1. 定义自定义边：处理双向箭头和两端 IP 显示
+            const registerCustomEdge = () => {
+                G6.registerEdge('interconnect-edge', {
+                    draw(cfg, group) {
+                        const { startPoint, endPoint, model } = cfg;
+                        
+                        // 绘制主路径
+                        const shape = group.addShape('path', {
+                            attrs: {
+                                stroke: '#409EFF',
+                                lineWidth: 2,
+                                path: [
+                                    ['M', startPoint.x, startPoint.y],
+                                    ['L', endPoint.x, endPoint.y],
+                                ],
+                                // 两端箭头配置
+                                startArrow: {
+                                    path: G6.Arrow.triangle(6, 8, 0),
+                                    fill: '#409EFF',
+                                    d: 0
+                                },
+                                endArrow: {
+                                    path: G6.Arrow.triangle(6, 8, 0),
+                                    fill: '#409EFF',
+                                    d: 0
+                                },
+                            },
+                            name: 'main-edge',
+                        });
+
+                        // 计算 IP A 的位置 (靠近起点 25% 处)
+                        const labelA_pos = {
+                            x: startPoint.x + (endPoint.x - startPoint.x) * 0.25,
+                            y: startPoint.y + (endPoint.y - startPoint.y) * 0.25,
+                        };
+
+                        // 计算 IP B 的位置 (靠近终点 75% 处)
+                        const labelB_pos = {
+                            x: startPoint.x + (endPoint.x - startPoint.x) * 0.75,
+                            y: startPoint.y + (endPoint.y - startPoint.y) * 0.75,
+                        };
+
+                        // 绘制 PeerIpA
+                        group.addShape('text', {
+                            attrs: {
+                                text: model.peerIpA || '',
+                                x: labelA_pos.x,
+                                y: labelA_pos.y - 5,
+                                fontSize: 10,
+                                textAlign: 'center',
+                                fill: '#666',
+                                fontWeight: 'bold',
+                                shadowBlur: 2,
+                                shadowColor: '#fff'
+                            },
+                            name: 'ip-a-label'
+                        });
+
+                        // 绘制 PeerIpB
+                        group.addShape('text', {
+                            attrs: {
+                                text: model.peerIpB || '',
+                                x: labelB_pos.x,
+                                y: labelB_pos.y - 5,
+                                fontSize: 10,
+                                textAlign: 'center',
+                                fill: '#666',
+                                fontWeight: 'bold',
+                                shadowBlur: 2,
+                                shadowColor: '#fff'
+                            },
+                            name: 'ip-b-label'
+                        });
+
+                        return shape;
+                    }
+                });
+            };
+
+            // 2. 数据转换逻辑：将 API 的扁平列表转为图结构
+            const processData = (inventories) => {
+                const nodesMap = new Map();
+                const edges = [];
+
+                inventories.forEach(item => {
+                    if (!nodesMap.has(item.switchCodeA)) {
+                        nodesMap.set(item.switchCodeA, { 
+                            id: item.switchCodeA, 
+                            label: item.switchCodeA 
+                        });
+                    }
+                    if (!nodesMap.has(item.switchCodeB)) {
+                        nodesMap.set(item.switchCodeB, { 
+                            id: item.switchCodeB, 
+                            label: item.switchCodeB 
+                        });
+                    }
+
+                    edges.push({
+                        source: item.switchCodeA,
+                        target: item.switchCodeB,
+                        type: 'interconnect-edge',
+                        ...item // 保留原始数据供 tooltip 使用
+                    });
+                });
+
+                return {
+                    nodes: Array.from(nodesMap.values()),
+                    edges: edges
+                };
+            };
+
+            // 3. 模拟数据生成器 (根据你的 API 结构)
+            const getMockData = (count) => {
+                const data = [];
+                for (let i = 0; i < count; i++) {
+                    const idA = Math.floor(Math.random() * (count/2));
+                    const idB = Math.floor(Math.random() * (count/2));
+                    if (idA === idB) continue;
+                    
+                    data.push({
+                        uuid: 'uuid-' + i,
+                        switchCodeA: `SW-CORE-${idA.toString().padStart(3, '0')}`,
+                        switchCodeB: `SW-ACC-${idB.toString().padStart(3, '0')}`,
+                        peerIpA: `10.254.${idA}.1`,
+                        peerIpB: `10.254.${idA}.2`,
+                        bandwidthA: 10,
+                        linkBandwidth: 10,
+                        interfaceA: `HundredGigE1/0/${i%48}`,
+                        interfaceB: `HundredGigE1/0/${i%48}`,
+                    });
+                }
+                return data;
+            };
+
+            const initGraph = () => {
+                const container = document.getElementById('mountNode');
+                const width = container.scrollWidth;
+                const height = container.scrollHeight;
+
+                graph.value = new G6.Graph({
+                    container: 'mountNode',
+                    width,
+                    height,
+                    fitView: true,
+                    fitViewPadding: 50,
+                    layout: {
+                        type: 'gForce', // 高性能力导向布局
+                        nodeStrength: 1000,
+                        edgeStrength: 200,
+                        nodeSpacing: 60,
+                        preventOverlap: true,
+                        gpuEnabled: true // 如果浏览器支持可开启加速
+                    },
+                    defaultNode: {
+                        size: [80, 40],
+                        type: 'rect',
+                        style: {
+                            fill: '#C6E5FF',
+                            stroke: '#5B8FF9',
+                            lineWidth: 1,
+                            radius: 4
+                        },
+                        labelCfg: {
+                            style: {
+                                fontSize: 11
+                            }
+                        }
+                    },
+                    modes: {
+                        default: [
+                            'drag-canvas', 
+                            'zoom-canvas', 
+                            'drag-node',
+                            {
+                                type: 'tooltip',
+                                formatText(model) {
+                                    // 仅当是边时显示详细信息
+                                    if (model.source) {
+                                        return `
+                                            <div style="line-height:1.8">
+                                                <strong>链路详情</strong><br/>
+                                                带宽: ${model.linkBandwidth} Gbps<br/>
+                                                A端接口: ${model.interfaceA}<br/>
+                                                B端接口: ${model.interfaceB}<br/>
+                                                A端IP: ${model.peerIpA}<br/>
+                                                B端IP: ${model.peerIpB}
+                                            </div>`;
+                                    }
+                                    return `设备: ${model.label}`;
+                                }
+                            },
+                            {
+                                type: 'activate-relations',
+                                activeState: 'active',
+                                inactiveState: 'inactive',
+                                resetSelected: true
+                            }
+                        ]
+                    },
+                    nodeStateStyles: {
+                        active: { opacity: 1, stroke: '#333', lineWidth: 2 },
+                        inactive: { opacity: 0.2 }
+                    },
+                    edgeStateStyles: {
+                        active: { stroke: '#f00', lineWidth: 3 },
+                        inactive: { opacity: 0.1 }
+                    }
+                });
+
+                // 获取并渲染数据
+                const rawData = getMockData(150); // 这里传入你 API 的返回结果
+                const formattedData = processData(rawData);
+                graph.value.data(formattedData);
+                graph.value.render();
+
+                // 窗口缩放适配
+                window.onresize = () => {
+                    if (!graph.value || graph.value.get('destroyed')) return;
+                    graph.value.changeSize(container.scrollWidth, container.scrollHeight);
+                };
+            };
+
+            const refreshLayout = () => {
+                if (graph.value) graph.value.layout();
+            };
+
+            onMounted(() => {
+                registerCustomEdge();
+                initGraph();
+            });
+
+            return {
+                refreshLayout
+            };
+        }
+    }).mount('#app');
+</script>
+
+</body>
+</html>
