@@ -21,7 +21,16 @@ export const detectApiBaseFromLocation = (): string => {
   try {
     const { protocol, hostname, port } = window.location;
     const normalizedPort = port ? `:${port}` : '';
-    return normalizeApiBase(`${protocol}//${hostname}${normalizedPort}`);
+    const detected = normalizeApiBase(`${protocol}//${hostname}${normalizedPort}`);
+
+    // 开发模式下（例如 Vite :5173），检测到的端口与 cpa-core 默认端口不同。
+    // 此时自动建议 localhost:${DEFAULT_API_PORT}，用户无需手动修改。
+    // 生产环境（cpa-core 托管 HTML）或远程访问时，检测到的端口就是实际端口，直接使用。
+    if (isLocalhost(hostname) && port && Number(port) !== DEFAULT_API_PORT) {
+      return normalizeApiBase(`http://localhost:${DEFAULT_API_PORT}`);
+    }
+
+    return detected;
   } catch (error) {
     console.warn('Failed to detect api base from location, fallback to default', error);
     return normalizeApiBase(`http://localhost:${DEFAULT_API_PORT}`);
