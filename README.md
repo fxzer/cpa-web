@@ -55,7 +55,7 @@ npm run build
 ./deploy.sh --to /opt/cpa-core/static
 
 # 用已有产物部署（跳过构建）
-./deploy.sh --skip-build --to ~/m/cpa/static
+./deploy.sh --skip-build --to /opt/cpa-core/static
 
 # 预览
 ./deploy.sh --dry-run --to /opt/cpa-core/static
@@ -133,7 +133,6 @@ cpa-core :8317
 - **监控首页** — 统计卡片强调色与仪表盘一致，添加缓存命中图表
 - **请求监控** — 时间列与状态标签样式统一，凭据行格式化便于扫读
 - **页面切换** — 竖向过渡动画
-- **ToggleSwitch** — 开启态使用 `--success-color`
 - **配置编辑** — 网格布局优化内边距与过渡，API Key 区块可读性提升
 - **响应式** — 移动端适配修复
 - **Provider 实时生效** — 配置变更即时反映
