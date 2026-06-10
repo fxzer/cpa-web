@@ -11,14 +11,14 @@
 
 从6.0.19版本开始，Web UI 随主程序一起提供；服务运行后，通过 API 端口上的"/web.html"访问它。
 
-## 配对后端（fxzer / CLIProxyAPI）
+## 配对后端（fxzer / cpa-core）
 
 本管理界面中与 **监控中心**、**凭证中心**、聚合用量等页面对齐的接口，由下列 fork 提供；与上游官方发行包相比，需在服务端包含对应路由与实现。
 
 | 项 | 链接 / 说明 |
 |----|-------------|
 | **本仓库（前端）** | <https://github.com/fxzer/cpa-web.git> |
-| **后端仓库** | <https://github.com/fxzer/CLIProxyAPI> · `git clone https://github.com/fxzer/CLIProxyAPI.git` |
+| **后端仓库** | <https://github.com/fxzer/cpa-core.git> · `git clone https://github.com/fxzer/cpa-core.git` |
 | **后端改动摘要** | 见该仓库 README **「fxzer fork」**小节（位于 **Sponsor / 赞助商** 上方），含 `GET /v0/management/request-events`、`GET /v0/management/auth-refresh-queue` 等。 |
 | **部署提示** | Homebrew 默认 `cliproxyapi` bottle 可能尚未包含上述路由；需使用含改动的构建（参见后端仓库内 `scripts/deploy-brew-service.sh` 或本仓库 `deploy.sh`）。 |
 
@@ -26,21 +26,20 @@
 
 - 本仓库以 **Web 管理界面**（React）为主，通过 CLI Proxy API 的 **Management API**（`/v0/management`）读取/修改配置、上传凭据与查看日志。
 - 请求监控数据由 CPA 内置 SQLite 持久化（默认开启），无需额外 sidecar。
-- 它们 **不是** 代理本体，不参与流量转发；代理服务仍由 [CLIProxyAPI](https://github.com/fxzer/CLIProxyAPI) 提供。
+- 它们 **不是** 代理本体，不参与流量转发；代理服务仍由 [cpa-core](https://github.com/fxzer/cpa-core) 提供。
 
 ### 组件关系
 
 ```
 cpa-web (React)
     │  全部页面 → /v0/management/*
-    ▼
-CLIProxyAPI :8317
+    ▼    cpa-core :8317
     代理 + Management API + SQLite 请求事件
 ```
 
 | 组件 | 是否必需 | 说明 |
 |------|----------|------|
-| CLIProxyAPI | 是 | 代理、管理 API、请求监控持久化 |
+| cpa-core | 是 | 代理、管理 API、请求监控持久化 |
 | 本仓库前端 | 是（若使用 Web UI） | 构建为 `web.html` |
 
 
@@ -80,9 +79,6 @@ CLIProxyAPI :8317
 - **deploy.sh**：前端一键构建与部署脚本，支持 `--to <目录>` 直接部署到后端 static 目录。
 - **站点标题**：`index.html` / `main.tsx` 中应用标题为 **cpa-web**。
 
-### 文档
-
-- **README**：「配对后端」与后端 fork 文档互链；合并英文说明，移除独立 `README_CN`。
 
 ## 快速开始
 
