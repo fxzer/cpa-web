@@ -9,7 +9,7 @@
 **示例地址**: https://remote.router-for.me/  
 **最低版本要求**: ≥ 6.8.0（推荐 ≥ 6.8.15）
 
-从6.0.19版本开始，Web UI 随主程序一起提供；服务运行后，通过 API 端口上的"/management.html"访问它。
+从6.0.19版本开始，Web UI 随主程序一起提供；服务运行后，通过 API 端口上的"/web.html"访问它。
 
 ## 配对后端（fxzer / CLIProxyAPI）
 
@@ -17,7 +17,7 @@
 
 | 项 | 链接 / 说明 |
 |----|-------------|
-| **本仓库（前端）** | <https://github.com/fxzer/cliproxyapi-management.git> |
+| **本仓库（前端）** | <https://github.com/fxzer/cpa-web.git> |
 | **后端仓库** | <https://github.com/fxzer/CLIProxyAPI> · `git clone https://github.com/fxzer/CLIProxyAPI.git` |
 | **后端改动摘要** | 见该仓库 README **「fxzer fork」**小节（位于 **Sponsor / 赞助商** 上方），含 `GET /v0/management/request-events`、`GET /v0/management/auth-refresh-queue` 等。 |
 | **部署提示** | Homebrew 默认 `cliproxyapi` bottle 可能尚未包含上述路由；需使用含改动的构建（参见后端仓库内 `scripts/deploy-brew-service.sh` 或本仓库 `deploy.sh`）。 |
@@ -31,7 +31,7 @@
 ### 组件关系
 
 ```
-cliproxyapi-management (React)
+cpa-web (React)
     │  全部页面 → /v0/management/*
     ▼
 CLIProxyAPI :8317
@@ -41,7 +41,7 @@ CLIProxyAPI :8317
 | 组件 | 是否必需 | 说明 |
 |------|----------|------|
 | CLIProxyAPI | 是 | 代理、管理 API、请求监控持久化 |
-| 本仓库前端 | 是（若使用 Web UI） | 构建为 `management.html` |
+| 本仓库前端 | 是（若使用 Web UI） | 构建为 `web.html` |
 
 
 
@@ -76,9 +76,9 @@ CLIProxyAPI :8317
 
 ### 部署与工程化
 
-- **DEPLOY.md**：完整部署指南（架构、手动/一键部署、请求监控配置、验证与排错）。
-- **deploy.sh**：一键部署前端与 CLIProxyAPI；支持本地（Homebrew + LaunchAgent）与服务器（SSH + systemd）。
-- **站点标题**：`index.html` / `main.tsx` 中应用标题为 **cliproxyapi-management**。
+- **DEPLOY.md**：部署指南（架构、构建、部署、请求监控等）。
+- **deploy.sh**：前端一键构建与部署脚本，支持 `--to <目录>` 直接部署到后端 static 目录。
+- **站点标题**：`index.html` / `main.tsx` 中应用标题为 **cpa-web**。
 
 ### 文档
 
@@ -89,7 +89,7 @@ CLIProxyAPI :8317
 ### 方式 A：使用 CLI Proxy API 自带的 Web UI（推荐）
 
 1. 启动 CLI Proxy API 服务。
-2. 打开：`http://<host>:<api_port>/management.html`
+2. 打开：`http://<host>:<api_port>/web.html`
 3. 输入 **管理密钥** 并连接。
 
 页面会根据当前地址自动推断 API 地址，也支持手动修改。
@@ -111,18 +111,19 @@ npm run build
 ```
 
 - 构建产物：`dist/index.html`（资源已全部内联）。
-- 在 CLI Proxy API 的发布流程里会重命名为 `management.html`。
+- 在 CLI Proxy API 的发布流程里会重命名为 `web.html`。
 - 本地预览：`npm run preview`
 
 提示：直接用 `file://` 打开 `dist/index.html` 可能遇到浏览器 CORS 限制；更稳妥的方式是用预览/静态服务器打开。
 
 ### 方式 D：生产部署
 
-完整部署步骤（最简手动、一键 `deploy.sh`、请求监控配置、服务器 SSH、验证清单）见 **[DEPLOY.md](./DEPLOY.md)**。
+完整部署步骤见 **[DEPLOY.md](./DEPLOY.md)**。
 
 ```bash
-./deploy.sh                    # 本地：前端 + CPA
-./deploy.sh --target server    # 部署到远程服务器
+./deploy.sh                                         # 构建到 dist/
+./deploy.sh --to /opt/cliproxyapi/static             # 构建并部署
+./deploy.sh --skip-build --to ~/m/cpa/static         # 用已有产物部署
 ```
 
 ## 请求监控
@@ -199,7 +200,7 @@ npm run build
 ## 构建与发布说明
 
 - 使用 Vite 输出 **单文件 HTML**（`dist/index.html`），资源全部内联（`vite-plugin-singlefile`）。
-- 打 `vX.Y.Z` 标签会触发 `.github/workflows/release.yml`，发布 `dist/management.html`。
+- 打 `vX.Y.Z` 标签会触发 `.github/workflows/release.yml`，构建并发布 `dist/index.html`（Release 中重命名为 `web.html`）。
 - 页脚显示的 UI 版本在构建期注入（优先使用环境变量 `VERSION`，否则使用 git tag / `package.json`）。
 
 ## 安全提示

@@ -7,18 +7,13 @@ import { RequestEventsDetailsCard, type RequestEventsFilteredStats } from '@/com
 import usageStyles from '@/pages/UsagePage.module.scss';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { requestEventsApi } from '@/services/api/requestEvents';
+import { requestEventsApi, MAX_REQUEST_EVENTS_LIMIT } from '@/services/api/requestEvents';
 import { useAuthStore, useConfigStore } from '@/stores';
 import { buildUsageSnapshotFromRequestEvents } from '@/utils/requestEvents';
+import { getErrorMessage } from '@/utils/error';
 import styles from './RequestMonitoringPage.module.scss';
 
 const AUTO_REFRESH_MS = 10_000;
-
-const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) return error.message;
-  if (typeof error === 'string') return error;
-  return '';
-};
 
 export function RequestMonitoringPage() {
   const { t } = useTranslation();
@@ -59,7 +54,7 @@ export function RequestMonitoringPage() {
 
     try {
       const [eventsResponse, statusResponse] = await Promise.all([
-        requestEventsApi.list({ limit: 50000 }),
+        requestEventsApi.list({ limit: MAX_REQUEST_EVENTS_LIMIT }),
         requestEventsApi.status().catch(() => null),
       ]);
       setUsagePayload(buildUsageSnapshotFromRequestEvents(eventsResponse.items));
@@ -79,12 +74,29 @@ export function RequestMonitoringPage() {
     void loadData();
   }, [loadData]);
 
+  /**
+   * 防重叠自动刷新：递归 setTimeout + cancelled 保护
+   * 只有在 await loadData() 完成后才调度下一轮，从根本上杜绝重叠
+   */
   useEffect(() => {
     if (!autoRefresh) return;
-    const timer = window.setInterval(() => {
-      void loadData();
-    }, AUTO_REFRESH_MS);
-    return () => window.clearInterval(timer);
+
+    let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout>;
+
+    const tick = async () => {
+      await loadData();
+      if (!cancelled) {
+        timerId = setTimeout(tick, AUTO_REFRESH_MS);
+      }
+    };
+
+    timerId = setTimeout(tick, AUTO_REFRESH_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timerId);
+    };
   }, [autoRefresh, loadData]);
 
   return (

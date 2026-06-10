@@ -185,11 +185,6 @@ export function OpenAIBatchModelTestModal({
     setSelected(new Set());
   }, []);
 
-  const availableTestedModels = useMemo(
-    () => models.filter((model) => testResults[model.name]?.success),
-    [models, testResults]
-  );
-
   const runBatchTests = useCallback(async () => {
     if (keyIndex === null || !rowKey) {
       return;
@@ -267,15 +262,30 @@ export function OpenAIBatchModelTestModal({
     }
   }, [form.apiKeyEntries, form.baseUrl, form.headers, keyIndex, onBatchComplete, rowKey, selected, t]);
 
+  const selectedAvailableCount = useMemo(
+    () => models.filter((m) => selected.has(m.name) && testResults[m.name]?.success).length,
+    [models, selected, testResults]
+  );
+
   const handleAddAvailableModels = useCallback(() => {
-    if (keyIndex === null || availableTestedModels.length === 0) return;
+    if (keyIndex === null) return;
+    const selectedAvailable = models.filter(
+      (m) => selected.has(m.name) && testResults[m.name]?.success
+    );
+    if (selectedAvailable.length === 0) return;
+
+    const selectedResults: Record<string, OpenAIBatchModelTestRowResult> = {};
+    selectedAvailable.forEach((m) => {
+      selectedResults[m.name] = testResults[m.name];
+    });
+
     onAddAvailableModels({
       keyIndex,
-      results: testResults,
-      models,
+      results: selectedResults,
+      models: selectedAvailable,
     });
     onClose();
-  }, [availableTestedModels.length, keyIndex, models, onAddAvailableModels, onClose, testResults]);
+  }, [keyIndex, models, selected, testResults, onAddAvailableModels, onClose]);
 
   const canRun =
     !disableControls &&
@@ -286,7 +296,7 @@ export function OpenAIBatchModelTestModal({
     Boolean(rowKey) &&
     keyIndex !== null;
   const canAddAvailable =
-    !disableControls && !saving && !fetching && !testing && availableTestedModels.length > 0;
+    !disableControls && !saving && !fetching && !testing && selectedAvailableCount > 0;
 
   if (!open || keyIndex === null) {
     return null;

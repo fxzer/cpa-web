@@ -360,14 +360,14 @@ export function AiProvidersGeminiEditPage() {
       results: Record<string, GeminiBatchModelTestRowResult>;
       models: ModelInfo[];
     }) => {
-      const usableNames = new Set(
+      const availableNames = new Set(
         Object.entries(results)
           .filter(([, result]) => result.success)
           .map(([name]) => stripGeminiModelResourceName(name).trim())
           .filter(Boolean)
       );
 
-      if (usableNames.size === 0) {
+      if (availableNames.size === 0) {
         showNotification(t('ai_providers.openai_batch_model_add_available_empty'), 'warning');
         return;
       }
@@ -378,25 +378,33 @@ export function AiProvidersGeminiEditPage() {
       }));
 
       let addedCount = 0;
+      let removedCount = 0;
 
       setForm((prev) => {
+        // 取交集逻辑：
+        // 1. 原有模型若不可用 → 清理掉
+        // 2. 原有模型若可用且有别名 → 保留其别名
+        // 3. 添加新勾选的可用模型
         const mergedMap = new Map<string, { name: string; alias: string }>();
+
         prev.modelEntries.forEach((entry) => {
           const name = stripGeminiModelResourceName(entry.name).trim();
           if (!name) return;
-          mergedMap.set(name, { name, alias: entry.alias?.trim() || '' });
+          if (availableNames.has(name)) {
+            // 可用 → 保留（保持别名）
+            mergedMap.set(name, { name, alias: entry.alias?.trim() || '' });
+          } else {
+            // 不可用 → 移除
+            removedCount += 1;
+          }
         });
 
         models.forEach((model) => {
           const name = stripGeminiModelResourceName(model.name).trim();
-          if (!name || !usableNames.has(name) || mergedMap.has(name)) return;
+          if (!name || !availableNames.has(name) || mergedMap.has(name)) return;
           mergedMap.set(name, { name, alias: model.alias ?? '' });
           addedCount += 1;
         });
-
-        if (addedCount === 0) {
-          return prev;
-        }
 
         const mergedEntries = Array.from(mergedMap.values());
         return {
@@ -405,7 +413,7 @@ export function AiProvidersGeminiEditPage() {
         };
       });
 
-      if (addedCount === 0) {
+      if (addedCount === 0 && removedCount === 0) {
         showNotification(t('ai_providers.openai_batch_model_add_available_none_new'), 'warning');
         return;
       }

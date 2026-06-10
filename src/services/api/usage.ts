@@ -2,13 +2,14 @@
  * 使用统计相关 API（基于 CPA 内置 request-events）
  */
 
-import { requestEventsApi } from './requestEvents';
+import { requestEventsApi, MAX_REQUEST_EVENTS_LIMIT } from './requestEvents';
 import {
   buildUsageSnapshotFromRequestEvents,
   mapRequestEventsToDetails,
 } from '@/utils/requestEvents';
 import {
   computeKeyStats,
+  normalizeUsageData,
   type KeyStats,
   type UsageDeleteResponse,
   type UsageQueryRange,
@@ -30,10 +31,9 @@ export const usageApi = {
 
   async getKeyStats(usageData?: unknown): Promise<KeyStats> {
     if (usageData) {
-      const { normalizeUsageData } = await import('@/utils/usage');
       return computeKeyStats(normalizeUsageData(usageData));
     }
-    const response = await requestEventsApi.list({ limit: 50000 });
+    const response = await requestEventsApi.list({ limit: MAX_REQUEST_EVENTS_LIMIT });
     return computeKeyStats(buildUsageSnapshotFromRequestEvents(response.items));
   },
 

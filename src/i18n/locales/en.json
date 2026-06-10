@@ -60,8 +60,8 @@
     "other": "Other"
   },
   "title": {
-    "main": "cliproxyapi-management",
-    "login": "cliproxyapi-management",
+    "main": "cpa-web",
+    "login": "cpa-web",
     "abbr": "CPAMC"
   },
   "splash": {
@@ -484,6 +484,7 @@
     "openai_batch_model_results_available": "{{count}} available",
     "openai_batch_model_results_unavailable": "{{count}} unavailable",
     "openai_batch_model_add_available": "Add all available models",
+    "openai_batch_model_add_selected": "Add {{count}} available model(s)",
     "openai_batch_model_add_available_done": "Added {{count}} available model(s)",
     "openai_batch_model_add_available_empty": "No available models in this test",
     "openai_batch_model_add_available_none_new": "All available models already exist; none added",
@@ -1311,7 +1312,7 @@
   },
   "system_info": {
     "title": "Management Center Info",
-    "about_title": "cliproxyapi-management",
+    "about_title": "cpa-web",
     "connection_status_title": "Connection Status",
     "api_status_label": "API Status:",
     "config_status_label": "Config Status:",

@@ -478,6 +478,14 @@ export function BatchModelTestModalShell({
     return { success, failed, total: values.length };
   })();
 
+  const selectedAvailableCount = useMemo(() => {
+    let count = 0;
+    for (const name of selected) {
+      if (testResults[name]?.success) count++;
+    }
+    return count;
+  }, [selected, testResults]);
+
   if (!open) {
     return null;
   }
@@ -510,7 +518,9 @@ export function BatchModelTestModalShell({
               onClick={onAddAvailableModels}
               disabled={!canAddAvailable}
             >
-              {t('ai_providers.openai_batch_model_add_available')}
+              {selectedAvailableCount > 0
+                ? t('ai_providers.openai_batch_model_add_selected', { count: selectedAvailableCount })
+                : t('ai_providers.openai_batch_model_add_available')}
             </Button>
             <Button size="sm" onClick={onRunBatchTests} disabled={!canRun} loading={testing}>
               {t('ai_providers.openai_batch_model_test_run')}

@@ -60,8 +60,8 @@
     "other": "其他"
   },
   "title": {
-    "main": "cliproxyapi-management",
-    "login": "cliproxyapi-management",
+    "main": "cpa-web",
+    "login": "cpa-web",
     "abbr": "CPAMC"
   },
   "splash": {
@@ -485,6 +485,7 @@
     "openai_batch_model_results_available": "可用 {{count}} 个",
     "openai_batch_model_results_unavailable": "不可用 {{count}} 个",
     "openai_batch_model_add_available": "添加所有可用模型",
+    "openai_batch_model_add_selected": "添加 {{count}} 个可用模型",
     "openai_batch_model_add_available_done": "已添加 {{count}} 个可用模型",
     "openai_batch_model_add_available_empty": "本次测试没有可用模型",
     "openai_batch_model_add_available_none_new": "可用模型均已存在，未新增",
@@ -1311,7 +1312,7 @@
     "empty_desc": "未找到支持配额查询的启用中认证文件。"
   },
   "system_info": {
-    "about_title": "cliproxyapi-management",
+    "about_title": "cpa-web",
     "connection_status_title": "连接状态",
     "api_status_label": "API 状态:",
     "config_status_label": "配置状态:",

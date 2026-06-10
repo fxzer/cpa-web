@@ -237,7 +237,7 @@ export function MainLayout() {
   const themeMenuRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLElement | null>(null);
 
-  const fullBrandName = 'cliproxyapi-management';
+  const fullBrandName = 'cpa-web';
   const abbrBrandName = t('title.abbr');
   const isLogsPage = location.pathname.startsWith('/logs');
   const showSidebarLabels = !sidebarCollapsed || sidebarOpen;
