@@ -59,10 +59,10 @@ cpa-web 有两种使用方式：
 npm run build
 
 # 使用 deploy.sh 一键部署到后端 static 目录
-./deploy.sh --to /opt/cpa-core/static
+./deploy.sh --to ~/cpa-core/static
 
 # 或手动复制
-cp dist/index.html /opt/cpa-core/static/web.html
+cp dist/index.html ~/cpa-core/static/web.html
 
 # 然后重启 cpa-core 服务
 ```
@@ -77,7 +77,7 @@ cp dist/index.html /opt/cpa-core/static/web.html
 curl -L -o web.html https://github.com/fxzer/cpa-web/releases/latest/download/web.html
 
 # 复制到后端 static 目录
-cp web.html /opt/cpa-core/static/web.html
+cp web.html ~/cpa-core/static/web.html
 ```
 
 > **cpa-core 后端内置自动更新机制**
