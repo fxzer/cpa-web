@@ -1,11 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
+import { modelPricesApi } from '@/services/api/requestEvents';
 import { USAGE_STATS_STALE_TIME_MS, useUsageStatsStore } from '@/stores/useUsageStatsStore';
-import {
-  loadModelPrices,
-  saveModelPrices,
-  type ModelPrice,
-  type UsageTimeRange,
-} from '@/utils/usage';
+import { type ModelPrice, type UsageTimeRange } from '@/utils/usage';
 
 export interface UsagePayload {
   total_requests?: number;
@@ -40,9 +36,7 @@ export function useUsageData(options: UseUsageDataOptions = {}): UseUsageDataRet
   const lastRefreshedAtTs = useUsageStatsStore((state) => state.lastRefreshedAt);
   const loadUsageStats = useUsageStatsStore((state) => state.loadUsageStats);
 
-  const [modelPrices, setModelPrices] = useState<Record<string, ModelPrice>>(() =>
-    loadModelPrices()
-  );
+  const [modelPrices, setModelPrices] = useState<Record<string, ModelPrice>>({});
 
   const loadUsage = useCallback(async () => {
     await loadUsageStats({
@@ -53,6 +47,13 @@ export function useUsageData(options: UseUsageDataOptions = {}): UseUsageDataRet
       minimumLookbackMs,
     });
   }, [loadUsageStats, minimumLookbackMs, refreshFullRange, timeRange]);
+
+  useEffect(() => {
+    void modelPricesApi
+      .get()
+      .then((response) => setModelPrices(response.prices || {}))
+      .catch(() => setModelPrices({}));
+  }, []);
 
   useEffect(() => {
     void loadUsageStats({
@@ -66,7 +67,7 @@ export function useUsageData(options: UseUsageDataOptions = {}): UseUsageDataRet
 
   const handleSetModelPrices = useCallback((prices: Record<string, ModelPrice>) => {
     setModelPrices(prices);
-    saveModelPrices(prices);
+    void modelPricesApi.put(prices).catch(() => undefined);
   }, []);
 
   const usage = usageSnapshot as UsagePayload | null;

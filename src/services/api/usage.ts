@@ -1,42 +1,47 @@
 /**
- * 使用统计相关 API
+ * 使用统计相关 API（基于 CPA 内置 request-events）
  */
 
-import { apiClient } from './client';
+import { requestEventsApi } from './requestEvents';
+import {
+  buildUsageSnapshotFromRequestEvents,
+  mapRequestEventsToDetails,
+} from '@/utils/requestEvents';
 import {
   computeKeyStats,
-  normalizeUsageData,
   type KeyStats,
   type UsageDeleteResponse,
   type UsageQueryRange,
 } from '@/utils/usage';
 
-const USAGE_TIMEOUT_MS = 60 * 1000;
-
 export const usageApi = {
-  /**
-   * 获取使用统计原始数据
-   */
-  getUsage: (params?: UsageQueryRange) =>
-    apiClient.get<Record<string, unknown>>('/usage', { timeout: USAGE_TIMEOUT_MS, params }),
+  getUsage: async (params?: UsageQueryRange) => {
+    const response = await requestEventsApi.list({
+      start: params?.start,
+      end: params?.end,
+    });
+    return buildUsageSnapshotFromRequestEvents(response.items);
+  },
 
-  /**
-   * 删除指定 usage 记录
-   */
-  deleteUsage: (ids: string[]) =>
-    apiClient.delete<UsageDeleteResponse>('/usage', {
-      timeout: USAGE_TIMEOUT_MS,
-      data: { ids },
-    }),
+  deleteUsage: async (ids: string[]) => {
+    const result = await requestEventsApi.delete(ids);
+    return { deleted: result.deleted } as UsageDeleteResponse;
+  },
 
-  /**
-   * 计算密钥成功/失败统计，必要时会先获取 usage 数据
-   */
   async getKeyStats(usageData?: unknown): Promise<KeyStats> {
-    let payload = usageData;
-    if (!payload) {
-      payload = await usageApi.getUsage();
+    if (usageData) {
+      const { normalizeUsageData } = await import('@/utils/usage');
+      return computeKeyStats(normalizeUsageData(usageData));
     }
-    return computeKeyStats(normalizeUsageData(payload));
+    const response = await requestEventsApi.list({ limit: 50000 });
+    return computeKeyStats(buildUsageSnapshotFromRequestEvents(response.items));
+  },
+
+  listDetails: async (params?: UsageQueryRange) => {
+    const response = await requestEventsApi.list({
+      start: params?.start,
+      end: params?.end,
+    });
+    return mapRequestEventsToDetails(response.items);
   },
 };

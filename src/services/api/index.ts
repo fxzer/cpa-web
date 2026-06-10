@@ -10,7 +10,7 @@ export * from './authFiles';
 export * from './oauth';
 export * from './logs';
 export * from './usage';
-export * from './usageService';
+export * from './requestEvents';
 export * from './version';
 export * from './models';
 export * from './transformers';
