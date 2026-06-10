@@ -11,11 +11,30 @@
 ### 开发模式
 
 ```bash
+# 1. 启动 cpa-core 后端（前提：已配置 config.yaml）
+cd /path/to/cpa-core
+go run ./cmd/server -config config.yaml
+
+# 2. 另开终端，启动前端开发服务器
+cd /path/to/cpa-web
 npm install
 npm run dev
 ```
 
-启动 Vite 开发服务器（默认 `localhost:5173`），连接到你的 cpa-core 后端实例即可调试。
+前端 Vite 开发服务器默认运行在 `http://localhost:5173`。
+
+打开浏览器访问该地址，在登录页面输入：
+
+| 字段 | 值 |
+|------|-----|
+| **API 地址** | `http://localhost:8317`（即 cpa-core 的监听地址） |
+| **管理密钥** | cpa-core 配置文件中的 `remote-management.secret-key` |
+
+点击连接即可开始开发调试。
+
+> **为什么不需要配置代理？**
+> 前端通过登录页面在**运行时**动态设置 API 地址，存于 localStorage。
+> 无论是 Vite 开发服务器还是生产环境的单文件 HTML，都是通过用户填入的 API 地址直接请求 cpa-core，没有编译期配置或 Vite proxy 依赖。
 
 ### 构建
 
