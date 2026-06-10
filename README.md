@@ -1,170 +1,137 @@
+# cpa-web
 
-# CLI Proxy API 管理中心
+**cpa-web** 是 [cpa-core](https://github.com/fxzer/cpa-core) 的 Web 管理界面，提供监控中心、凭证管理、用量统计、配置编辑等功能。
 
-用于管理与故障排查 **CLI Proxy API** 的单文件 Web UI（React + TypeScript），通过 **Management API** 完成配置、凭据与日志等管理操作。
+构建产物为单文件 `index.html`（所有资源内联），部署到 cpa-core 后端的 static 目录即可使用。
 
-[English](README.md)
-
-**主项目**: https://github.com/router-for-me/CLIProxyAPI  
-**示例地址**: https://remote.router-for.me/  
-**最低版本要求**: ≥ 6.8.0（推荐 ≥ 6.8.15）
-
-从6.0.19版本开始，Web UI 随主程序一起提供；服务运行后，通过 API 端口上的"/web.html"访问它。
-
-## 配对后端（fxzer / cpa-core）
-
-本管理界面中与 **监控中心**、**凭证中心**、聚合用量等页面对齐的接口，由下列 fork 提供；与上游官方发行包相比，需在服务端包含对应路由与实现。
-
-| 项 | 链接 / 说明 |
-|----|-------------|
-| **本仓库（前端）** | <https://github.com/fxzer/cpa-web.git> |
-| **后端仓库** | <https://github.com/fxzer/cpa-core.git> · `git clone https://github.com/fxzer/cpa-core.git` |
-| **后端改动摘要** | 见该仓库 README **「fxzer fork」**小节（位于 **Sponsor / 赞助商** 上方），含 `GET /v0/management/request-events`、`GET /v0/management/auth-refresh-queue` 等。 |
-| **部署提示** | Homebrew 默认 `cliproxyapi` bottle 可能尚未包含上述路由；需使用含改动的构建（参见后端仓库内 `scripts/deploy-brew-service.sh` 或本仓库 `deploy.sh`）。 |
-
-## 这是什么（以及不是什么）
-
-- 本仓库以 **Web 管理界面**（React）为主，通过 CLI Proxy API 的 **Management API**（`/v0/management`）读取/修改配置、上传凭据与查看日志。
-- 请求监控数据由 CPA 内置 SQLite 持久化（默认开启），无需额外 sidecar。
-- 它们 **不是** 代理本体，不参与流量转发；代理服务仍由 [cpa-core](https://github.com/fxzer/cpa-core) 提供。
-
-### 组件关系
-
-```
-cpa-web (React)
-    │  全部页面 → /v0/management/*
-    ▼    cpa-core :8317
-    代理 + Management API + SQLite 请求事件
-```
-
-| 组件 | 是否必需 | 说明 |
-|------|----------|------|
-| cpa-core | 是 | 代理、管理 API、请求监控持久化 |
-| 本仓库前端 | 是（若使用 Web UI） | 构建为 `web.html` |
-
-
-
-## 基于上游的自定义改动
-
-本项目基于 [router-for-me/Cli-Proxy-API-Management-Center](https://github.com/router-for-me/Cli-Proxy-API-Management-Center) fork，主要改动如下：
-
-### 监控中心与凭证中心
-
-- **页面集成**：新增监控中心、凭证中心等页面与路由。
-- **请求监控**：时间列与状态标签样式统一；凭据行展示与标题格式化，便于快速扫读。
-- **统计与动效**：监控首页统计卡片强调色与仪表盘一致；页面切换组件支持竖向过渡变体。
-- **页头与状态区**：两中心页头、刷新队列与监控状态卡片样式统一；按钮加载态更清晰，并改进键盘与读屏相关体验。
-
-### UI/UX
-
-- **模型列表**：从系统页拆出为独立页，侧栏「模型列表」全宽展示；标题与刷新控件同一行，标题保持在卡片外。
-- **菜单**：「OAuth 登录」排在「认证文件」前。
-- **开关**：`ToggleSwitch` 开启态使用 `--success-color`（原为 `--primary-color`）。
-- **配置编辑**：`ConfigSection` / `VisualConfigEditor` 采用网格布局并优化内边距与过渡；API Key 等区块可读性提升；用量相关页与配置相关页共用浏览器本地存储中的时间范围选择。
-- **仪表盘**：样式与布局与近期其它页面统一。
-
-### 国际化
-
-- **语言**：移除 zh-TW、ru，仅保留 en、zh-CN。
-
-### 布局与页面
-
-- **认证文件**：禁用态下卡片操作仍可辨识。
-- **AI 提供商**：修复 OpenAI 卡片溢出。
-- **系统信息**：去掉模型列表（见独立页）；其余（关于、版本、快捷链接、清除登录存储）不变。
-
-### 部署与工程化
-
-- **DEPLOY.md**：部署指南（架构、构建、部署、请求监控等）。
-- **deploy.sh**：前端一键构建与部署脚本，支持 `--to <目录>` 直接部署到后端 static 目录。
-- **站点标题**：`index.html` / `main.tsx` 中应用标题为 **cpa-web**。
-
+---
 
 ## 快速开始
 
-### 方式 A：使用 CLI Proxy API 自带的 Web UI（推荐）
-
-1. 启动 CLI Proxy API 服务。
-2. 打开：`http://<host>:<api_port>/web.html`
-3. 输入 **管理密钥** 并连接。
-
-页面会根据当前地址自动推断 API 地址，也支持手动修改。
-
-### 方式 B：开发调试
+### 开发模式
 
 ```bash
 npm install
 npm run dev
 ```
 
-打开 `http://localhost:5173`，然后连接到你的 CLI Proxy API 后端实例。
+启动 Vite 开发服务器（默认 `localhost:5173`），连接到你的 cpa-core 后端实例即可调试。
 
-### 方式 C：构建单文件 HTML
+### 构建
 
 ```bash
-npm install
 npm run build
 ```
 
-- 构建产物：`dist/index.html`（资源已全部内联）。
-- 在 CLI Proxy API 的发布流程里会重命名为 `web.html`。
-- 本地预览：`npm run preview`
+产物输出到 `dist/index.html`，单文件，无外部依赖。
 
-提示：直接用 `file://` 打开 `dist/index.html` 可能遇到浏览器 CORS 限制；更稳妥的方式是用预览/静态服务器打开。
+---
 
-### 方式 D：生产部署
+## 部署方式
 
-完整部署步骤见 **[DEPLOY.md](./DEPLOY.md)**。
+### 方式一：用 deploy.sh 一键部署到本地 cpa-core
 
 ```bash
-./deploy.sh                                         # 构建到 dist/
-./deploy.sh --to /opt/cliproxyapi/static             # 构建并部署
-./deploy.sh --skip-build --to ~/m/cpa/static         # 用已有产物部署
+# 构建并部署到后端 static 目录（自动命名为 web.html）
+./deploy.sh --to /opt/cpa-core/static
+
+# 用已有产物部署（跳过构建）
+./deploy.sh --skip-build --to ~/m/cpa/static
+
+# 预览
+./deploy.sh --dry-run --to /opt/cpa-core/static
 ```
 
-## 请求监控
+### 方式二：手动部署
 
-「请求监控」页直接读取 CPA 的 `/v0/management/request-events` API，数据默认持久化到 SQLite。配置说明见 **[DEPLOY.md](./DEPLOY.md#请求监控与持久化)**。
+```bash
+npm run build
+cp dist/index.html /opt/cpa-core/static/web.html
+# 然后重启 cpa-core 服务
+```
 
-## 连接说明
+### 方式三：使用 GitHub Release 的预构建产物
 
-### API 地址怎么填
+每次打 `vX.Y.Z` 标签时，CI 会自动构建并发布 `web.html` 到 Releases 页面。
 
-以下格式均可，Web UI 会自动归一化：
+```bash
+# 下载最新 Release 的 web.html
+curl -L -o web.html https://github.com/fxzer/cpa-web/releases/latest/download/web.html
+# 复制到后端 static 目录
+cp web.html /opt/cpa-core/static/web.html
+```
 
-- `localhost:8317`
-- `http://192.168.1.10:8317`
-- `https://example.com:8317`
-- `http://example.com:8317/v0/management`（也可填写，后缀会被自动去除）
+---
 
-### 管理密钥（注意：不是 API Keys）
+## 架构
 
-管理密钥会以如下方式随请求发送：
+```
+cpa-web (React SPA)
+    │  全部页面 → /v0/management/*
+    ▼
+cpa-core :8317
+    AI 代理 + Management API + SQLite 请求事件
+```
 
-- `Authorization: Bearer <MANAGEMENT_KEY>`（默认）
+| 组件 | 说明 |
+|------|------|
+| **cpa-core** | AI 代理服务，提供代理转发、管理 API、请求监控持久化 |
+| **cpa-web** | 本仓库，构建为 `web.html`，由 cpa-core 托管 |
 
-这与 Web UI 中"API Keys"页面管理的 `api-keys` 不同：后者是代理对外接口（如 OpenAI 兼容接口）给客户端使用的鉴权 key。
+> 请求监控数据由 cpa-core 内置 SQLite 持久化，无需额外 sidecar。
 
-### 远程管理
+---
 
-当你从非 localhost 的浏览器访问时，服务端通常需要开启远程管理（例如 `allow-remote-management: true`）。  
+## 功能
 
-## 功能一览（按页面对应）
+- **监控中心** — 请求事件列表、模型定价与费用估算、缓存命中/用量趋势图表
+- **凭证中心** — 多 Key 管理、OAuth 流程/状态、Auth Refresh Queue
+- **AI 提供商** — Gemini / Codex / Claude / Vertex / OpenAI 兼容 / Ampcode 配置
+- **认证文件** — 上传/下载/删除 JSON 凭据、模型别名映射、OAuth 排除模型
+- **配额管理** — Claude / Antigravity / Codex / Gemini CLI 等配额上限
+- **用量统计** — 聚合用量概览、时间范围筛选
+- **配置文件** — 浏览器内编辑 YAML（CodeMirror 高亮）、保存/重载
+- **日志** — 增量拉取、搜索过滤、隐藏管理端流量
+- **OAuth 登录** — 发起 OAuth/设备码流程、iFlow Cookie 导入
+- **系统信息** — 版本、构建信息、快捷链接、模型列表
 
-- **仪表盘**：连接状态、服务版本/构建时间、关键数量概览、可用模型概览。
-- **基础设置**：调试开关、代理 URL、请求重试、配额回退（达到上限时切换项目或预览模型）、请求日志、文件日志、WebSocket 鉴权。
-- **API Keys**：管理代理 `api-keys`（增/改/删）。
-- **AI 提供商**：
-  - Gemini/Codex/Claude/Vertex 配置（Base URL、Headers、代理、模型别名、排除模型、Prefix）。
-  - OpenAI 兼容提供商（多 Key、Header、自助从 `/v1/models` 拉取并导入模型别名、可选浏览器侧 `chat/completions` 测试）。
-  - Ampcode 集成（上游地址/密钥、强制映射、模型映射表）。
-- **认证文件**：上传/下载/删除 JSON 凭据，筛选/搜索/分页，标记 runtime-only；查看单个凭据可用模型（依赖后端支持）；管理 OAuth 排除模型（支持 `*` 通配符）；配置 OAuth 模型别名映射。
-- **OAuth**：对支持的提供商发起 OAuth/设备码流程，轮询状态；可选提交回调 `redirect_url`；包含 iFlow Cookie 导入。
-- **配额管理**：管理 Claude、Antigravity、Codex、Gemini CLI 等提供商的配额上限与使用情况。
-- **配置文件**：浏览器内编辑 `/config.yaml`（YAML 高亮 + 搜索），保存/重载。
-- **日志**：增量拉取日志、自动刷新、搜索、隐藏管理端流量、清空日志；下载请求错误日志文件。
-- **请求监控**：逐条请求列表、模型定价与费用估算、用量导入导出（CPA 内置 SQLite 持久化）。
-- **系统信息**：快捷链接 + 拉取 `/v1/models` 并分组展示（需要至少一个代理 API Key 才能查询模型）。
+---
+
+## 基于上游的自定义改动
+
+本项目基于 [router-for-me/Cli-Proxy-API-Management-Center](https://github.com/router-for-me/Cli-Proxy-API-Management-Center) fork，主要改动：
+
+### 新增页面与功能
+
+- **监控中心** — 请求事件列表、趋势图表、缓存命中分析、模型定价
+- **凭证中心** — 凭据统计、Auth Refresh Queue 监控、Codex 凭证池
+- **批量模型测试** — OpenAI / Gemini 批量测试弹窗，复选框选择添加模型，测试结果持久保留
+- **OAuth 模型别名映射** — 认证文件层级映射配置 UI
+- **API Key 备注** — 支持备注标记
+
+### UI/UX 改进
+
+- **监控首页** — 统计卡片强调色与仪表盘一致，添加缓存命中图表
+- **请求监控** — 时间列与状态标签样式统一，凭据行格式化便于扫读
+- **页面切换** — 竖向过渡动画
+- **ToggleSwitch** — 开启态使用 `--success-color`
+- **配置编辑** — 网格布局优化内边距与过渡，API Key 区块可读性提升
+- **响应式** — 移动端适配修复
+- **Provider 实时生效** — 配置变更即时反映
+
+### 部署与工程化
+
+- **deploy.sh** — 简化前端部署脚本，`--to <目录>` 直接部署到后端 static 目录
+- **DEPLOY.md** — 完整部署指南
+- **单文件构建** — Vite + `vite-plugin-singlefile`，产物 `index.html` 内联所有资源
+- **Release CI** — 自动构建并发布 `web.html` 到 GitHub Releases
+
+### 其他
+
+- **语言精简** — 移除 zh-TW、ru，仅保留 en、zh-CN
+- **命名规范** — 前后端统一为 cpa-web / cpa-core，管理页面文件统一为 `web.html`
+
+---
 
 ## 技术栈
 
@@ -177,61 +144,23 @@ npm run build
 - CodeMirror 6（YAML 编辑器）
 - SCSS Modules（样式）
 - i18next（国际化）
+- motion（动画）
 
-## 多语言支持
-
-目前支持两种语言：
-
-- 英文 (en)
-- 简体中文 (zh-CN)
-
-界面语言会根据浏览器设置自动切换，也可在页面底部手动切换。
-
-## 浏览器兼容性
-
-- 构建目标：`ES2020`
-- 支持 Chrome、Firefox、Safari、Edge 等现代浏览器
-- 支持移动端响应式布局，可通过手机/平板访问
-
-## 构建与发布说明
-
-- 使用 Vite 输出 **单文件 HTML**（`dist/index.html`），资源全部内联（`vite-plugin-singlefile`）。
-- 打 `vX.Y.Z` 标签会触发 `.github/workflows/release.yml`，构建并发布 `dist/index.html`（Release 中重命名为 `web.html`）。
-- 页脚显示的 UI 版本在构建期注入（优先使用环境变量 `VERSION`，否则使用 git tag / `package.json`）。
-
-## 安全提示
-
-- 管理密钥会存入浏览器 `localStorage`，并使用轻量混淆格式（`enc::v1::...`）避免明文；仍应视为敏感信息。
-- 建议使用独立浏览器配置/设备进行管理；开启远程管理时请谨慎评估暴露面。
-
-## 常见问题
-
-- **无法连接 / 401**：确认 API 地址与管理密钥；远程访问可能需要服务端开启远程管理。
-- **反复输错密钥**：服务端可能对远程 IP 进行临时封禁。
-- **日志页面不显示**：需要在“基础设置”里开启“写入日志文件”，导航项才会出现。
-- **功能提示不支持**：多为后端版本较旧或接口未启用/不存在（如：认证文件模型列表、排除模型、日志相关接口）。
-- **OpenAI 提供商测试失败**：测试在浏览器侧执行，会受网络与 CORS 影响；这里失败不一定代表服务端不可用。
-- **部署与请求监控问题**：见 [DEPLOY.md](./DEPLOY.md#常见问题)。
+---
 
 ## 开发命令
 
 ```bash
-npm run dev        # 启动开发服务器
-npm run build      # tsc + Vite 构建
-npm run preview    # 本地预览 dist
-npm run lint       # ESLint（warnings 视为失败）
-npm run format     # Prettier
-npm run type-check # tsc --noEmit
+npm run dev         # 启动开发服务器
+npm run build       # tsc + Vite 构建
+npm run preview     # 本地预览 dist
+npm run lint        # ESLint
+npm run format      # Prettier
+npm run type-check  # tsc --noEmit
 ```
 
-## 贡献
+---
 
-欢迎提 Issue 与 PR。建议附上：
+## 浏览器兼容性
 
-- 复现步骤（服务端版本 + UI 版本）
-- UI 改动截图
-- 验证记录（`npm run lint`、`npm run type-check`）
-
-## 许可证
-
-MIT
+构建目标 `ES2020`，支持 Chrome、Firefox、Safari、Edge 等现代浏览器。支持移动端响应式布局。
