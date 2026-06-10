@@ -1,3 +1,4 @@
+
 # cpa-web
 
 **cpa-web** 是 [cpa-core](https://github.com/fxzer/cpa-core) 的 Web 管理界面，提供监控中心、凭证管理、用量统计、配置编辑等功能。
@@ -48,37 +49,42 @@ npm run build
 
 ## 部署方式
 
-### 方式一：用 deploy.sh 一键部署到本地 cpa-core
+cpa-web 有两种使用方式：
 
-```bash
-# 构建并部署到后端 static 目录（自动命名为 web.html）
-./deploy.sh --to /opt/cpa-core/static
+### 方式一：本地构建部署
 
-# 用已有产物部署（跳过构建）
-./deploy.sh --skip-build --to /opt/cpa-core/static
-
-# 预览
-./deploy.sh --dry-run --to /opt/cpa-core/static
-```
-
-### 方式二：手动部署
+从源码构建并部署到 cpa-core 后端：
 
 ```bash
 npm run build
+
+# 使用 deploy.sh 一键部署到后端 static 目录
+./deploy.sh --to /opt/cpa-core/static
+
+# 或手动复制
 cp dist/index.html /opt/cpa-core/static/web.html
+
 # 然后重启 cpa-core 服务
 ```
 
-### 方式三：使用 GitHub Release 的预构建产物
+### 方式二：使用 GitHub Release 的预构建产物
 
 每次打 `vX.Y.Z` 标签时，CI 会自动构建并发布 `web.html` 到 Releases 页面。
+直接下载即可使用，无需安装 Node.js 或构建：
 
 ```bash
-# 下载最新 Release 的 web.html
+# 下载最新 Release 的 web.html（约 2.5MB，单文件）
 curl -L -o web.html https://github.com/fxzer/cpa-web/releases/latest/download/web.html
+
 # 复制到后端 static 目录
 cp web.html /opt/cpa-core/static/web.html
 ```
+
+> **cpa-core 后端内置自动更新机制**
+> cpa-core 会定期（每 3 小时）检查 GitHub Releases 是否有新版 `web.html`，
+> 发现新版本时自动下载更新，无需手动操作。
+> 自动更新源指向：`https://github.com/fxzer/cpa-web/releases/latest/download/web.html`
+> 可通过配置 `remote-management.disable-auto-update-panel: true` 关闭。
 
 ---
 
@@ -143,6 +149,7 @@ cpa-core :8317
 - **DEPLOY.md** — 完整部署指南
 - **单文件构建** — Vite + `vite-plugin-singlefile`，产物 `index.html` 内联所有资源
 - **Release CI** — 自动构建并发布 `web.html` 到 GitHub Releases
+- **后端自动更新** — cpa-core 自动检测并下载新版 web.html
 
 ### 其他
 
