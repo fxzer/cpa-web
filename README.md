@@ -139,7 +139,7 @@ cpa-core :8317
 ![AI 供应商卡片视图](public/screenshot/ai-providers-card.png)
 ![AI 供应商表格视图](public/screenshot/ai-providers-table.png)
 
-# 模型别名路由思维导图
+### 模型别名路由思维导图
 ![模型别名路由思维导图](public/screenshot/model-alias-route.png)
 
 ### 请求明细
