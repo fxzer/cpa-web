@@ -45,6 +45,10 @@ import {
   GeminiBatchModelTestModal,
   type GeminiBatchModelTestRowResult,
 } from './GeminiBatchModelTestModal';
+import {
+  normalizeGeminiModelEntries,
+  stripGeminiModelResourceName,
+} from './AiProvidersGeminiEditUtils';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
 import styles from './AiProvidersPage.module.scss';
 
@@ -84,24 +88,6 @@ const parseIndexParam = (value: string | undefined) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const stripGeminiModelResourceName = (value: string) => {
-  return String(value ?? '')
-    .trim()
-    .replace(/^\/?models\//i, '');
-};
-
-const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) =>
-  (entries ?? []).reduce<Array<{ name: string; alias: string }>>((acc, entry) => {
-    const name = stripGeminiModelResourceName(entry?.name ?? '').trim();
-    let alias = String(entry?.alias ?? '').trim();
-    if (name && alias === name) {
-      alias = '';
-    }
-    if (!name && !alias) return acc;
-    acc.push({ name, alias });
-    return acc;
-  }, []);
-
 type GeminiFormBaseline = {
   apiKeyEntries: ReturnType<typeof normalizeApiKeyEntriesForBaseline>;
   priority: number | null;
@@ -109,7 +95,7 @@ type GeminiFormBaseline = {
   prefix: string;
   baseUrl: string;
   headers: ReturnType<typeof normalizeHeaderEntries>;
-  models: ReturnType<typeof normalizeModelEntries>;
+  models: ReturnType<typeof normalizeGeminiModelEntries>;
   excludedModels: string[];
 };
 
@@ -123,7 +109,7 @@ const buildGeminiBaseline = (form: GeminiFormState): GeminiFormBaseline => ({
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
   headers: normalizeHeaderEntries(form.headers),
-  models: normalizeModelEntries(form.modelEntries),
+  models: normalizeGeminiModelEntries(form.modelEntries),
   excludedModels: parseExcludedModels(form.excludedText ?? ''),
 });
 
@@ -877,7 +863,7 @@ export function AiProvidersGeminiEditPage() {
 
   const normalizedHeaders = useMemo(() => normalizeHeaderEntries(form.headers), [form.headers]);
   const normalizedModels = useMemo(
-    () => normalizeModelEntries(form.modelEntries),
+    () => normalizeGeminiModelEntries(form.modelEntries),
     [form.modelEntries]
   );
   const normalizedExcludedModels = useMemo(
@@ -1055,6 +1041,7 @@ export function AiProvidersGeminiEditPage() {
                   hint={t('ai_providers.priority_hint')}
                   type="number"
                   step={1}
+                  min={0}
                   value={form.priority ?? ''}
                   onChange={(e) => {
                     const raw = e.target.value;

@@ -1,5 +1,5 @@
 import type { DragEvent, MouseEvent as ReactMouseEvent, RefObject } from 'react';
-import type { AliasNode, ProviderNode, SourceNode } from './ModelMappingDiagramTypes';
+import type { AliasNode, HoveredEntity, ProviderNode, SourceNode } from './ModelMappingDiagramTypes';
 import styles from './ModelMappingDiagram.module.scss';
 
 interface ProviderColumnProps {
@@ -10,6 +10,8 @@ interface ProviderColumnProps {
   providerRefs: RefObject<Map<string, HTMLDivElement>>;
   onToggleCollapse: (provider: string) => void;
   onContextMenu: (e: ReactMouseEvent, type: 'provider' | 'background', data?: string) => void;
+  onItemHover: (entity: HoveredEntity) => void;
+  onItemLeave: () => void;
   label: string;
   expandLabel: string;
   collapseLabel: string;
@@ -23,6 +25,8 @@ export function ProviderColumn({
   providerRefs,
   onToggleCollapse,
   onContextMenu,
+  onItemHover,
+  onItemLeave,
   label,
   expandLabel,
   collapseLabel,
@@ -58,6 +62,8 @@ export function ProviderColumn({
                 e.stopPropagation();
                 onContextMenu(e, 'provider', provider);
               }}
+              onMouseEnter={() => onItemHover({ type: 'provider', id: provider })}
+              onMouseLeave={onItemLeave}
             >
               <button
                 type="button"
@@ -97,6 +103,8 @@ interface SourceColumnProps {
   onDragLeave: () => void;
   onDrop: (e: DragEvent, source: SourceNode) => void;
   onContextMenu: (e: ReactMouseEvent, type: 'source' | 'background', data?: string) => void;
+  onItemHover: (entity: HoveredEntity) => void;
+  onItemLeave: () => void;
   label: string;
 }
 
@@ -117,6 +125,8 @@ export function SourceColumn({
   onDragLeave,
   onDrop,
   onContextMenu,
+  onItemHover,
+  onItemLeave,
   label,
 }: SourceColumnProps) {
   return (
@@ -162,6 +172,8 @@ export function SourceColumn({
                   e.stopPropagation();
                   onContextMenu(e, 'source', source.id);
                 }}
+                onMouseEnter={() => onItemHover({ type: 'source', id: source.id })}
+                onMouseLeave={onItemLeave}
               >
                 <span className={styles.itemName} title={source.name}>
                   {source.name}
@@ -196,6 +208,8 @@ interface AliasColumnProps {
   onDragLeave: () => void;
   onDrop: (e: DragEvent, alias: string) => void;
   onContextMenu: (e: ReactMouseEvent, type: 'alias' | 'background', data?: string) => void;
+  onItemHover: (entity: HoveredEntity) => void;
+  onItemLeave: () => void;
   label: string;
 }
 
@@ -213,6 +227,8 @@ export function AliasColumn({
   onDragLeave,
   onDrop,
   onContextMenu,
+  onItemHover,
+  onItemLeave,
   label,
 }: AliasColumnProps) {
   return (
@@ -249,6 +265,8 @@ export function AliasColumn({
             e.stopPropagation();
             onContextMenu(e, 'alias', node.alias);
           }}
+          onMouseEnter={() => onItemHover({ type: 'alias', id: node.alias })}
+          onMouseLeave={onItemLeave}
         >
           <div className={`${styles.dot} ${styles.dotLeft}`} />
           <span className={styles.itemName} title={node.alias}>

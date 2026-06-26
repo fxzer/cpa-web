@@ -32,7 +32,7 @@ import {
   parseExcludedModels,
   serializeApiKeyEntriesForSave,
 } from '@/components/providers/utils';
-import type { ProviderFormState } from '@/components/providers';
+import type { ModelEntry, ProviderFormState } from '@/components/providers';
 import type { ModelInfo } from '@/utils/models';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
 import styles from './AiProvidersPage.module.scss';
@@ -308,11 +308,11 @@ export function AiProvidersCodexEditPage() {
 
       let addedCount = 0;
       setForm((prev) => {
-        const mergedMap = new Map<string, { name: string; alias: string }>();
+        const mergedMap = new Map<string, ModelEntry>();
         prev.modelEntries.forEach((entry) => {
           const name = entry.name.trim();
           if (!name) return;
-          mergedMap.set(name.toLowerCase(), { name, alias: entry.alias?.trim() || '' });
+          mergedMap.set(name.toLowerCase(), { ...entry, name, alias: entry.alias?.trim() || '' });
         });
 
         selectedModels.forEach((model) => {
@@ -594,6 +594,7 @@ export function AiProvidersCodexEditPage() {
                   hint={t('ai_providers.priority_hint')}
                   type="number"
                   step={1}
+                  min={0}
                   value={form.priority ?? ''}
                   onChange={(e) => {
                     const raw = e.target.value;

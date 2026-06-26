@@ -7,7 +7,7 @@ import styles from '@/pages/AiProvidersPage.module.scss';
 
 export type ProviderModelEntry = { name: string; alias?: string };
 
-const PREVIEW_COUNT = 5;
+const DEFAULT_PREVIEW_COUNT = 5;
 
 export type ProviderModelsPreviewProps = {
   models: ProviderModelEntry[];
@@ -15,6 +15,7 @@ export type ProviderModelsPreviewProps = {
   modalTitle: string;
   /** 可选；与原先卡片内 `modelCountLabel` 一致，例如「模型数量: 12」 */
   countLabel?: string;
+  previewCount?: number;
 };
 
 function modelCellKey(model: ProviderModelEntry, index: number) {
@@ -25,6 +26,7 @@ export function ProviderModelsPreview({
   models,
   modalTitle,
   countLabel,
+  previewCount = DEFAULT_PREVIEW_COUNT,
 }: ProviderModelsPreviewProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -32,8 +34,8 @@ export function ProviderModelsPreview({
 
   if (!orderedModels.length) return null;
 
-  const preview = orderedModels.slice(0, PREVIEW_COUNT);
-  const hiddenCount = orderedModels.length - PREVIEW_COUNT;
+  const preview = orderedModels.slice(0, previewCount);
+  const hiddenCount = orderedModels.length - previewCount;
 
   return (
     <>

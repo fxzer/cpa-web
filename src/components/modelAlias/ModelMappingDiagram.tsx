@@ -27,8 +27,10 @@ import type {
   AuthFileModelItem,
   ContextMenuState,
   DiagramLine,
+  HoveredEntity,
   SourceNode,
 } from './ModelMappingDiagramTypes';
+import { getProviderColor } from './ModelMappingDiagramColors';
 import styles from './ModelMappingDiagram.module.scss';
 
 export interface ModelMappingDiagramProps {
@@ -47,22 +49,6 @@ export interface ModelMappingDiagramProps {
 
 const MODAL_SCALE_IN_ANIMATION = 'modal-scale-in';
 const MODAL_LAYOUT_FALLBACK_MS = 380;
-
-const PROVIDER_COLORS = [
-  '#8b8680',
-  '#10b981',
-  '#f59e0b',
-  '#c65746',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#84cc16',
-];
-
-function getProviderColor(provider: string): string {
-  const hash = provider.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return PROVIDER_COLORS[hash % PROVIDER_COLORS.length];
-}
 
 export interface ModelMappingDiagramRef {
   collapseAll: () => void;
@@ -109,6 +95,7 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
     const [tapAlias, setTapAlias] = useState<string | null>(null);
     const [extraAliases, setExtraAliases] = useState<string[]>([]);
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+    const [hoveredEntity, setHoveredEntity] = useState<HoveredEntity>(null);
     const [collapsedProviders, setCollapsedProviders] = useState<Set<string>>(new Set());
     const [providerGroupHeights, setProviderGroupHeights] = useState<Record<string, number>>({});
     const [renameState, setRenameState] = useState<{ oldAlias: string } | null>(null);
@@ -206,6 +193,45 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
 
       return { aliasNodes: aliasNodesList, providerNodes: providerNodesList };
     }, [modelAlias, allProviderModels, providerAliasSeeds, extraAliases]);
+
+    const isLineRelated = useCallback(
+      (line: DiagramLine, hovered: HoveredEntity): boolean => {
+        if (!hovered) return true;
+
+        if (hovered.type === 'provider') {
+          if (line.id.startsWith(`provider-${hovered.id}-source-`)) return true;
+          for (const { provider, sources } of providerNodes) {
+            if (provider !== hovered.id) continue;
+            for (const source of sources) {
+              if (line.id.startsWith(source.id)) return true;
+            }
+          }
+          return false;
+        }
+
+        if (hovered.type === 'source') {
+          return line.id.includes(hovered.id);
+        }
+
+        if (hovered.type === 'alias') {
+          if (line.id.endsWith(`-${hovered.id}`)) return true;
+          for (const { sources } of providerNodes) {
+            for (const source of sources) {
+              if (
+                source.aliases.some((a) => a.alias === hovered.id) &&
+                line.id === `provider-${source.provider}-source-${source.id}`
+              ) {
+                return true;
+              }
+            }
+          }
+          return false;
+        }
+
+        return true;
+      },
+      [providerNodes]
+    );
 
     // Track element positions
     const providerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -357,9 +383,10 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
     }, [updateLines, aliasNodes, providerNodes]);
 
     useEffect(() => {
-      setLayoutReady(false);
-
       let cancelled = false;
+      const resetRaf = requestAnimationFrame(() => {
+        if (!cancelled) setLayoutReady(false);
+      });
       let fallbackTimer: number | undefined;
 
       const revealDiagram = () => {
@@ -398,6 +425,7 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
 
       return () => {
         cancelled = true;
+        cancelAnimationFrame(resetRaf);
         if (fallbackTimer !== undefined) {
           window.clearTimeout(fallbackTimer);
         }
@@ -407,7 +435,8 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
 
     useLayoutEffect(() => {
       if (!layoutReady) return;
-      updateLines();
+      const raf = requestAnimationFrame(updateLines);
+      return () => cancelAnimationFrame(raf);
     }, [layoutReady, updateLines]);
 
     useLayoutEffect(() => {
@@ -652,7 +681,6 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
         {enableTapLinking && onUpdate && (
           <div className={styles.tapHint}>{t('oauth_model_alias.diagram_tap_hint')}</div>
         )}
-        <div className={styles.tierHint}>{t('oauth_model_alias.diagram_overview_hint')}</div>
         <div className={styles.diagramShell}>
           {!layoutReady && (
             <div className={styles.layoutOverlay} aria-busy="true" aria-live="polite">
@@ -673,14 +701,27 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
           >
             {layoutReady && (
               <svg className={styles.connections} ref={connectionsRef}>
-                {lines.map((line) => (
-                  <path
-                    key={line.id}
-                    d={line.path}
-                    stroke={line.color}
-                    strokeOpacity={isDark ? 0.4 : 0.3}
-                  />
-                ))}
+                {lines.map((line) => {
+                  const dimmed = hoveredEntity && !isLineRelated(line, hoveredEntity);
+                  return (
+                    <path
+                      key={line.id}
+                      d={line.path}
+                      stroke={line.color}
+                      strokeOpacity={
+                        dimmed
+                          ? 0.015
+                          : hoveredEntity
+                            ? isDark
+                              ? 0.7
+                              : 0.6
+                            : isDark
+                              ? 0.4
+                              : 0.3
+                      }
+                    />
+                  );
+                })}
               </svg>
             )}
 
@@ -692,6 +733,8 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
               providerRefs={providerRefs}
               onToggleCollapse={toggleProviderCollapse}
               onContextMenu={(e, type, data) => handleContextMenu(e, type, data)}
+              onItemHover={(entity) => setHoveredEntity(entity)}
+              onItemLeave={() => setHoveredEntity(null)}
               label={t('oauth_model_alias.diagram_providers')}
               expandLabel={t('oauth_model_alias.diagram_expand')}
               collapseLabel={t('oauth_model_alias.diagram_collapse')}
@@ -716,6 +759,8 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
               onDragLeave={handleDragLeaveSource}
               onDrop={handleDropOnSource}
               onContextMenu={(e, type, data) => handleContextMenu(e, type, data)}
+              onItemHover={(entity) => setHoveredEntity(entity)}
+              onItemLeave={() => setHoveredEntity(null)}
               label={t('oauth_model_alias.diagram_source_models')}
             />
             <AliasColumn
@@ -735,6 +780,8 @@ export const ModelMappingDiagram = forwardRef<ModelMappingDiagramRef, ModelMappi
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onContextMenu={(e, type, data) => handleContextMenu(e, type, data)}
+              onItemHover={(entity) => setHoveredEntity(entity)}
+              onItemLeave={() => setHoveredEntity(null)}
               label={t('oauth_model_alias.diagram_aliases')}
             />
           </div>

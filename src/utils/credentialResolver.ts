@@ -313,11 +313,7 @@ export function resolveProviderModelColumnDisplay(input: {
   const displayName = firstText(input.resolvedCredential?.requestLabel, input.sourceDisplayName);
   const normalizedName = displayName.trim();
   const showName =
-    Boolean(normalizedName) &&
-    (!channelTag || normalizedName.toLowerCase() !== channelTag) &&
-    !input.openaiProviderNames?.some(
-      (name) => name.trim().toLowerCase() === normalizedName.toLowerCase()
-    );
+    Boolean(normalizedName) && (!channelTag || normalizedName.toLowerCase() !== channelTag);
 
   let headline = '-';
   if (channelTag && showName) {
@@ -377,10 +373,22 @@ export function buildCredentialDisplay(input: {
   const fallbackHeadline = firstText(badge, shortAuthIndex(authIndex));
 
   if (resolvedApiKey) {
+    const openAIProviderName = input.resolvedCredential?.providerType === 'openai'
+      ? firstText(input.resolvedCredential.requestLabel, input.resolvedCredential.providerLabel)
+      : '';
+    const normalizedCredentialIdentity = credentialIdentity.trim().toLowerCase();
+    const normalizedOpenAIProviderName = openAIProviderName.trim().toLowerCase();
+    const credentialHeadline =
+      normalizedOpenAIProviderName &&
+      (normalizedCredentialIdentity === normalizedOpenAIProviderName ||
+        normalizedCredentialIdentity === `${normalizedOpenAIProviderName} api key`)
+        ? firstText(badge, shortAuthIndex(authIndex))
+        : credentialIdentity || fallbackHeadline || '-';
+
     return {
-      headline: credentialIdentity || fallbackHeadline || '-',
+      headline: credentialHeadline || '-',
       subtitle: resolvedApiKey,
-      badge,
+      badge: credentialHeadline === badge ? '' : badge,
       resolvedApiKey,
     };
   }

@@ -5,6 +5,8 @@ import type { ModelAlias } from '@/types/provider';
 export interface ModelEntry {
   name: string;
   alias: string;
+  priority?: number;
+  testModel?: string;
 }
 
 export interface OpenAIFormState {

@@ -331,6 +331,7 @@ export function AiProvidersClaudeEditPage() {
                 hint={t('ai_providers.priority_hint')}
                 type="number"
                 step={1}
+                min={0}
                 value={form.priority ?? ''}
                 onChange={(e) => {
                   const raw = e.target.value;

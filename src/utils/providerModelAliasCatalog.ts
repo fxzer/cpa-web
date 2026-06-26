@@ -113,3 +113,85 @@ export function buildProviderCardAliasDiagramData(
     providerAliasSeeds: {},
   };
 }
+
+function mergeChannelModels(
+  target: Record<string, OAuthModelAliasEntry[]>,
+  channel: string,
+  models: ModelAlias[]
+) {
+  if (!models.length) return;
+  const bucket = target[channel] ?? [];
+  const seen = new Set(bucket.map((e) => `${e.name}|${e.alias}`.toLowerCase()));
+  models.forEach((model) => {
+    const name = String(model.name ?? '').trim();
+    const alias = String(model.alias ?? '').trim();
+    if (!name || !alias) return;
+    if (!isDistinctOAuthModelAlias(name, alias)) return;
+    const key = `${name}|${alias}`.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    bucket.push({ name, alias });
+  });
+  if (bucket.length > 0) target[channel] = bucket;
+}
+
+function mergeChannelProviderModels(
+  target: Record<string, AuthFileModelItem[]>,
+  channel: string,
+  models: ModelAlias[]
+) {
+  if (!models.length) return;
+  const bucket = target[channel] ?? [];
+  const seen = new Set(bucket.map((m) => m.id.toLowerCase()));
+  models.forEach((model) => {
+    const name = String(model.name ?? '').trim();
+    if (!name) return;
+    const key = name.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    const alias = String(model.alias ?? '').trim();
+    bucket.push({
+      id: name,
+      ...(alias && alias !== name ? { display_name: alias } : {}),
+    });
+  });
+  if (bucket.length > 0) target[channel] = bucket;
+}
+
+/** Build alias diagram data from ALL providers in the config for the global routing mind map. */
+export function buildGlobalAliasDiagramData(
+  config: Config | null
+): {
+  modelAlias: Record<string, OAuthModelAliasEntry[]>;
+  allProviderModels: Record<string, AuthFileModelItem[]>;
+  providerAliasSeeds: Record<string, string[]>;
+} {
+  const modelAlias: Record<string, OAuthModelAliasEntry[]> = {};
+  const allProviderModels: Record<string, AuthFileModelItem[]> = {};
+
+  if (!config) return { modelAlias, allProviderModels, providerAliasSeeds: {} };
+
+  (config.geminiApiKeys ?? []).forEach((entry) => {
+    mergeChannelModels(modelAlias, 'gemini-cli', entry.models ?? []);
+    mergeChannelProviderModels(allProviderModels, 'gemini-cli', entry.models ?? []);
+  });
+  (config.codexApiKeys ?? []).forEach((entry) => {
+    mergeChannelModels(modelAlias, 'codex', entry.models ?? []);
+    mergeChannelProviderModels(allProviderModels, 'codex', entry.models ?? []);
+  });
+  (config.claudeApiKeys ?? []).forEach((entry) => {
+    mergeChannelModels(modelAlias, 'claude', entry.models ?? []);
+    mergeChannelProviderModels(allProviderModels, 'claude', entry.models ?? []);
+  });
+  (config.vertexApiKeys ?? []).forEach((entry) => {
+    mergeChannelModels(modelAlias, 'vertex', entry.models ?? []);
+    mergeChannelProviderModels(allProviderModels, 'vertex', entry.models ?? []);
+  });
+  (config.openaiCompatibility ?? []).forEach((entry) => {
+    const channel = String(entry.name ?? entry.baseUrl ?? 'openai').trim().toLowerCase();
+    mergeChannelModels(modelAlias, channel, entry.models ?? []);
+    mergeChannelProviderModels(allProviderModels, channel, entry.models ?? []);
+  });
+
+  return { modelAlias, allProviderModels, providerAliasSeeds: {} };
+}

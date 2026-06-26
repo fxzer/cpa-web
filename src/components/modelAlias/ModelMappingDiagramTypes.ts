@@ -31,3 +31,9 @@ export interface ContextMenuState {
 }
 
 export type DiagramLine = { path: string; color: string; id: string };
+
+export type HoveredEntity =
+  | { type: 'provider'; id: string }
+  | { type: 'source'; id: string }
+  | { type: 'alias'; id: string }
+  | null;

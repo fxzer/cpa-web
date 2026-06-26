@@ -112,12 +112,17 @@ export function OAuthAliasOverviewModal(props: OAuthAliasOverviewModalProps) {
       width="min(1200px, 96vw)"
       className={styles.aliasOverviewModal}
       title={
-        <span className={styles.modalTitleInline}>
-          <span className={styles.modalTitleText}>{t('auth_files.alias_overview_title')}</span>
-          <span className={styles.typeBadge} style={scopeBadgeStyle}>
-            {scopeLabel}
+        <div className={styles.batchModelTestModalHeader}>
+          <span className={styles.modalTitleInline}>
+            <span className={styles.modalTitleText}>{t('auth_files.alias_overview_title')}</span>
+            <span className={styles.typeBadge} style={scopeBadgeStyle}>
+              {scopeLabel}
+            </span>
           </span>
-        </span>
+          <div className={styles.batchModelTestModalHint}>
+            {t('models.routing_mindmap_hint')}
+          </div>
+        </div>
       }
       footer={
         <Button variant="secondary" onClick={onClose}>

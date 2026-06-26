@@ -258,13 +258,15 @@ function BatchModelTestModalBody({
   const [activeGroupId, setActiveGroupId] = useState<string>('');
 
   useEffect(() => {
-    if (groups.length > 0) {
-      if (!activeGroupId || !groups.some((g) => g.id === activeGroupId)) {
-        setActiveGroupId(groups[0].id);
-      }
-    } else {
-      setActiveGroupId('');
+    const nextActiveGroupId =
+      groups.length > 0 && activeGroupId && groups.some((g) => g.id === activeGroupId)
+        ? activeGroupId
+        : (groups[0]?.id ?? '');
+    if (nextActiveGroupId === activeGroupId) {
+      return;
     }
+    const raf = requestAnimationFrame(() => setActiveGroupId(nextActiveGroupId));
+    return () => cancelAnimationFrame(raf);
   }, [groups, activeGroupId]);
 
   const handleCategoryClick = (groupId: string) => {

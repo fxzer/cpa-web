@@ -16,6 +16,7 @@ import type { ModelInfo } from '@/utils/models';
 import { buildHeaderObject, hasHeader } from '@/utils/headers';
 import { buildApiKeyEntry, buildOpenAIChatCompletionsEndpoint } from '@/components/providers/utils';
 import { KeyTestStatusIcon } from '@/components/providers/KeyTestStatusIcon';
+import { UsageExampleModal } from '@/components/providers/UsageExampleModal';
 import type { OpenAIEditOutletContext } from './AiProvidersOpenAIEditLayout';
 import {
   OpenAIBatchModelTestModal,
@@ -70,6 +71,7 @@ export function AiProvidersOpenAIEditPage() {
 
   const swipeRef = useEdgeSwipeBack({ onBack: handleBack });
   const [isTestingKeys, setIsTestingKeys] = useState(false);
+  const [examplesModalOpen, setExamplesModalOpen] = useState(false);
   const [batchTestModalOpen, setBatchTestModalOpen] = useState(false);
   const [batchTestKeyIndex, setBatchTestKeyIndex] = useState<number | null>(null);
   const [batchModelTestByKey, setBatchModelTestByKey] = useState<
@@ -560,15 +562,25 @@ export function AiProvidersOpenAIEditPage() {
           <span className={styles.keyEntriesCount}>
             {t('ai_providers.openai_keys_count')}: {list.length}
           </span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={addEntry}
-            disabled={saving || disableControls || isTestingKeys}
-            className={styles.addKeyButton}
-          >
-            {t('ai_providers.openai_keys_add_btn')}
-          </Button>
+          <div className={styles.keyEntriesActions}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setExamplesModalOpen(true)}
+              disabled={saving || disableControls || isTestingKeys}
+            >
+              {t('config_management.visual.api_keys.examples', { defaultValue: '使用示例' })}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={addEntry}
+              disabled={saving || disableControls || isTestingKeys}
+              className={styles.addKeyButton}
+            >
+              {t('ai_providers.openai_keys_add_btn')}
+            </Button>
+          </div>
         </div>
         <div className={`${styles.keyTableShell} ${styles.keyTableShellWithTesting}`}>
           <div className={styles.keyTableHeader}>
@@ -724,6 +736,7 @@ export function AiProvidersOpenAIEditPage() {
                   hint={t('ai_providers.priority_hint')}
                   type="number"
                   step={1}
+                  min={0}
                   value={form.priority ?? ''}
                   onChange={(e) => {
                     const raw = e.target.value;
@@ -926,6 +939,14 @@ export function AiProvidersOpenAIEditPage() {
           form={form}
           onBatchComplete={handleBatchTestComplete}
           onAddAvailableModels={handleAddBatchAvailableModels}
+        />
+        <UsageExampleModal
+          open={examplesModalOpen}
+          onClose={() => setExamplesModalOpen(false)}
+          baseUrl={form.baseUrl}
+          apiKeys={form.apiKeyEntries.map((e) => e.apiKey).filter(Boolean)}
+          models={availableModels}
+          defaultModel={form.testModel}
         />
       </>
     </SecondaryScreenShell>

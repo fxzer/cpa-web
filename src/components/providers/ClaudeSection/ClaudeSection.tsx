@@ -9,6 +9,7 @@ import { statusBarDataFromRecentRequests } from '@/utils/recentRequests';
 import { ProviderConfigApiKeyEntriesList } from '../ProviderConfigApiKeyEntriesList';
 import styles from '@/pages/AiProvidersPage.module.scss';
 import { ProviderList } from '../ProviderList';
+import { ProviderKeyConfigTable } from '../ProviderKeyConfigTable';
 import { ProviderModelsPreview } from '../ProviderModelsPreview';
 import { CopyableUrlValue } from '../CopyableUrlValue';
 import { ProviderSectionCardTitle } from '../ProviderSectionCardTitle';
@@ -36,6 +37,7 @@ interface ClaudeSectionProps {
   onDelete: (index: number) => void;
   onToggle: (index: number, enabled: boolean) => void;
   onAliasOverview?: (request: ProviderAliasOverviewRequest) => void;
+  viewMode?: 'card' | 'table';
 }
 
 export function ClaudeSection({
@@ -49,6 +51,7 @@ export function ClaudeSection({
   onDelete,
   onToggle,
   onAliasOverview,
+  viewMode = 'card',
 }: ClaudeSectionProps) {
   const { t } = useTranslation();
   const actionsDisabled = disableControls || loading || isSwitching;
@@ -86,152 +89,170 @@ export function ClaudeSection({
           </Button>
         }
       >
-        <ProviderList<ProviderKeyConfig>
-          items={configs}
-          loading={loading}
-          keyField={(item, index) => getProviderConfigKey(item, index)}
-          emptyTitle={t('ai_providers.claude_empty_title')}
-          emptyDescription={t('ai_providers.claude_empty_desc')}
-          onEdit={(_, index) => onEdit(index)}
-          onDelete={(_, index) => onDelete(index)}
-          onAliasOverview={
-            onAliasOverview
-              ? (item, index) =>
-                  onAliasOverview({
-                    providerKey: AI_PROVIDER_ALIAS_CHANNEL.claude,
-                    providerLabel: buildProviderOverviewLabel(
-                      item,
-                      `${t('ai_providers.claude_item_title')} #${index + 1}`
-                    ),
-                    models: item.models,
-                  })
-              : undefined
-          }
-          actionsDisabled={actionsDisabled}
-          listClassName={styles.openaiProviderList}
-          rowClassName={styles.openaiProviderCard}
-          metaClassName={styles.openaiProviderMeta}
-          getRowDisabled={(item) => hasDisableAllModelsRule(item.excludedModels)}
-          renderExtraActions={(item, index) => (
-            <ProviderConfigToggle
-              checked={!hasDisableAllModelsRule(item.excludedModels)}
-              disabled={toggleDisabled}
-              onChange={(value) => void onToggle(index, value)}
-            />
-          )}
-          actionsClassName={styles.openaiProviderActions}
-          renderContent={(item, index) => {
-            const stats = getProviderKeyConfigRecentStats('claude', item, usageByProvider);
-            const headerEntries = Object.entries(item.headers || {});
-            const configDisabled = hasDisableAllModelsRule(item.excludedModels);
-            const excludedModels = item.excludedModels ?? [];
-            const statusData =
-              statusBarCache.get(getProviderConfigKey(item, index)) ||
-              statusBarDataFromRecentRequests([]);
-
-            return (
-              <Fragment>
-                <div className={styles.providerCardHeader}>
-                  <div className={styles.providerCardHeaderRow}>
-                    <div
-                      className={`item-title ${styles.providerCardTitle} ${configDisabled ? styles.providerCardTitleDisabled : ''}`}
-                    >
-                      {buildProviderOverviewLabel(
+        {viewMode === 'table' ? (
+          <ProviderKeyConfigTable
+            provider="claude"
+            configs={configs}
+            usageByProvider={usageByProvider}
+            loading={loading}
+            emptyTitle={t('ai_providers.claude_empty_title')}
+            emptyDescription={t('ai_providers.claude_empty_desc')}
+            itemTitle={t('ai_providers.claude_item_title')}
+            actionsDisabled={actionsDisabled}
+            toggleDisabled={toggleDisabled}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onToggle={onToggle}
+            onAliasOverview={onAliasOverview}
+          />
+        ) : (
+          <ProviderList<ProviderKeyConfig>
+            items={configs}
+            loading={loading}
+            keyField={(item, index) => getProviderConfigKey(item, index)}
+            emptyTitle={t('ai_providers.claude_empty_title')}
+            emptyDescription={t('ai_providers.claude_empty_desc')}
+            onEdit={(_, index) => onEdit(index)}
+            onDelete={(_, index) => onDelete(index)}
+            onAliasOverview={
+              onAliasOverview
+                ? (item, index) =>
+                    onAliasOverview({
+                      providerKey: AI_PROVIDER_ALIAS_CHANNEL.claude,
+                      providerLabel: buildProviderOverviewLabel(
                         item,
                         `${t('ai_providers.claude_item_title')} #${index + 1}`
-                      )}
+                      ),
+                      models: item.models,
+                    })
+                : undefined
+            }
+            actionsDisabled={actionsDisabled}
+            listClassName={styles.openaiProviderList}
+            rowClassName={styles.openaiProviderCard}
+            metaClassName={styles.openaiProviderMeta}
+            getRowDisabled={(item) => hasDisableAllModelsRule(item.excludedModels)}
+            renderExtraActions={(item, index) => (
+              <ProviderConfigToggle
+                checked={!hasDisableAllModelsRule(item.excludedModels)}
+                disabled={toggleDisabled}
+                onChange={(value) => void onToggle(index, value)}
+              />
+            )}
+            actionsClassName={styles.openaiProviderActions}
+            renderContent={(item, index) => {
+              const stats = getProviderKeyConfigRecentStats('claude', item, usageByProvider);
+              const headerEntries = Object.entries(item.headers || {});
+              const configDisabled = hasDisableAllModelsRule(item.excludedModels);
+              const excludedModels = item.excludedModels ?? [];
+              const statusData =
+                statusBarCache.get(getProviderConfigKey(item, index)) ||
+                statusBarDataFromRecentRequests([]);
+
+              return (
+                <Fragment>
+                  <div className={styles.providerCardHeader}>
+                    <div className={styles.providerCardHeaderRow}>
+                      <div
+                        className={`item-title ${styles.providerCardTitle} ${configDisabled ? styles.providerCardTitleDisabled : ''}`}
+                      >
+                        {buildProviderOverviewLabel(
+                          item,
+                          `${t('ai_providers.claude_item_title')} #${index + 1}`
+                        )}
+                      </div>
+                      <div className={styles.cardStats}>
+                        <span className={`${styles.statPill} ${styles.statSuccess}`}>
+                          {t('stats.success')}: {stats.success}
+                        </span>
+                        <span className={`${styles.statPill} ${styles.statFailure}`}>
+                          {t('stats.failure')}: {stats.failure}
+                        </span>
+                      </div>
                     </div>
-                    <div className={styles.cardStats}>
-                      <span className={`${styles.statPill} ${styles.statSuccess}`}>
-                        {t('stats.success')}: {stats.success}
-                      </span>
-                      <span className={`${styles.statPill} ${styles.statFailure}`}>
-                        {t('stats.failure')}: {stats.failure}
-                      </span>
-                    </div>
+                    <ProviderStatusBar statusData={statusData} />
                   </div>
-                  <ProviderStatusBar statusData={statusData} />
-                </div>
-                <ProviderConfigApiKeyEntriesList
-                  provider="claude"
-                  baseUrl={item.baseUrl}
-                  entries={item.apiKeyEntries}
-                  usageByProvider={usageByProvider}
-                />
-                <ProviderPrefixPriorityRow prefix={item.prefix} priority={item.priority} />
-                {item.baseUrl && (
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>{t('common.base_url')}:</span>
-                    <CopyableUrlValue value={item.baseUrl} />
-                  </div>
-                )}
-                {item.cloak && (
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>
-                      {t('ai_providers.claude_cloak_mode_label')}:
-                    </span>
-                    <span className={styles.fieldValue}>
-                      {(() => {
-                        const raw = (item.cloak?.mode ?? '').trim().toLowerCase();
-                        const key = raw === 'always' || raw === 'never' ? raw : 'auto';
-                        return t(`ai_providers.claude_cloak_mode_${key}`);
-                      })()}
-                    </span>
-                  </div>
-                )}
-                {item.cloak?.strictMode ? (
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>
-                      {t('ai_providers.claude_cloak_strict_label')}:
-                    </span>
-                    <span className={styles.fieldValue}>{t('common.yes')}</span>
-                  </div>
-                ) : null}
-                {item.cloak?.sensitiveWords?.length ? (
-                  <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>
-                      {t('ai_providers.claude_cloak_sensitive_words_count')}:
-                    </span>
-                    <span className={styles.fieldValue}>{item.cloak.sensitiveWords.length}</span>
-                  </div>
-                ) : null}
-                {headerEntries.length > 0 && (
-                  <div className={styles.headerBadgeList}>
-                    {headerEntries.map(([key, value]) => (
-                      <span key={key} className={styles.headerBadge}>
-                        <strong>{key}:</strong> {value}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {item.models?.length ? (
-                  <ProviderModelsPreview
-                    models={item.models}
-                    countLabel={`${t('ai_providers.claude_models_count')}: ${item.models.length}`}
-                    modalTitle={`${t('ai_providers.claude_item_title')} #${index + 1}`}
+                  <ProviderConfigApiKeyEntriesList
+                    provider="claude"
+                    baseUrl={item.baseUrl}
+                    entries={item.apiKeyEntries}
+                    usageByProvider={usageByProvider}
                   />
-                ) : null}
-                {excludedModels.length ? (
-                  <div className={styles.excludedModelsSection}>
-                    <div className={styles.excludedModelsLabel}>
-                      {t('ai_providers.excluded_models_count', { count: excludedModels.length })}
+                  <ProviderPrefixPriorityRow prefix={item.prefix} priority={item.priority} />
+                  {item.baseUrl && (
+                    <div className={styles.fieldRow}>
+                      <span className={styles.fieldLabel}>{t('common.base_url')}:</span>
+                      <CopyableUrlValue value={item.baseUrl} />
                     </div>
-                    <div className={styles.modelTagList}>
-                      {excludedModels.map((model) => (
-                        <span
-                          key={model}
-                          className={`${styles.modelTag} ${styles.excludedModelTag}`}
-                        >
-                          <span className={styles.modelName}>{model}</span>
+                  )}
+                  {item.cloak && (
+                    <div className={styles.fieldRow}>
+                      <span className={styles.fieldLabel}>
+                        {t('ai_providers.claude_cloak_mode_label')}:
+                      </span>
+                      <span className={styles.fieldValue}>
+                        {(() => {
+                          const raw = (item.cloak?.mode ?? '').trim().toLowerCase();
+                          const key = raw === 'always' || raw === 'never' ? raw : 'auto';
+                          return t(`ai_providers.claude_cloak_mode_${key}`);
+                        })()}
+                      </span>
+                    </div>
+                  )}
+                  {item.cloak?.strictMode ? (
+                    <div className={styles.fieldRow}>
+                      <span className={styles.fieldLabel}>
+                        {t('ai_providers.claude_cloak_strict_label')}:
+                      </span>
+                      <span className={styles.fieldValue}>{t('common.yes')}</span>
+                    </div>
+                  ) : null}
+                  {item.cloak?.sensitiveWords?.length ? (
+                    <div className={styles.fieldRow}>
+                      <span className={styles.fieldLabel}>
+                        {t('ai_providers.claude_cloak_sensitive_words_count')}:
+                      </span>
+                      <span className={styles.fieldValue}>{item.cloak.sensitiveWords.length}</span>
+                    </div>
+                  ) : null}
+                  {headerEntries.length > 0 && (
+                    <div className={styles.headerBadgeList}>
+                      {headerEntries.map(([key, value]) => (
+                        <span key={key} className={styles.headerBadge}>
+                          <strong>{key}:</strong> {value}
                         </span>
                       ))}
                     </div>
-                  </div>
-                ) : null}
-              </Fragment>
-            );
-          }}
-        />
+                  )}
+                  {item.models?.length ? (
+                    <ProviderModelsPreview
+                      models={item.models}
+                      countLabel={`${t('ai_providers.claude_models_count')}: ${item.models.length}`}
+                      modalTitle={`${t('ai_providers.claude_item_title')} #${index + 1}`}
+                    />
+                  ) : null}
+                  {excludedModels.length ? (
+                    <div className={styles.excludedModelsSection}>
+                      <div className={styles.excludedModelsLabel}>
+                        {t('ai_providers.excluded_models_count', { count: excludedModels.length })}
+                      </div>
+                      <div className={styles.modelTagList}>
+                        {excludedModels.map((model) => (
+                          <span
+                            key={model}
+                            className={`${styles.modelTag} ${styles.excludedModelTag}`}
+                          >
+                            <span className={styles.modelName}>{model}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </Fragment>
+              );
+            }}
+          />
+        )}
       </Card>
     </>
   );

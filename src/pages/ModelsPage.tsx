@@ -11,6 +11,7 @@ import {
 } from '@/stores';
 import { apiKeysApi } from '@/services/api/apiKeys';
 import { classifyModels, partitionModelsBySlash } from '@/utils/models';
+import { RoutingMindMapModal } from '@/components/modelAlias';
 import iconGemini from '@/assets/icons/gemini.svg';
 import iconClaude from '@/assets/icons/claude.svg';
 import iconOpenaiLight from '@/assets/icons/openai-light.svg';
@@ -52,6 +53,7 @@ export function ModelsPage() {
     type: 'success' | 'warning' | 'error' | 'muted';
     message: string;
   }>();
+  const [mindMapOpen, setMindMapOpen] = useState(false);
   const apiKeysCache = useRef<string[]>([]);
 
   const otherLabel = useMemo(
@@ -171,15 +173,23 @@ export function ModelsPage() {
             </span>
           )}
         </div>
-        <Button
-          className={styles.titleRowAction}
-          variant="secondary"
-          size="sm"
-          onClick={() => fetchModels({ forceRefresh: true })}
-          loading={modelsLoading}
-        >
-          {t('common.refresh')}
-        </Button>
+        <div className={styles.titleRowActions}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setMindMapOpen(true)}
+          >
+            {t('models.routing_mindmap_button')}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => fetchModels({ forceRefresh: true })}
+            loading={modelsLoading}
+          >
+            {t('common.refresh')}
+          </Button>
+        </div>
       </div>
       <div className={styles.content}>
         {modelStatus && modelStatus.type !== 'success' && !modelsLoading && (
@@ -248,6 +258,12 @@ export function ModelsPage() {
           </div>
         ) : null}
       </div>
+
+      <RoutingMindMapModal
+        open={mindMapOpen}
+        config={config}
+        onClose={() => setMindMapOpen(false)}
+      />
     </div>
   );
 }

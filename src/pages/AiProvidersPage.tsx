@@ -25,6 +25,7 @@ import type { GeminiKeyConfig, OpenAIProviderConfig, ProviderKeyConfig } from '@
 import styles from './AiProvidersPage.module.scss';
 
 type AiProviderTabId = 'openai' | 'gemini' | 'codex' | 'claude' | 'vertex' | 'ampcode';
+type AiProviderViewMode = 'card' | 'table';
 
 const AI_PROVIDER_TAB_ORDER: AiProviderTabId[] = [
   'openai',
@@ -79,6 +80,7 @@ export function AiProvidersPage() {
 
   const [configSwitchingKey, setConfigSwitchingKey] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<AiProviderTabId>('openai');
+  const [viewMode, setViewMode] = useState<AiProviderViewMode>('table');
   const [aliasOverview, setAliasOverview] = useState<ProviderAliasOverviewRequest | null>(null);
 
   const disableControls = connectionStatus !== 'connected';
@@ -464,7 +466,7 @@ export function AiProvidersPage() {
   );
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${viewMode === 'table' ? styles.tableMode : ''}`}>
       <div className={styles.pageTitleRow}>
         <div className={styles.titleMain}>
           <h1 className={styles.pageTitle}>{t('ai_providers.title')}</h1>
@@ -473,6 +475,28 @@ export function AiProvidersPage() {
               {totalProviderCount}
             </span>
           )}
+        </div>
+        <div
+          className={styles.viewModeToggle}
+          role="group"
+          aria-label={t('ai_providers.view_mode_label')}
+        >
+          <button
+            type="button"
+            className={`${styles.viewModeButton} ${viewMode === 'card' ? styles.viewModeButtonActive : ''}`}
+            onClick={() => setViewMode('card')}
+            aria-pressed={viewMode === 'card'}
+          >
+            {t('ai_providers.view_mode_card')}
+          </button>
+          <button
+            type="button"
+            className={`${styles.viewModeButton} ${viewMode === 'table' ? styles.viewModeButtonActive : ''}`}
+            onClick={() => setViewMode('table')}
+            aria-pressed={viewMode === 'table'}
+          >
+            {t('ai_providers.view_mode_table')}
+          </button>
         </div>
       </div>
       <div className={styles.content}>
@@ -507,6 +531,7 @@ export function AiProvidersPage() {
                 onDelete={deleteGemini}
                 onToggle={(index, enabled) => void setConfigEnabled('gemini', index, enabled)}
                 onAliasOverview={openAliasOverview}
+                viewMode={viewMode}
               />
             </div>
           )}
@@ -524,6 +549,7 @@ export function AiProvidersPage() {
                 onDelete={(index) => void deleteProviderEntry('codex', index)}
                 onToggle={(index, enabled) => void setConfigEnabled('codex', index, enabled)}
                 onAliasOverview={openAliasOverview}
+                viewMode={viewMode}
               />
             </div>
           )}
@@ -541,6 +567,7 @@ export function AiProvidersPage() {
                 onDelete={(index) => void deleteProviderEntry('claude', index)}
                 onToggle={(index, enabled) => void setConfigEnabled('claude', index, enabled)}
                 onAliasOverview={openAliasOverview}
+                viewMode={viewMode}
               />
             </div>
           )}
@@ -558,6 +585,7 @@ export function AiProvidersPage() {
                 onDelete={deleteVertex}
                 onToggle={(index, enabled) => void setConfigEnabled('vertex', index, enabled)}
                 onAliasOverview={openAliasOverview}
+                viewMode={viewMode}
               />
             </div>
           )}
@@ -588,6 +616,7 @@ export function AiProvidersPage() {
                 onDelete={deleteOpenai}
                 onToggle={(index, enabled) => void setOpenAIProviderEnabled(index, enabled)}
                 onAliasOverview={openAliasOverview}
+                viewMode={viewMode}
               />
             </div>
           )}

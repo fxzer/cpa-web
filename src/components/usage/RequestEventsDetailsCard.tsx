@@ -176,6 +176,20 @@ const formatCredentialKeyLine = (
   return '-';
 };
 
+const buildModelRouteDisplay = (row: Pick<RequestEventRow, 'model' | 'modelAlias'>) => {
+  const requestedModel = row.modelAlias || row.model;
+  const upstreamModel = row.model;
+  const showRoute =
+    Boolean(row.modelAlias) && upstreamModel !== '-' && row.modelAlias !== upstreamModel;
+
+  return {
+    requestedModel,
+    upstreamModel,
+    showRoute,
+    title: showRoute ? `${requestedModel} -> ${upstreamModel}` : requestedModel,
+  };
+};
+
 const renderCredentialSubtitle = (
   row: Pick<RequestEventRow, 'credentialSubtitle' | 'authFile' | 'authLabel' | 'resolvedApiKey'>,
   styles: Record<string, string>,
@@ -1046,6 +1060,7 @@ export function RequestEventsDetailsCard({
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t('usage_stats.request_events_search_placeholder')}
+            style={{ paddingRight: 28 }}
             rightElement={<IconSearch size={16} />}
             aria-label={t('usage_stats.request_events_search_placeholder')}
           />
@@ -1195,6 +1210,7 @@ export function RequestEventsDetailsCard({
                     row.endpointPath
                   );
                   const endpointSubline = formatEndpointSubline(endpointHeadline, row.endpoint);
+                  const modelRoute = buildModelRouteDisplay(row);
 
                   return (
                     <tr key={row.id}>
@@ -1227,9 +1243,9 @@ export function RequestEventsDetailsCard({
                         <div
                           className={styles.requestEventsPrimaryText}
                           title={
-                            [row.provider !== '-' ? row.provider : '', row.modelAlias]
+                            [row.providerTag, row.providerDisplayName || row.provider]
                               .filter(Boolean)
-                              .join(' · ') || undefined
+                              .join(' ') || undefined
                           }
                         >
                           {row.providerTag ? (
@@ -1242,28 +1258,28 @@ export function RequestEventsDetailsCard({
                                   {row.providerDisplayName}
                                 </span>
                               ) : null}
-                              {row.modelAlias ? (
-                                <span className={styles.requestEventsModelAliasTag}>
-                                  {row.modelAlias}
-                                </span>
-                              ) : null}
                             </>
                           ) : (
                             <>
                               {row.providerDisplayName || row.provider}
-                              {row.modelAlias ? (
-                                <span className={styles.requestEventsModelAliasTag}>
-                                  {row.modelAlias}
-                                </span>
-                              ) : null}
                             </>
                           )}
                         </div>
                         <div
-                          className={styles.requestEventsSecondaryText}
-                          title={row.model !== '-' ? row.model : undefined}
+                          className={`${styles.requestEventsSecondaryText} ${styles.requestEventsModelRouteLine}`}
+                          title={modelRoute.title !== '-' ? modelRoute.title : undefined}
                         >
-                          {row.model}
+                          <span className={styles.requestEventsRequestedModel}>
+                            {modelRoute.requestedModel}
+                          </span>
+                          {modelRoute.showRoute ? (
+                            <>
+                              <span className={styles.requestEventsModelRouteArrow}>-&gt;</span>
+                              <span className={styles.requestEventsUpstreamModel}>
+                                {modelRoute.upstreamModel}
+                              </span>
+                            </>
+                          ) : null}
                         </div>
                       </td>
                       <td

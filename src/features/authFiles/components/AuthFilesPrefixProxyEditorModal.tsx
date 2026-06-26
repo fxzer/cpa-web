@@ -130,11 +130,25 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                   />
                   <Input
                     label={t('auth_files.priority_label')}
+                    type="number"
+                    min={0}
                     value={editor.priority}
                     placeholder={t('auth_files.priority_placeholder')}
                     hint={t('auth_files.priority_hint')}
                     disabled={disableControls || editor.saving || !editor.json}
                     onChange={(e) => onChange('priority', e.target.value)}
+                    rightElement={
+                      editor.priority ? (
+                        <button
+                          type="button"
+                          className={styles.prefixProxyClearBtn}
+                          onClick={() => onChange('priority', '')}
+                          aria-label={t('common.clear')}
+                        >
+                          ✕
+                        </button>
+                      ) : undefined
+                    }
                   />
                   <div className="form-group">
                     <label>{t('auth_files.headers_label')}</label>

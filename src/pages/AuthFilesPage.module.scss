@@ -1475,6 +1475,26 @@
   box-shadow: 0 0 0 3px rgba($error-color, 0.12);
 }
 
+.prefixProxyClearBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1;
+
+  &:hover {
+    background: var(--hover-bg, rgba(128, 128, 128, 0.15));
+    color: var(--text-primary);
+  }
+}
+
 .cardActions {
   display: flex;
   align-items: center;

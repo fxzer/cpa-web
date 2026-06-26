@@ -1,0 +1,164 @@
+@use '../../styles/mixins' as *;
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+.configRow {
+  display: flex;
+  gap: 12px;
+
+  @media (max-width: 540px) {
+    flex-direction: column;
+  }
+}
+
+.configField {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.configLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+
+.tabBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.tabItem {
+  @include button-reset;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--bg-hover) 48%, transparent);
+  }
+
+  &:active {
+    background: color-mix(in srgb, var(--bg-active) 64%, transparent);
+  }
+}
+
+.tabActive {
+  background: var(--bg-primary);
+  border-color: color-mix(in srgb, var(--border-color) 88%, transparent);
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.1);
+
+  :global([data-theme='dark']) & {
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.codeContainer {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+  overflow: hidden;
+}
+
+.codeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: color-mix(in srgb, var(--bg-secondary) 84%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+}
+
+.codeType {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.copyButton {
+  @include button-reset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  background: transparent;
+  transition: all 0.15s ease;
+
+  &:hover {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--bg-hover) 64%, transparent);
+    border-color: color-mix(in srgb, var(--border-color) 88%, transparent);
+  }
+
+  &:active {
+    background: color-mix(in srgb, var(--bg-active) 80%, transparent);
+  }
+}
+
+.copiedIcon {
+  color: var(--success-color, #22c55e);
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.codeBlock {
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  max-height: 320px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: transparent;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-all;
+
+  code {
+    font-family: inherit;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

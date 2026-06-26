@@ -12,7 +12,6 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -171,8 +170,6 @@ export function VisualConfigEditor({
   const isMobile = useMediaQuery('(max-width: 768px)');
   const isWideDesktopNav = useMediaQuery('(min-width: 1025px)');
   const shouldRenderFloatingSidebar = !isMobile && isWideDesktopNav && isCurrentLayer;
-  const routingStrategyLabelId = useId();
-  const routingStrategyHintId = `${routingStrategyLabelId}-hint`;
   const keepaliveInputId = useId();
   const keepaliveHintId = `${keepaliveInputId}-hint`;
   const keepaliveErrorId = `${keepaliveInputId}-error`;
@@ -703,6 +700,35 @@ export function VisualConfigEditor({
                 error={logsMaxSizeError}
               />
             </SectionGrid>
+
+            <SectionGrid>
+              <div className={styles.routingPillField}>
+                <label className={styles.routingPillTitle}>
+                  {t('basic_settings.routing_strategy_label')}
+                </label>
+                <div className={styles.pillGroup}>
+                  <button
+                    type="button"
+                    className={`${styles.pillButton} ${values.routingStrategy === 'round-robin' ? styles.pillButtonActive : ''}`}
+                    onClick={() => onChange({ routingStrategy: 'round-robin' })}
+                    disabled={disabled}
+                  >
+                    {t('basic_settings.routing_strategy_round_robin')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.pillButton} ${values.routingStrategy === 'fill-first' ? styles.pillButtonActive : ''}`}
+                    onClick={() => onChange({ routingStrategy: 'fill-first' })}
+                    disabled={disabled}
+                  >
+                    {t('basic_settings.routing_strategy_fill_first')}
+                  </button>
+                </div>
+                <div className={styles.fieldHint}>
+                  {t('basic_settings.routing_strategy_hint')}
+                </div>
+              </div>
+            </SectionGrid>
           </SectionStack>
         </ConfigSection>
 
@@ -752,35 +778,6 @@ export function VisualConfigEditor({
                 disabled={disabled}
                 error={maxRetryIntervalError}
               />
-              <FieldShell
-                label={t('config_management.visual.sections.network.routing_strategy')}
-                labelId={routingStrategyLabelId}
-                hint={t('config_management.visual.sections.network.routing_strategy_hint')}
-                hintId={routingStrategyHintId}
-              >
-                <Select
-                  value={values.routingStrategy}
-                  options={[
-                    {
-                      value: 'round-robin',
-                      label: t('config_management.visual.sections.network.strategy_round_robin'),
-                    },
-                    {
-                      value: 'fill-first',
-                      label: t('config_management.visual.sections.network.strategy_fill_first'),
-                    },
-                  ]}
-                  id={`${routingStrategyLabelId}-select`}
-                  disabled={disabled}
-                  ariaLabelledBy={routingStrategyLabelId}
-                  ariaDescribedBy={routingStrategyHintId}
-                  onChange={(nextValue) =>
-                    onChange({
-                      routingStrategy: nextValue as VisualConfigValues['routingStrategy'],
-                    })
-                  }
-                />
-              </FieldShell>
               <Input
                 label={t('config_management.visual.sections.network.session_affinity_ttl')}
                 placeholder="1h"

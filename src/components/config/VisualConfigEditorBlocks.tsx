@@ -450,6 +450,7 @@ model = "gpt-5.5"
       <Modal
         open={examplesModalOpen}
         onClose={() => setExamplesModalOpen(false)}
+        width={660}
         title={t('config_management.visual.api_keys.examples_title', { defaultValue: '使用示例' })}
         footer={
           <Button onClick={() => setExamplesModalOpen(false)}>

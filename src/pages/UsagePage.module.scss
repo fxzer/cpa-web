@@ -1181,7 +1181,7 @@
 }
 
 .requestEventsTable {
-  min-width: 1282px;
+  min-width: 1390px;
   table-layout: fixed;
 }
 
@@ -1190,7 +1190,7 @@
 }
 
 .requestEventsProviderModelCol {
-  width: 190px;
+  width: 260px;
 }
 
 .requestEventsEndpointRequestCol {
@@ -1198,7 +1198,7 @@
 }
 
 .requestEventsCredentialCol {
-  width: 360px;
+  width: 320px;
 }
 
 .requestEventsUsageCol {
@@ -1206,7 +1206,7 @@
 }
 
 .requestEventsPerformanceCol {
-  width: 170px;
+  width: 150px;
 }
 
 .requestEventsEndpointCell {
@@ -1222,7 +1222,7 @@
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
   font-size: 12px;
-  max-width: 340px;
+  max-width: 300px;
   overflow: hidden;
 }
 
@@ -1266,21 +1266,6 @@
   font-weight: 650;
 }
 
-.requestEventsModelAliasTag {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: $radius-full;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.4;
-  color: var(--accent-primary, #2563eb);
-  background: color-mix(in srgb, var(--accent-primary, #2563eb) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent-primary, #2563eb) 28%, transparent);
-  vertical-align: middle;
-  text-transform: lowercase;
-}
-
 .requestEventsSecondaryText {
   margin-top: 4px;
   color: var(--text-secondary);
@@ -1289,6 +1274,39 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.requestEventsModelRouteLine {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+}
+
+.requestEventsRequestedModel,
+.requestEventsUpstreamModel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.requestEventsRequestedModel {
+  flex: 0 1 auto;
+  color: var(--text-primary);
+  font-weight: 650;
+}
+
+.requestEventsModelRouteArrow {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+}
+
+.requestEventsUpstreamModel {
+  flex: 1 1 auto;
 }
 
 .requestEventsCredentialKeyButton {

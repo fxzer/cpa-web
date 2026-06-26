@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { Select } from '@/components/ui/Select';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { ProviderConfigToggle } from '../ProviderConfigToggle';
 import {
   IconChevronDown,
@@ -23,6 +24,7 @@ import { CopyableUrlValue } from '../CopyableUrlValue';
 import { ProviderSectionCardTitle } from '../ProviderSectionCardTitle';
 import { ProviderPrefixPriorityRow } from '../ProviderPrefixPriorityRow';
 import { ProviderStatusBar } from '../ProviderStatusBar';
+import { OpenAIProviderTable } from '../OpenAIProviderTable';
 import {
   getOpenAIProviderRecentStatusData,
   getOpenAIProviderTotalStats,
@@ -35,6 +37,7 @@ import type { ProviderAliasOverviewRequest } from '../types';
 
 type SortOption = 'name' | 'priority' | 'success-rate';
 type SortDirection = 'asc' | 'desc';
+type DisabledFilter = 'all' | 'enabled' | 'disabled';
 
 const EMPTY_STATUS_BAR = statusBarDataFromRecentRequests([]);
 
@@ -60,6 +63,7 @@ interface OpenAISectionProps {
   onDelete: (index: number) => void;
   onToggle: (index: number, enabled: boolean) => void;
   onAliasOverview?: (request: ProviderAliasOverviewRequest) => void;
+  viewMode?: 'card' | 'table';
 }
 
 interface IndexedOpenAIProvider {
@@ -87,12 +91,17 @@ export function OpenAISection({
   onDelete,
   onToggle,
   onAliasOverview,
+  viewMode = 'card',
 }: OpenAISectionProps) {
   const { t } = useTranslation();
   const actionsDisabled = disableControls || loading || isSwitching;
   const toggleDisabled = disableControls || loading || isSwitching;
   const [sortOption, setSortOption] = useState<SortOption>('priority');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [disabledFilter, setDisabledFilter] = useLocalStorage<DisabledFilter>(
+    'openai-disabled-filter',
+    'all'
+  );
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownLayout, setDropdownLayout] = useState({ openAbove: false, maxHeight: 300 });
@@ -203,6 +212,8 @@ export function OpenAISection({
   const sortedConfigs = useMemo<IndexedOpenAIProvider[]>(() => {
     const indexed = configs.map((config, originalIndex) => ({ config, originalIndex }));
     const filtered = indexed.filter(({ config }) => {
+      if (disabledFilter === 'enabled' && config.disabled) return false;
+      if (disabledFilter === 'disabled' && !config.disabled) return false;
       if (selectedModels.size === 0) return true;
       return config.models?.some((model) => selectedModels.has(model.name));
     });
@@ -264,7 +275,7 @@ export function OpenAISection({
     }
 
     return sorted;
-  }, [configs, sortOption, sortDirection, usageByProvider, selectedModels]);
+  }, [configs, sortOption, sortDirection, usageByProvider, selectedModels, disabledFilter]);
 
   const toggleModelSelection = (modelName: string) => {
     setSelectedModels((prev) => {
@@ -438,6 +449,19 @@ export function OpenAISection({
           )}
         </div>
         {renderSortControls()}
+        <div className={styles.disabledFilterSwitch}>
+          {(['all', 'enabled', 'disabled'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              className={`${styles.disabledFilterItem} ${disabledFilter === value ? `${styles.disabledFilterItemActive} ${value === 'enabled' ? styles.disabledFilterItemEnabled : value === 'disabled' ? styles.disabledFilterItemDisabled : ''}` : ''}`}
+              onClick={() => setDisabledFilter(value)}
+              disabled={actionsDisabled}
+            >
+              {t(`ai_providers.disabled_filter_${value}`)}
+            </button>
+          ))}
+        </div>
         <Button
           size="sm"
           onClick={onAdd}
@@ -460,7 +484,7 @@ export function OpenAISection({
         />
       }
       title={t('ai_providers.openai_title')}
-      count={configs.length}
+      count={sortedConfigs.length}
     />
   );
 
@@ -543,12 +567,22 @@ export function OpenAISection({
                           {(entryStats.success || 0) > 0 ? (
                             <span className={styles.apiKeyPillSuccess}>✓{entryStats.success}</span>
                           ) : (
-                            <span className={styles.apiKeyPillSuccess} style={{ visibility: 'hidden' }}>✓0</span>
+                            <span
+                              className={styles.apiKeyPillSuccess}
+                              style={{ visibility: 'hidden' }}
+                            >
+                              ✓0
+                            </span>
                           )}
                           {(entryStats.failure || 0) > 0 ? (
                             <span className={styles.apiKeyPillFailure}>✗{entryStats.failure}</span>
                           ) : (
-                            <span className={styles.apiKeyPillFailure} style={{ visibility: 'hidden' }}>✗0</span>
+                            <span
+                              className={styles.apiKeyPillFailure}
+                              style={{ visibility: 'hidden' }}
+                            >
+                              ✗0
+                            </span>
                           )}
                         </span>
                       )}
@@ -649,6 +683,20 @@ export function OpenAISection({
         <EmptyState
           title={t('ai_providers.openai_empty_title')}
           description={t('ai_providers.openai_empty_desc')}
+        />
+      ) : viewMode === 'table' ? (
+        <OpenAIProviderTable
+          items={sortedConfigs}
+          usageByProvider={usageByProvider}
+          loading={loading}
+          emptyTitle={t('ai_providers.openai_empty_title')}
+          emptyDescription={t('ai_providers.openai_empty_desc')}
+          actionsDisabled={actionsDisabled}
+          toggleDisabled={toggleDisabled}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onToggle={onToggle}
+          onAliasOverview={onAliasOverview}
         />
       ) : (
         <div className={styles.openaiProviderList}>{sortedConfigs.map(renderProviderCard)}</div>

@@ -12,10 +12,12 @@ import {
   extractLatencyMs,
   finalizeLatencyStats,
 } from './usage/latency';
+import { computeCacheHitRatio } from './usage/cacheHit';
 import { maskApiKey } from './format';
 import { parseTimestampMs } from './timestamp';
 
 export type { DurationFormatOptions, LatencyStats } from './usage/latency';
+export { computeCacheHitRatio } from './usage/cacheHit';
 export {
   LATENCY_SOURCE_FIELD,
   LATENCY_SOURCE_UNIT,
@@ -311,23 +313,6 @@ const normalizeUsageTokens = (value: unknown): UsageDetail['tokens'] => {
     total_tokens: totalTokens,
   };
 };
-
-/**
- * 缓存命中率：OpenAI/Gemini 中 cached 是 input 的子集；Claude 中 input 仅计未缓存部分，cached 需与 input 相加后再算比例。
- */
-export function computeCacheHitRatio(inputTokens: number, cachedTokens: number): number | null {
-  const input = Math.max(inputTokens, 0);
-  const cached = Math.max(cachedTokens, 0);
-  if (cached <= 0) return null;
-
-  if (input > 0 && cached <= input) {
-    return Math.min(cached / input, 1);
-  }
-
-  const totalInput = input + cached;
-  if (totalInput <= 0) return null;
-  return Math.min(cached / totalInput, 1);
-}
 
 export type UsageTokenCacheHitAggregation = 'request' | '5m' | 'hour' | 'day' | 'month';
 

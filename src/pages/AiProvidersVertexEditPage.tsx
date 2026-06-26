@@ -289,7 +289,12 @@ export function AiProvidersVertexEditPage() {
             const name = entry.name.trim();
             const alias = entry.alias.trim();
             if (!name || !alias) return null;
-            return { name, alias };
+            return {
+              name,
+              alias,
+              priority: entry.priority,
+              testModel: entry.testModel,
+            };
           })
           .filter(Boolean) as ProviderKeyConfig['models'],
         excludedModels: parseExcludedModels(form.excludedText),
@@ -379,6 +384,24 @@ export function AiProvidersVertexEditPage() {
                   value={form.name ?? ''}
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                   hint={t('ai_providers.provider_name_hint')}
+                  disabled={disableControls || saving}
+                />
+                <Input
+                  label={t('ai_providers.priority_label')}
+                  hint={t('ai_providers.priority_hint')}
+                  type="number"
+                  step={1}
+                  min={0}
+                  value={form.priority ?? ''}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const parsed = raw.trim() === '' ? undefined : Number(raw);
+                    setForm((prev) => ({
+                      ...prev,
+                      priority:
+                        parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
+                    }));
+                  }}
                   disabled={disableControls || saving}
                 />
                 <Input

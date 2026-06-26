@@ -407,7 +407,7 @@ export function AiProvidersClaudeEditLayout() {
         prev.modelEntries.forEach((entry) => {
           const name = entry.name.trim();
           if (!name) return;
-          mergedMap.set(name, { name, alias: entry.alias?.trim() || '' });
+          mergedMap.set(name, { ...entry, name, alias: entry.alias?.trim() || '' });
         });
 
         selectedModels.forEach((model) => {
@@ -458,7 +458,12 @@ export function AiProvidersClaudeEditLayout() {
             const name = entry.name.trim();
             if (!name) return null;
             const alias = entry.alias.trim();
-            return { name, alias: alias || name };
+            return {
+              name,
+              alias: alias || name,
+              priority: entry.priority,
+              testModel: entry.testModel,
+            };
           })
           .filter(Boolean) as ProviderKeyConfig['models'],
         excludedModels: parseExcludedModels(form.excludedText),
