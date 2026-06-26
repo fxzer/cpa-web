@@ -111,7 +111,7 @@ cpa-core :8317
 
 - **监控中心** — 请求事件列表、模型定价与费用估算、缓存命中/用量趋势图表
 - **凭证中心** — 多 Key 管理、OAuth 流程/状态、Auth Refresh Queue
-- **AI 提供商** — Gemini / Codex / Claude / Vertex / OpenAI 兼容 / Ampcode 配置
+- **AI 供应商** — Gemini / Codex / Claude / Vertex / OpenAI 兼容 / Ampcode 配置
 - **认证文件** — 上传/下载/删除 JSON 凭据、模型别名映射、OAuth 排除模型
 - **配额管理** — Claude / Antigravity / Codex / Gemini CLI 等配额上限
 - **用量统计** — 聚合用量概览、时间范围筛选
@@ -119,6 +119,40 @@ cpa-core :8317
 - **日志** — 增量拉取、搜索过滤、隐藏管理端流量
 - **OAuth 登录** — 发起 OAuth/设备码流程、iFlow Cookie 导入
 - **系统信息** — 版本、构建信息、快捷链接、模型列表
+
+---
+
+## 界面预览
+
+> 截图位于 `public/screenshot/` 目录（模型别名路由页面除外，按菜单顺序排列）。
+
+### 监控中心
+
+![监控中心](public/screenshot/monitoring-dashboard.png)
+
+### 凭证中心
+
+![凭证中心](public/screenshot/credential-center.png)
+
+### AI 供应商
+
+![AI 供应商卡片视图](public/screenshot/ai-providers-card.png)
+![AI 供应商表格视图](public/screenshot/ai-providers-table.png)
+
+# 模型别名路由思维导图
+![模型别名路由思维导图](public/screenshot/model-alias-route.png)
+
+### 请求明细
+
+![请求明细](public/screenshot/request-details.png)
+
+### 日志
+
+![日志](public/screenshot/logs.png)
+
+### 配置文件
+
+![配置文件](public/screenshot/config.png)
 
 ---
 
@@ -133,11 +167,16 @@ cpa-core :8317
 - **批量模型测试** — OpenAI / Gemini 批量测试弹窗，复选框选择添加模型，测试结果持久保留
 - **OAuth 模型别名映射** — 认证文件层级映射配置 UI
 - **API Key 备注** — 支持备注标记
+- **路由策略切换** — 可视化配置编辑器中支持路由策略 Pill 切换、用量示例弹窗、禁用筛选标签持久化到 localStorage
+- **模型别名路由图** — 模型映射关系的交互式可视化图表
 
 ### UI/UX 改进
 
 - **监控首页** — 统计卡片强调色与仪表盘一致，添加缓存命中图表
 - **请求监控** — 时间列与状态标签样式统一，凭据行格式化便于扫读
+- **请求明细优化** — 相对时间显示，hover 显示绝对时间，表格布局更清晰
+- **Provider 编辑页布局统一** — 各供应商编辑页布局顺序一致
+- **Provider 状态徽章** — AI 供应商和认证文件页面添加状态徽章
 - **页面切换** — 竖向过渡动画
 - **配置编辑** — 网格布局优化内边距与过渡，API Key 区块可读性提升
 - **响应式** — 移动端适配修复
@@ -146,7 +185,6 @@ cpa-core :8317
 ### 部署与工程化
 
 - **deploy.sh** — 简化前端部署脚本，`--to <目录>` 直接部署到后端 static 目录
-- **DEPLOY.md** — 完整部署指南
 - **单文件构建** — Vite + `vite-plugin-singlefile`，产物 `index.html` 内联所有资源
 - **Release CI** — 自动构建并发布 `web.html` 到 GitHub Releases
 - **后端自动更新** — cpa-core 自动检测并下载新版 web.html
@@ -155,6 +193,7 @@ cpa-core :8317
 
 - **语言精简** — 移除 zh-TW、ru，仅保留 en、zh-CN
 - **命名规范** — 前后端统一为 cpa-web / cpa-core，管理页面文件统一为 `web.html`
+- **Dev 模式** — Vite 开发服务器自动检测 cpa-core 端口，无需手动配置代理
 
 ---
 
