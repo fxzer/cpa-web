@@ -124,7 +124,7 @@ export function OpenAIProviderTable({
                 </td>
                 <td>
                   <div className={styles.providerTableCellStack}>
-                    <div className={styles.providerTableCellGroup}>
+                    <div className={`${styles.providerTableCellGroup} ${styles.providerTableEndpoint}`}>
                       <span className={styles.providerTableLabel}>{t('common.base_url')}:</span>
                       <CopyableUrlValue value={row.provider.baseUrl} />
                     </div>

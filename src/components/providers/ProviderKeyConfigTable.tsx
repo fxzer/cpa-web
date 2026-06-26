@@ -140,7 +140,7 @@ export function ProviderKeyConfigTable<T extends ProviderTableConfig>({
               </td>
               <td>
                 <div className={styles.providerTableCellStack}>
-                  <div className={styles.providerTableCellGroup}>
+                  <div className={`${styles.providerTableCellGroup} ${styles.providerTableEndpoint}`}>
                     <span className={styles.providerTableLabel}>{t('common.base_url')}:</span>
                     {row.item.baseUrl ? <CopyableUrlValue value={row.item.baseUrl} /> : '-'}
                   </div>

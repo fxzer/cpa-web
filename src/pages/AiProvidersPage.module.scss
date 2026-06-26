@@ -202,7 +202,7 @@ $openai-toolbar-control-height: 36px;
 }
 
 .providerTableActionsCol {
-  width: 196px;
+  width: 180px;
 }
 
 .providerTableRowDisabled {
@@ -264,7 +264,7 @@ $openai-toolbar-control-height: 36px;
 
 .providerTablePrimary {
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 750;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -286,6 +286,18 @@ $openai-toolbar-control-height: 36px;
   align-items: baseline;
   gap: 6px;
   min-width: 0;
+}
+
+.providerTableEndpoint {
+  color: var(--text-tertiary);
+  font-size: 12px;
+
+  .providerTableLabel,
+  .fieldValue,
+  .fieldValueCopyable {
+    color: var(--text-tertiary);
+    font-size: 12px;
+  }
 }
 
 .providerTableLabel,
@@ -425,15 +437,8 @@ $openai-toolbar-control-height: 36px;
   }
 
   .providerStatusToggle {
-    width: 100%;
-    min-width: 0;
+    justify-self: center;
     margin-left: 0;
-    justify-content: stretch;
-  }
-
-  .providerStatusToggle :global(label) {
-    width: 100%;
-    min-width: 0;
   }
 
   .cardStatusSwitchTrack {
