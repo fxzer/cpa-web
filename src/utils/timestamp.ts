@@ -59,3 +59,36 @@ export function parseTimestamp(value: unknown): Date | null {
   }
   return new Date(timestampMs);
 }
+
+const SECOND = 1000;
+const MINUTE = 60 * SECOND;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const YEAR = 365 * DAY;
+
+export function formatRelativeTime(date: Date | null, locale: string): string {
+  if (!date) return '-';
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 0) return locale.startsWith('zh') ? '刚刚' : 'just now';
+
+  const isZh = locale.startsWith('zh');
+
+  if (diffMs < MINUTE) {
+    const n = Math.floor(diffMs / SECOND);
+    return isZh ? `${n}秒前` : `${n}s ago`;
+  }
+  if (diffMs < HOUR) {
+    const n = Math.floor(diffMs / MINUTE);
+    return isZh ? `${n}分钟前` : `${n}m ago`;
+  }
+  if (diffMs < DAY) {
+    const n = Math.floor(diffMs / HOUR);
+    return isZh ? `${n}小时前` : `${n}h ago`;
+  }
+  if (diffMs < YEAR) {
+    const n = Math.floor(diffMs / DAY);
+    return isZh ? `${n}天前` : `${n}d ago`;
+  }
+  const n = Math.floor(diffMs / YEAR);
+  return isZh ? `${n}年前` : `${n}y ago`;
+}

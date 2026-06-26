@@ -21,7 +21,7 @@ import {
   resolveProviderModelColumnDisplay,
 } from '@/utils/credentialResolver';
 import { buildSourceInfoMap, resolveSourceDisplay } from '@/utils/sourceResolver';
-import { parseTimestampMs } from '@/utils/timestamp';
+import { formatRelativeTime, parseTimestampMs } from '@/utils/timestamp';
 import {
   collectUsageDetailsWithEndpoint,
   computeCacheHitRatio,
@@ -49,6 +49,7 @@ type RequestEventRow = {
   timestamp: string;
   timestampMs: number;
   timestampLabel: string;
+  timestampRelative: string;
   requestId: string;
   provider: string;
   providerTag: string;
@@ -542,6 +543,7 @@ export function RequestEventsDetailsCard({
         timestamp,
         timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
         timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
+        timestampRelative: formatRelativeTime(date, i18n.language),
         requestId,
         provider: providerColumn.headline,
         providerTag: providerColumn.tag,
@@ -1214,8 +1216,8 @@ export function RequestEventsDetailsCard({
 
                   return (
                     <tr key={row.id}>
-                      <td title={row.timestamp} className={styles.requestEventsTimeResultCell}>
-                        <div className={styles.requestEventsPrimaryText}>{row.timestampLabel}</div>
+                      <td title={row.timestampLabel} className={styles.requestEventsTimeResultCell}>
+                        <div className={styles.requestEventsPrimaryText}>{row.timestampRelative}</div>
                         <div className={styles.requestEventsStatusLine}>
                           {row.failed ? (
                             <button

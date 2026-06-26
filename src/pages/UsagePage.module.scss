@@ -1181,24 +1181,24 @@
 }
 
 .requestEventsTable {
-  min-width: 1390px;
+  min-width: 1400px;
   table-layout: fixed;
 }
 
 .requestEventsTimeResultCol {
-  width: 180px;
+  width: 140px;
 }
 
 .requestEventsProviderModelCol {
-  width: 260px;
+  width: 360px;
 }
 
 .requestEventsEndpointRequestCol {
-  width: 200px;
+  width: 220px;
 }
 
 .requestEventsCredentialCol {
-  width: 320px;
+  width: 250px;
 }
 
 .requestEventsUsageCol {
@@ -1222,7 +1222,7 @@
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
   font-size: 12px;
-  max-width: 300px;
+  max-width: 220px;
   overflow: hidden;
 }
 
@@ -1383,6 +1383,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
+  margin-top: 2px;
 }
 
 .requestEventsRequestLine {
