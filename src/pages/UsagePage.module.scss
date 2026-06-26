@@ -1131,7 +1131,7 @@
 
 .requestEventsTableWrapper {
   overflow: auto;
-  max-height: 560px;
+  max-height: 610px;
   border: 1px solid var(--border-color);
   border-radius: $radius-md;
 }
@@ -1146,11 +1146,11 @@
 .requestEventsFixedRoot {
   display: flex;
   flex-direction: column;
-  height: 796px;
+  height: 846px;
   overflow: hidden;
 
   @include mobile {
-    height: 680px;
+    height: 730px;
 
     .requestEventsToolbar {
       flex-wrap: nowrap;
