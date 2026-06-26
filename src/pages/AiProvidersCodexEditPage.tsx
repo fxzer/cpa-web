@@ -632,21 +632,6 @@ export function AiProvidersCodexEditPage() {
                   <div className="hint">{t('ai_providers.codex_websockets_hint')}</div>
                 </div>
               </div>
-              <div className={styles.keyEntriesSection}>
-                <div className={styles.keyEntriesHeader}>
-                  <label className={styles.keyEntriesLabel}>
-                    {t('ai_providers.codex_add_modal_key_label')}
-                  </label>
-                  <span className={styles.keyEntriesHint}>
-                    {t('ai_providers.provider_keys_hint')}
-                  </span>
-                </div>
-                <ProviderApiKeyEntriesEditor
-                  entries={form.apiKeyEntries}
-                  disabled={disableControls || saving}
-                  onChange={(apiKeyEntries) => setForm((prev) => ({ ...prev, apiKeyEntries }))}
-                />
-              </div>
               <HeaderInputList
                 entries={form.headers}
                 onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}
@@ -702,6 +687,21 @@ export function AiProvidersCodexEditPage() {
                   removeButtonClassName={styles.modelRowRemoveButton}
                   removeButtonTitle={t('common.delete')}
                   removeButtonAriaLabel={t('common.delete')}
+                />
+              </div>
+              <div className={styles.keyEntriesSection}>
+                <div className={styles.keyEntriesHeader}>
+                  <label className={styles.keyEntriesLabel}>
+                    {t('ai_providers.codex_add_modal_key_label')}
+                  </label>
+                  <span className={styles.keyEntriesHint}>
+                    {t('ai_providers.provider_keys_hint')}
+                  </span>
+                </div>
+                <ProviderApiKeyEntriesEditor
+                  entries={form.apiKeyEntries}
+                  disabled={disableControls || saving}
+                  onChange={(apiKeyEntries) => setForm((prev) => ({ ...prev, apiKeyEntries }))}
                 />
               </div>
               <div className="form-group">

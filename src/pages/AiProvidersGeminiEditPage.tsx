@@ -1070,32 +1070,6 @@ export function AiProvidersGeminiEditPage() {
                   disabled={disableControls || saving}
                 />
               </div>
-              <div className={styles.keyEntriesSection}>
-                <div className={styles.keyEntriesHeader}>
-                  <label className={styles.keyEntriesLabel}>
-                    {t('ai_providers.gemini_add_modal_key_label')}
-                  </label>
-                  <span className={styles.keyEntriesHint}>
-                    {t('ai_providers.provider_keys_hint')}
-                  </span>
-                </div>
-                <ProviderApiKeyEntriesEditor
-                  entries={form.apiKeyEntries}
-                  disabled={disableControls || saving}
-                  onChange={(apiKeyEntries) => {
-                    setForm((prev) => ({ ...prev, apiKeyEntries }));
-                    resetKeyTestStatuses(apiKeyEntries.length);
-                    setTestStatus('idle');
-                    setTestMessage('');
-                  }}
-                  keyTestStatuses={keyTestStatuses}
-                  isTestingKeys={isTestingKeys}
-                  hasConfiguredModels={hasConfiguredModels}
-                  baseUrl={form.baseUrl ?? ''}
-                  onBatchTest={openBatchModelTest}
-                  onSingleTest={(index) => void testSingleKey(index)}
-                />
-              </div>
               <HeaderInputList
                 entries={form.headers}
                 onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}
@@ -1229,6 +1203,33 @@ export function AiProvidersGeminiEditPage() {
                     {testMessage}
                   </div>
                 )}
+              </div>
+
+              <div className={styles.keyEntriesSection}>
+                <div className={styles.keyEntriesHeader}>
+                  <label className={styles.keyEntriesLabel}>
+                    {t('ai_providers.gemini_add_modal_key_label')}
+                  </label>
+                  <span className={styles.keyEntriesHint}>
+                    {t('ai_providers.provider_keys_hint')}
+                  </span>
+                </div>
+                <ProviderApiKeyEntriesEditor
+                  entries={form.apiKeyEntries}
+                  disabled={disableControls || saving}
+                  onChange={(apiKeyEntries) => {
+                    setForm((prev) => ({ ...prev, apiKeyEntries }));
+                    resetKeyTestStatuses(apiKeyEntries.length);
+                    setTestStatus('idle');
+                    setTestMessage('');
+                  }}
+                  keyTestStatuses={keyTestStatuses}
+                  isTestingKeys={isTestingKeys}
+                  hasConfiguredModels={hasConfiguredModels}
+                  baseUrl={form.baseUrl ?? ''}
+                  onBatchTest={openBatchModelTest}
+                  onSingleTest={(index) => void testSingleKey(index)}
+                />
               </div>
 
               <div className="form-group">

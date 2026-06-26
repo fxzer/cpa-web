@@ -358,25 +358,6 @@ export function AiProvidersClaudeEditPage() {
                 disabled={saving || disableControls || isTesting}
               />
             </div>
-            <div className={styles.keyEntriesSection}>
-              <div className={styles.keyEntriesHeader}>
-                <label className={styles.keyEntriesLabel}>
-                  {t('ai_providers.claude_add_modal_key_label')}
-                </label>
-                <span className={styles.keyEntriesHint}>
-                  {t('ai_providers.provider_keys_hint')}
-                </span>
-              </div>
-              <ProviderApiKeyEntriesEditor
-                entries={form.apiKeyEntries}
-                disabled={saving || disableControls || isTesting}
-                onChange={(apiKeyEntries) => {
-                  setForm((prev) => ({ ...prev, apiKeyEntries }));
-                  setTestStatus('idle');
-                  setTestMessage('');
-                }}
-              />
-            </div>
             <HeaderInputList
               entries={form.headers}
               onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}
@@ -498,6 +479,26 @@ export function AiProvidersClaudeEditPage() {
                   {testMessage}
                 </div>
               )}
+            </div>
+
+            <div className={styles.keyEntriesSection}>
+              <div className={styles.keyEntriesHeader}>
+                <label className={styles.keyEntriesLabel}>
+                  {t('ai_providers.claude_add_modal_key_label')}
+                </label>
+                <span className={styles.keyEntriesHint}>
+                  {t('ai_providers.provider_keys_hint')}
+                </span>
+              </div>
+              <ProviderApiKeyEntriesEditor
+                entries={form.apiKeyEntries}
+                disabled={saving || disableControls || isTesting}
+                onChange={(apiKeyEntries) => {
+                  setForm((prev) => ({ ...prev, apiKeyEntries }));
+                  setTestStatus('idle');
+                  setTestMessage('');
+                }}
+              />
             </div>
 
             <div className="form-group">
