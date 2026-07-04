@@ -26,7 +26,12 @@ interface NotificationState {
     isLoading: boolean;
     options: ConfirmationOptions | null;
   };
-  showNotification: (message: string, type?: NotificationType, duration?: number) => void;
+  showNotification: (
+    message: string,
+    type?: NotificationType,
+    duration?: number,
+    description?: string
+  ) => void;
   removeNotification: (id: string) => void;
   clearAll: () => void;
   showConfirmation: (options: ConfirmationOptions) => void;
@@ -42,13 +47,14 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     options: null,
   },
 
-  showNotification: (message, type = 'info', duration = NOTIFICATION_DURATION_MS) => {
+  showNotification: (message, type = 'info', duration = NOTIFICATION_DURATION_MS, description) => {
     const id = generateId();
     const notification: Notification = {
       id,
       message,
       type,
       duration,
+      description,
     };
 
     set((state) => ({

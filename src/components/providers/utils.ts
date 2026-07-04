@@ -69,7 +69,7 @@ type ProviderLabelInput = {
   name?: string;
 };
 
-/** 提供商列表卡片等场景：prefix 优先（路由标识更直观） */
+/** 供应商列表卡片等场景：prefix 优先（路由标识更直观） */
 export function buildProviderOverviewLabel(item: ProviderLabelInput, fallback: string): string {
   const prefix = String(item.prefix ?? '').trim();
   if (prefix) return prefix;

@@ -1,5 +1,5 @@
 /**
- * AI 提供商相关类型
+ * AI 供应商相关类型
  * 基于原项目 src/modules/ai-providers.js
  */
 

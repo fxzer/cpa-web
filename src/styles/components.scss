@@ -253,6 +253,15 @@ textarea {
   .message {
     flex: 1;
     font-weight: 500;
+
+    .description {
+      margin-top: $spacing-xs;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      word-break: break-word;
+      line-height: 1.4;
+    }
   }
 
   .close-btn {

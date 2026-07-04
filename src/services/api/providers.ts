@@ -1,5 +1,5 @@
 /**
- * AI 提供商相关 API
+ * AI 供应商相关 API
  */
 
 import { apiClient } from './client';

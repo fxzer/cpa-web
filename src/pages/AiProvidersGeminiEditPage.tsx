@@ -41,6 +41,8 @@ import {
   serializeApiKeyEntriesForSave,
 } from '@/components/providers/utils';
 import type { GeminiFormState } from '@/components/providers';
+import { AliasBatchSetter } from '@/components/providers/AliasBatchSetter';
+import { collectAllProviderAliases } from '@/utils/providerModelAliasCatalog';
 import {
   GeminiBatchModelTestModal,
   type GeminiBatchModelTestRowResult,
@@ -126,6 +128,8 @@ export function AiProvidersGeminiEditPage() {
   const fetchConfig = useConfigStore((state) => state.fetchConfig);
   const updateConfigValue = useConfigStore((state) => state.updateConfigValue);
   const clearCache = useConfigStore((state) => state.clearCache);
+  const config = useConfigStore((state) => state.config);
+  const aliasOptions = useMemo(() => collectAllProviderAliases(config), [config]);
 
   const [configs, setConfigs] = useState<GeminiKeyConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -577,7 +581,12 @@ export function AiProvidersGeminiEditPage() {
             'success'
           );
         } else if (result.message) {
-          showNotification(t('ai_providers.openai_test_single_failed'), 'error');
+          showNotification(
+            t('ai_providers.openai_test_single_failed'),
+            'error',
+            undefined,
+            result.message
+          );
         }
         return result.ok;
       } finally {
@@ -1127,6 +1136,41 @@ export function AiProvidersGeminiEditPage() {
                     >
                       {t('ai_providers.gemini_models_fetch_button')}
                     </Button>
+                    <AliasBatchSetter
+                      options={aliasOptions}
+                      disabled={
+                        disableControls || saving || isTestingKeys || !hasConfiguredModels
+                      }
+                      onApply={(alias) => {
+                        const validCount = form.modelEntries.filter((entry) =>
+                          entry.name.trim()
+                        ).length;
+                        if (validCount === 0) {
+                          showNotification(
+                            t('ai_providers.alias_batch_set_empty'),
+                            'warning'
+                          );
+                          return;
+                        }
+                        setForm((prev) => ({
+                          ...prev,
+                          modelEntries: prev.modelEntries.map((entry) => ({
+                            ...entry,
+                            alias,
+                          })),
+                        }));
+                        showNotification(
+                          t('ai_providers.alias_batch_set_done', {
+                            count: validCount,
+                            alias,
+                          }),
+                          'success'
+                        );
+                      }}
+                      className={styles.aliasSetterCluster}
+                      inputClassName={styles.aliasSetterInput}
+                      buttonClassName={styles.aliasSetterButton}
+                    />
                     <div className={styles.modelToolbarTestCluster}>
                       <Select
                         value={testModel}

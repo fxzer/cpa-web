@@ -13,6 +13,8 @@ export interface Notification {
   message: string;
   type: NotificationType;
   duration?: number;
+  // 标题下方的第二行小字描述，用于展示失败原因等较长内容
+  description?: string;
 }
 
 export interface ApiResponse<T = unknown> {

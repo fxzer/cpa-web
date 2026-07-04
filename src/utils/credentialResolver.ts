@@ -256,7 +256,7 @@ export interface ProviderModelColumnDisplay {
   headline: string;
 }
 
-/** 与 AI 提供商配置页分段器 id 对齐 */
+/** 与 AI 供应商配置页分段器 id 对齐 */
 const AI_PROVIDER_CHANNEL_IDS = new Set([
   'openai',
   'gemini',
@@ -285,7 +285,7 @@ const resolveOpenAICompatChannelByName = (
   return '';
 };
 
-/** 请求明细「供应商 / 模型」列上行：tag 对齐 AI 提供商 / 认证文件分段器 channel */
+/** 请求明细「供应商 / 模型」列上行：tag 对齐 AI 供应商 / 认证文件分段器 channel */
 export function resolveProviderModelColumnDisplay(input: {
   usageProvider?: string;
   resolvedCredential?: ConfiguredCredential | null;

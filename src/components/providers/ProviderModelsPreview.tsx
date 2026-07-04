@@ -11,7 +11,7 @@ const DEFAULT_PREVIEW_COUNT = 5;
 
 export type ProviderModelsPreviewProps = {
   models: ProviderModelEntry[];
-  /** 弹窗标题前缀，例如提供商名称 */
+  /** 弹窗标题前缀，例如供应商名称 */
   modalTitle: string;
   /** 可选；与原先卡片内 `modelCountLabel` 一致，例如「模型数量: 12」 */
   countLabel?: string;

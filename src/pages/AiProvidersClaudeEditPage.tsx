@@ -260,9 +260,12 @@ export function AiProvidersClaudeEditPage() {
       const resolvedMessage = isTimeout
         ? t('ai_providers.claude_test_timeout', { seconds: CLAUDE_TEST_TIMEOUT_MS / 1000 })
         : `${t('ai_providers.claude_test_failed')}: ${message || t('common.unknown_error')}`;
+      const failDescription = isTimeout
+        ? t('ai_providers.claude_test_timeout', { seconds: CLAUDE_TEST_TIMEOUT_MS / 1000 })
+        : message || t('common.unknown_error');
       setTestStatus('error');
       setTestMessage(resolvedMessage);
-      showNotification(resolvedMessage, 'error');
+      showNotification(t('ai_providers.claude_test_failed'), 'error', undefined, failDescription);
     } finally {
       setIsTesting(false);
     }

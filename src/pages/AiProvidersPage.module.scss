@@ -2230,7 +2230,7 @@ $provider-status-bar-small-height: 14px;
   }
 }
 
-// 提供商编辑页：大屏双列排布基础字段，减少纵向滚动
+// 供应商编辑页：大屏双列排布基础字段，减少纵向滚动
 .providerEditTopGrid {
   display: flex;
   flex-direction: column;
@@ -2345,10 +2345,12 @@ $provider-status-bar-small-height: 14px;
   flex-wrap: nowrap;
   align-items: center;
   gap: $spacing-xs;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
   justify-content: flex-end;
+  // 与左侧的独立按钮/相邻分组拉开距离，让"输入+按钮"的组合视觉上成组
+  margin-left: $spacing-md;
 
   .openaiTestSelect {
     flex: 0 0 240px;
@@ -2367,6 +2369,38 @@ $provider-status-bar-small-height: 14px;
 
   .modelTestAllButton {
     flex-shrink: 0;
+  }
+}
+
+// 「一键设置别名」组合控件：可输入下拉 + 按钮，布局与 .modelToolbarTestCluster 对齐
+.aliasSetterCluster {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: $spacing-xs;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  justify-content: flex-end;
+  // 与左侧的独立按钮/相邻分组拉开距离，让"输入+按钮"的组合视觉上成组
+  margin-left: $spacing-md;
+
+  .aliasSetterInput {
+    position: relative;
+    flex: 0 0 200px;
+    width: 200px;
+    min-width: 0;
+    box-sizing: border-box;
+
+    @include mobile {
+      flex: 1 1 200px;
+      width: 100%;
+    }
+  }
+
+  .aliasSetterButton {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 }
 

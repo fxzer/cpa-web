@@ -3,7 +3,7 @@
  * 基于原项目 src/modules/oauth.js
  */
 
-// OAuth 提供商类型
+// OAuth 供应商类型
 export type OAuthProvider = 'codex' | 'anthropic' | 'antigravity' | 'gemini-cli' | 'kimi';
 
 // OAuth 流程状态

@@ -40,7 +40,7 @@ export const INTEGER_STRING_PATTERN = /^[+-]?\d+$/;
 export const TRUTHY_TEXT_VALUES = new Set(['true', '1', 'yes', 'y', 'on']);
 export const FALSY_TEXT_VALUES = new Set(['false', '0', 'no', 'n', 'off']);
 
-// 标签类型颜色配置 — 基于各提供商 Logo 品牌色调配，确保彼此不重复
+// 标签类型颜色配置 — 基于各供应商 Logo 品牌色调配，确保彼此不重复
 export const TYPE_COLORS: Record<string, TypeColorSet> = {
   // Qwen logo: 紫罗兰渐变 #6336E7 → #6F69F7
   qwen: {

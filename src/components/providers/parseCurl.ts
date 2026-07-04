@@ -1,5 +1,5 @@
 /**
- * 从 cURL 命令解析出 OpenAI 兼容提供商所需的配置。
+ * 从 cURL 命令解析出 OpenAI 兼容供应商所需的配置。
  * 纯函数，无副作用，便于单测。
  */
 
@@ -12,7 +12,7 @@ export interface ParsedCurl {
   model: string;
   /** token 看起来是占位符（如 <your-api-key>、$ENV_VAR）时为 true，此时 apiKey 为空串 */
   apiKeyIsPlaceholder: boolean;
-  /** 根据 baseUrl host 自动推导的提供商名称；无法推导时为空串 */
+  /** 根据 baseUrl host 自动推导的供应商名称；无法推导时为空串 */
   name: string;
 }
 
@@ -31,7 +31,7 @@ function isIPv4(value: string): boolean {
 }
 
 /**
- * 根据 base URL 的 host 推导提供商名称：
+ * 根据 base URL 的 host 推导供应商名称：
  * - 多级域名（≥3段，且非 IP）：去掉首段（通常是 api/www 等前缀）和末段（TLD），中间用 - 拼接
  *   例：api.babel.town → babel；a.b.deepseek.com → b-deepseek
  * - 兜底：localhost、IP、只有 2 段的域名（如 example.com）→ 直接用 host 本身

@@ -271,7 +271,7 @@ export function MainLayout() {
     };
   }, []);
 
-  // 将主内容区的中心点写入 CSS 变量，供底部浮层（配置面板操作栏、提供商导航）对齐到内容区
+  // 将主内容区的中心点写入 CSS 变量，供底部浮层（配置面板操作栏、供应商导航）对齐到内容区
   useLayoutEffect(() => {
     const updateContentCenter = () => {
       const el = contentRef.current;

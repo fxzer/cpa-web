@@ -9,7 +9,7 @@ import { ModelInputList } from '@/components/ui/ModelInputList';
 import { Select } from '@/components/ui/Select';
 import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
 import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
-import { useNotificationStore } from '@/stores';
+import { useNotificationStore, useConfigStore } from '@/stores';
 import { apiCallApi, getApiCallErrorMessage } from '@/services/api';
 import type { ApiKeyEntry } from '@/types';
 import type { ModelInfo } from '@/utils/models';
@@ -18,6 +18,8 @@ import { buildApiKeyEntry, buildOpenAIChatCompletionsEndpoint } from '@/componen
 import { KeyTestStatusIcon } from '@/components/providers/KeyTestStatusIcon';
 import { UsageExampleModal } from '@/components/providers/UsageExampleModal';
 import { CurlImportModal } from '@/components/providers/CurlImportModal';
+import { AliasBatchSetter } from '@/components/providers/AliasBatchSetter';
+import { collectAllProviderAliases } from '@/utils/providerModelAliasCatalog';
 import type { OpenAIEditOutletContext } from './AiProvidersOpenAIEditLayout';
 import {
   OpenAIBatchModelTestModal,
@@ -73,6 +75,8 @@ export function AiProvidersOpenAIEditPage() {
   const swipeRef = useEdgeSwipeBack({ onBack: handleBack });
   const [isTestingKeys, setIsTestingKeys] = useState(false);
   const [examplesModalOpen, setExamplesModalOpen] = useState(false);
+  const config = useConfigStore((state) => state.config);
+  const aliasOptions = useMemo(() => collectAllProviderAliases(config), [config]);
   const [curlImportOpen, setCurlImportOpen] = useState(false);
   const [batchTestModalOpen, setBatchTestModalOpen] = useState(false);
   const [batchTestKeyIndex, setBatchTestKeyIndex] = useState<number | null>(null);
@@ -420,7 +424,12 @@ export function AiProvidersOpenAIEditPage() {
             'success'
           );
         } else if (result.message) {
-          showNotification(t('ai_providers.openai_test_single_failed'), 'error');
+          showNotification(
+            t('ai_providers.openai_test_single_failed'),
+            'error',
+            undefined,
+            result.message
+          );
         }
         return result.ok;
       } finally {
@@ -527,6 +536,25 @@ export function AiProvidersOpenAIEditPage() {
     }
     requestOpenModelDiscovery();
   };
+
+  const applyAliasToAllModels = useCallback(
+    (alias: string) => {
+      const validEntries = form.modelEntries.filter((entry) => entry.name.trim());
+      if (validEntries.length === 0) {
+        showNotification(t('ai_providers.alias_batch_set_empty'), 'warning');
+        return;
+      }
+      setForm((prev) => ({
+        ...prev,
+        modelEntries: prev.modelEntries.map((entry) => ({ ...entry, alias })),
+      }));
+      showNotification(
+        t('ai_providers.alias_batch_set_done', { count: validEntries.length, alias }),
+        'success'
+      );
+    },
+    [form.modelEntries, setForm, showNotification, t]
+  );
 
   const renderKeyEntries = (entries: ApiKeyEntry[]) => {
     const list = entries.length ? entries : [buildApiKeyEntry()];
@@ -842,6 +870,16 @@ export function AiProvidersOpenAIEditPage() {
                     >
                       {t('ai_providers.openai_models_fetch_button')}
                     </Button>
+                    <AliasBatchSetter
+                      options={aliasOptions}
+                      disabled={
+                        saving || disableControls || isTestingKeys || !hasConfiguredModels
+                      }
+                      onApply={applyAliasToAllModels}
+                      className={styles.aliasSetterCluster}
+                      inputClassName={styles.aliasSetterInput}
+                      buttonClassName={styles.aliasSetterButton}
+                    />
                     <div className={styles.modelToolbarTestCluster}>
                       <Select
                         value={testModel}

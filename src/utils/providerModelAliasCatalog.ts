@@ -27,6 +27,32 @@ const collectAliasesFromModels = (models?: ModelAlias[]): string[] => {
   return result;
 };
 
+/** Collect deduplicated alias names from ALL providers in the config (flattened, not keyed by channel). */
+export function collectAllProviderAliases(config: Config | null | undefined): string[] {
+  if (!config) return [];
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+  const pushAliases = (aliases: string[]) => {
+    aliases.forEach((alias) => {
+      const key = alias.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      result.push(alias);
+    });
+  };
+
+  (config.geminiApiKeys ?? []).forEach((entry) => pushAliases(collectAliasesFromModels(entry.models)));
+  (config.codexApiKeys ?? []).forEach((entry) => pushAliases(collectAliasesFromModels(entry.models)));
+  (config.claudeApiKeys ?? []).forEach((entry) => pushAliases(collectAliasesFromModels(entry.models)));
+  (config.vertexApiKeys ?? []).forEach((entry) => pushAliases(collectAliasesFromModels(entry.models)));
+  (config.openaiCompatibility ?? []).forEach((entry) =>
+    pushAliases(collectAliasesFromModels(entry.models))
+  );
+
+  return result;
+}
+
 const mergeChannelAliases = (
   target: Record<string, string[]>,
   channel: string,
