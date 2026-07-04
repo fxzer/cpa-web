@@ -17,6 +17,7 @@ import { buildHeaderObject, hasHeader } from '@/utils/headers';
 import { buildApiKeyEntry, buildOpenAIChatCompletionsEndpoint } from '@/components/providers/utils';
 import { KeyTestStatusIcon } from '@/components/providers/KeyTestStatusIcon';
 import { UsageExampleModal } from '@/components/providers/UsageExampleModal';
+import { CurlImportModal } from '@/components/providers/CurlImportModal';
 import type { OpenAIEditOutletContext } from './AiProvidersOpenAIEditLayout';
 import {
   OpenAIBatchModelTestModal,
@@ -72,6 +73,7 @@ export function AiProvidersOpenAIEditPage() {
   const swipeRef = useEdgeSwipeBack({ onBack: handleBack });
   const [isTestingKeys, setIsTestingKeys] = useState(false);
   const [examplesModalOpen, setExamplesModalOpen] = useState(false);
+  const [curlImportOpen, setCurlImportOpen] = useState(false);
   const [batchTestModalOpen, setBatchTestModalOpen] = useState(false);
   const [batchTestKeyIndex, setBatchTestKeyIndex] = useState<number | null>(null);
   const [batchModelTestByKey, setBatchModelTestByKey] = useState<
@@ -693,7 +695,16 @@ export function AiProvidersOpenAIEditPage() {
       backLabel={t('common.back')}
       backAriaLabel={t('common.back')}
       hideTopBarBackButton
-      hideTopBarRightAction
+      rightAction={
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setCurlImportOpen(true)}
+          disabled={saving || disableControls || isTestingKeys}
+        >
+          {t('ai_providers.openai_curl_import_button')}
+        </Button>
+      }
       floatingAction={
         <div className={layoutStyles.floatingActions}>
           <Button
@@ -926,6 +937,11 @@ export function AiProvidersOpenAIEditPage() {
             </div>
           )}
         </Card>
+        <CurlImportModal
+          open={curlImportOpen}
+          onClose={() => setCurlImportOpen(false)}
+          setForm={setForm}
+        />
         <OpenAIBatchModelTestModal
           open={batchTestModalOpen}
           onClose={() => {
