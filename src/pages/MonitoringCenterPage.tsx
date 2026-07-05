@@ -30,6 +30,7 @@ import {
 import type { ModelStat } from '@/components/usage/ModelStatsCard';
 import { MonitorStatCards } from '@/components/monitor/MonitorStatCards';
 import { MonitorTrendChart } from '@/components/monitor/MonitorTrendChart';
+import { MonitorTokenBreakdownCard } from '@/components/monitor/MonitorTokenBreakdownCard';
 import { ModelUsageDistributionCard } from '@/components/monitor/ModelUsageDistributionCard';
 import { MonitorApiKeyStatsCard } from '@/components/monitor/MonitorApiKeyStatsCard';
 import {
@@ -214,6 +215,14 @@ export function MonitoringCenterPage() {
         />
         <ModelUsageDistributionCard modelStats={modelStats} loading={loading} isDark={isDark} />
       </div>
+
+      <MonitorTokenBreakdownCard
+        usage={filteredUsage as UsagePayload | null}
+        loading={loading}
+        isDark={isDark}
+        isMobile={isMobile}
+        timeRange={timeRange}
+      />
 
       <div className={styles.middleGrid}>
         {usageStatsDimension === 'model' ? (

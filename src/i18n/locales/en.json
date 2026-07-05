@@ -1592,6 +1592,10 @@
     "credential_stats": "Credential Statistics",
     "credential_name": "Credential",
     "token_breakdown": "Token Type Breakdown",
+    "token_input": "Input",
+    "token_output": "Output",
+    "token_cached": "Cached",
+    "token_reasoning": "Reasoning",
     "request_events_title": "Request Details",
     "request_events_filter_time_range": "Time range",
     "request_events_search_label": "Search",
@@ -1699,7 +1703,8 @@
     "auto_refresh_off": "Off",
     "auto_refresh_custom": "Custom",
     "auto_refresh_custom_seconds": "Custom refresh seconds",
-    "auto_refresh_countdown": "Refreshes in {{count}}s"
+    "auto_refresh_countdown": "Refreshes in {{count}}s",
+    "token_breakdown_title": "Token Breakdown by Type"
   },
   "request_monitoring": {
     "title": "Request Details",

@@ -1592,6 +1592,10 @@
     "credential_stats": "凭证统计",
     "credential_name": "凭证",
     "token_breakdown": "Token 类型分布",
+    "token_input": "输入",
+    "token_output": "输出",
+    "token_cached": "缓存",
+    "token_reasoning": "推理",
     "request_events_title": "请求明细",
     "request_events_filter_time_range": "时间范围",
     "request_events_search_label": "搜索",
@@ -1699,7 +1703,8 @@
     "auto_refresh_off": "关闭",
     "auto_refresh_custom": "自定义",
     "auto_refresh_custom_seconds": "自定义刷新秒数",
-    "auto_refresh_countdown": "{{count}} 秒后自动刷新"
+    "auto_refresh_countdown": "{{count}} 秒后自动刷新",
+    "token_breakdown_title": "Token 类型分解"
   },
   "request_monitoring": {
     "title": "请求明细",
