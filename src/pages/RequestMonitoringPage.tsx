@@ -11,6 +11,8 @@ import { requestEventsApi, MAX_REQUEST_EVENTS_LIMIT } from '@/services/api/reque
 import { useAuthStore, useConfigStore } from '@/stores';
 import { buildUsageSnapshotFromRequestEvents } from '@/utils/requestEvents';
 import { getErrorMessage } from '@/utils/error';
+import { ServiceHealthHeatmapCard } from '@/components/monitor/ServiceHealthHeatmapCard';
+import { useThemeStore } from '@/stores';
 import styles from './RequestMonitoringPage.module.scss';
 
 const AUTO_REFRESH_MS = 10_000;
@@ -20,6 +22,7 @@ export function RequestMonitoringPage() {
   const managementKey = useAuthStore((state) => state.managementKey);
   const config = useConfigStore((state) => state.config);
   const requestLogEnabled = config?.requestLog ?? false;
+  const isDark = useThemeStore((state) => state.resolvedTheme) === 'dark';
   const usageStatisticsEnabled = config?.usageStatisticsEnabled ?? true;
 
   const [usagePayload, setUsagePayload] = useState<unknown>(null);
@@ -182,6 +185,12 @@ export function RequestMonitoringPage() {
           {t('request_monitoring.writer_dropped', { count: writerDropped })}
         </div>
       )}
+
+      <ServiceHealthHeatmapCard
+        usagePayload={usagePayload}
+        loading={loading}
+        isDark={isDark}
+      />
 
       <RequestEventsDetailsCard
         usage={usagePayload}

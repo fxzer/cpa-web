@@ -323,6 +323,103 @@
   }
 }
 
+.healthCard {
+  min-width: 0;
+}
+
+.healthHint {
+  color: var(--text-tertiary);
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+.healthGridWrapper {
+  overflow-x: auto;
+}
+
+.healthGridMeta {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.healthGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.healthGridHeader {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 2px;
+}
+
+.healthGridCorner {
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.healthGridColLabel {
+  width: 18px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.healthGridRow {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.healthGridRowLabel {
+  width: 36px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: right;
+  padding-right: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.healthGridCell {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.75;
+  }
+}
+
+.healthGridLegend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+
+.healthLegendLabel {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.healthLegendSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
 @include mobile {
   .header {
     gap: 12px;

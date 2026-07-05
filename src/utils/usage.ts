@@ -1997,6 +1997,93 @@ export function computeKeyStatsFromDetails(usageDetails: UsageDetail[]): KeyStat
   return { bySource, byAuthIndex };
 }
 
+export interface ServiceHealthCell {
+  success: number;
+  failure: number;
+  rate: number;
+}
+
+export interface ServiceHealthGrid {
+  rows: number;
+  cols: number;
+  cells: ServiceHealthCell[][];
+  labels: string[];
+  totalSuccess: number;
+  totalFailure: number;
+  overallRate: number;
+}
+
+export function buildServiceHealthGrid(usageData: unknown): ServiceHealthGrid {
+  const ROWS = 7;
+  const COLS = 24;
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfWindow = new Date(startOfToday);
+  startOfWindow.setDate(startOfWindow.getDate() - (ROWS - 1));
+
+  const cells: ServiceHealthCell[][] = [];
+  const labels: string[] = [];
+  let totalSuccess = 0;
+  let totalFailure = 0;
+
+  for (let row = 0; row < ROWS; row++) {
+    const day = new Date(startOfWindow);
+    day.setDate(day.getDate() + row);
+    labels.push(formatDayLabel(day));
+    const hourCells: ServiceHealthCell[] = [];
+    for (let col = 0; col < COLS; col++) {
+      hourCells.push({ success: 0, failure: 0, rate: -1 });
+    }
+    cells.push(hourCells);
+  }
+
+  const details = collectUsageDetails(usageData);
+  details.forEach((detail) => {
+    const timestamp =
+      typeof detail.__timestampMs === 'number'
+        ? detail.__timestampMs
+        : parseTimestampMs(detail.timestamp);
+    if (!Number.isFinite(timestamp) || timestamp <= 0) return;
+    const d = new Date(timestamp);
+    const dayStart = new Date(d);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayMs = dayStart.getTime();
+    const windowStartMs = startOfWindow.getTime();
+    const rowIndex = Math.floor((dayMs - windowStartMs) / (24 * 60 * 60 * 1000));
+    if (rowIndex < 0 || rowIndex >= ROWS) return;
+    const hour = d.getHours();
+    if (hour < 0 || hour >= COLS) return;
+    const cell = cells[rowIndex][hour];
+    if (detail.failed) {
+      cell.failure += 1;
+      totalFailure += 1;
+    } else {
+      cell.success += 1;
+      totalSuccess += 1;
+    }
+  });
+
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      const cell = cells[row][col];
+      const total = cell.success + cell.failure;
+      cell.rate = total > 0 ? cell.success / total : -1;
+    }
+  }
+
+  const overallTotal = totalSuccess + totalFailure;
+  return {
+    rows: ROWS,
+    cols: COLS,
+    cells,
+    labels,
+    totalSuccess,
+    totalFailure,
+    overallRate: overallTotal > 0 ? totalSuccess / overallTotal : -1,
+  };
+}
+
 export type TokenCategory = 'input' | 'output' | 'cached' | 'reasoning';
 
 export interface TokenBreakdownSeries {
