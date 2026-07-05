@@ -1723,6 +1723,7 @@
     "settings": "Settings",
     "service_status": "Collector",
     "service_health_title": "7-Day Service Health",
+    "service_health_btn": "Health",
     "collector_checking": "Checking",
     "collector_offline": "Offline",
     "collector_running": "Running",

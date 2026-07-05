@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Modal } from '@/components/ui/Modal';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { RequestEventsDetailsCard, type RequestEventsFilteredStats } from '@/components/usage';
 import usageStyles from '@/pages/UsagePage.module.scss';
@@ -32,6 +33,7 @@ export function RequestMonitoringPage() {
   const [error, setError] = useState('');
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useLocalStorage('requestMonitoringPage.autoRefresh', false);
+  const [healthModalOpen, setHealthModalOpen] = useState(false);
   const [filteredStats, setFilteredStats] = useState<RequestEventsFilteredStats>({
     count: 0,
     successRate: null,
@@ -155,6 +157,9 @@ export function RequestMonitoringPage() {
           <Button variant="secondary" size="sm" loading={loading} onClick={() => void loadData()}>
             {t('common.refresh')}
           </Button>
+          <Button variant="secondary" size="sm" onClick={() => setHealthModalOpen(true)}>
+            {t('request_monitoring.service_health_btn')}
+          </Button>
           <Button
             variant="secondary"
             size="sm"
@@ -186,11 +191,18 @@ export function RequestMonitoringPage() {
         </div>
       )}
 
-      <ServiceHealthHeatmapCard
-        usagePayload={usagePayload}
-        loading={loading}
-        isDark={isDark}
-      />
+      <Modal
+        open={healthModalOpen}
+        onClose={() => setHealthModalOpen(false)}
+        title={t('request_monitoring.service_health_title')}
+        width={820}
+      >
+        <ServiceHealthHeatmapCard
+          usagePayload={usagePayload}
+          loading={loading}
+          isDark={isDark}
+        />
+      </Modal>
 
       <RequestEventsDetailsCard
         usage={usagePayload}

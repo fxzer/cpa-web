@@ -1723,6 +1723,7 @@
     "settings": "设置",
     "service_status": "采集状态",
     "service_health_title": "7天服务健康度",
+    "service_health_btn": "健康度",
     "collector_checking": "检查中",
     "collector_offline": "未连接",
     "collector_running": "运行中",

@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/Card';
 import {
   buildServiceHealthGrid,
   formatCompactNumber,
@@ -50,7 +49,7 @@ export function ServiceHealthHeatmapCard({
   }, [grid]);
 
   return (
-    <Card title={t('request_monitoring.service_health_title')} className={styles.healthCard}>
+    <div className={styles.healthCard}>
       {loading ? (
         <div className={styles.healthHint}>{t('common.loading')}</div>
       ) : grid ? (
@@ -122,6 +121,6 @@ export function ServiceHealthHeatmapCard({
       ) : (
         <div className={styles.healthHint}>{t('usage_stats.no_data')}</div>
       )}
-    </Card>
+    </div>
   );
 }
