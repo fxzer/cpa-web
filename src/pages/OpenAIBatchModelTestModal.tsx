@@ -163,11 +163,13 @@ export function OpenAIBatchModelTestModal({
   useEffect(() => {
     if (!open) return;
     if (loading) return;
+    // 等待 selectedKeyIndex 从 keyIndex prop 同步完成，避免初始 null 发一次、同步后又发一次
+    if (keyIndex !== null && selectedKeyIndex === null) return;
     setModels([]);
     setSearch('');
     setSelected(new Set());
     void fetchModels();
-  }, [open, loading, selectedKeyIndex, fetchModels]);
+  }, [open, loading, selectedKeyIndex, keyIndex, fetchModels]);
 
   useEffect(() => {
     if (!open) return;
