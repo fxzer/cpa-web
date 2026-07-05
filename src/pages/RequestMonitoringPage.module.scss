@@ -359,12 +359,13 @@
 }
 
 .healthGridCorner {
-  width: 36px;
+  width: 70px;
   flex-shrink: 0;
+  margin-right: 12px;
 }
 
 .healthGridColLabel {
-  width: 18px;
+  width: 24px;
   flex-shrink: 0;
   text-align: center;
   font-size: 10px;
@@ -379,19 +380,21 @@
 }
 
 .healthGridRowLabel {
-  width: 36px;
+  width: 70px;
   flex-shrink: 0;
   font-size: 11px;
   color: var(--text-secondary);
   text-align: right;
-  padding-right: 4px;
+  padding-right: 0;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  margin-right: 12px;
 }
 
 .healthGridCell {
-  width: 18px;
-  height: 18px;
-  border-radius: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
   flex-shrink: 0;
   cursor: pointer;
   transition: opacity 0.15s;

@@ -34,6 +34,15 @@ export function RequestMonitoringPage() {
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useLocalStorage('requestMonitoringPage.autoRefresh', false);
   const [healthModalOpen, setHealthModalOpen] = useState(false);
+  const [healthSnapshot, setHealthSnapshot] = useState<{
+    usagePayload: unknown;
+    loading: boolean;
+  }>({ usagePayload: null, loading: false });
+
+  const openHealthModal = useCallback(() => {
+    setHealthSnapshot({ usagePayload, loading });
+    setHealthModalOpen(true);
+  }, [usagePayload, loading]);
   const [filteredStats, setFilteredStats] = useState<RequestEventsFilteredStats>({
     count: 0,
     successRate: null,
@@ -157,7 +166,7 @@ export function RequestMonitoringPage() {
           <Button variant="secondary" size="sm" loading={loading} onClick={() => void loadData()}>
             {t('common.refresh')}
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => setHealthModalOpen(true)}>
+          <Button variant="secondary" size="sm" onClick={openHealthModal}>
             {t('request_monitoring.service_health_btn')}
           </Button>
           <Button
@@ -198,8 +207,8 @@ export function RequestMonitoringPage() {
         width={820}
       >
         <ServiceHealthHeatmapCard
-          usagePayload={usagePayload}
-          loading={loading}
+          usagePayload={healthSnapshot.usagePayload}
+          loading={healthSnapshot.loading}
           isDark={isDark}
         />
       </Modal>
