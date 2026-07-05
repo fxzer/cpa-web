@@ -68,6 +68,16 @@ const trimDailySeriesToRecentDays = (
   };
 };
 
+const BUCKET_TO_RATE: Record<string, number> = {
+  hourly: 1 / 60,
+  daily: 1 / 1440,
+};
+
+const getBucketType = (timeRange: UsageTimeRange): 'hourly' | 'daily' => {
+  if (timeRange === '7h' || timeRange === '24h') return 'hourly';
+  return 'daily';
+};
+
 export function useSparklines({
   usage,
   loading,
@@ -138,6 +148,18 @@ export function useSparklines({
     return series;
   }, [modelPrices, timeRange, usage]);
 
+  const rateMultiplier = BUCKET_TO_RATE[getBucketType(timeRange)];
+
+  const rpmData = useMemo(
+    () => requestsAndTokensSeries.requests.map((r) => r * rateMultiplier),
+    [rateMultiplier, requestsAndTokensSeries.requests]
+  );
+
+  const tpmData = useMemo(
+    () => requestsAndTokensSeries.tokens.map((t) => t * rateMultiplier),
+    [rateMultiplier, requestsAndTokensSeries.tokens]
+  );
+
   const buildSparkline = useCallback(
     (
       series: { labels: string[]; data: number[] },
@@ -190,21 +212,21 @@ export function useSparklines({
   const rpmSparkline = useMemo(
     () =>
       buildSparkline(
-        { labels: requestsAndTokensSeries.labels, data: requestsAndTokensSeries.requests },
+        { labels: requestsAndTokensSeries.labels, data: rpmData },
         '#22c55e',
         'rgba(34, 197, 94, 0.18)'
       ),
-    [buildSparkline, requestsAndTokensSeries.labels, requestsAndTokensSeries.requests]
+    [buildSparkline, requestsAndTokensSeries.labels, rpmData]
   );
 
   const tpmSparkline = useMemo(
     () =>
       buildSparkline(
-        { labels: requestsAndTokensSeries.labels, data: requestsAndTokensSeries.tokens },
+        { labels: requestsAndTokensSeries.labels, data: tpmData },
         '#f97316',
         'rgba(249, 115, 22, 0.18)'
       ),
-    [buildSparkline, requestsAndTokensSeries.labels, requestsAndTokensSeries.tokens]
+    [buildSparkline, requestsAndTokensSeries.labels, tpmData]
   );
 
   const costSparkline = useMemo(
