@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { apiCallApi, getApiCallErrorMessage } from '@/services/api';
-import { modelsApi } from '@/services/api';
+import { apiCallApi, getApiCallErrorMessage, modelsApi } from '@/services/api';
 import type { ModelInfo } from '@/utils/models';
 import { buildHeaderObject, hasHeader } from '@/utils/headers';
-import {
-  buildOpenAIModelsEndpoint,
-  buildOpenAIChatCompletionsEndpoint,
-} from '@/components/providers/utils';
-import type { OpenAIFormState } from '@/components/providers/types';
+import { buildOpenAIChatCompletionsEndpoint } from '@/components/providers/utils';
+import type { ProviderFormState } from '@/components/providers/types';
 import {
   BatchModelTestModalShell,
   type BatchModelTestProgress,
@@ -16,9 +12,9 @@ import {
 } from './BatchModelTestModalShell';
 import { buildBatchModelTestFailure, runBatchModelTestsConcurrent } from './batchModelTestConcurrent';
 
-const OPENAI_TEST_TIMEOUT_MS = 30_000;
+const CODEX_TEST_TIMEOUT_MS = 30_000;
 
-export type OpenAIBatchModelTestRowResult = BatchModelTestRowResult;
+export type CodexBatchModelTestRowResult = BatchModelTestRowResult;
 
 const getErrorMessage = (err: unknown) => {
   if (err instanceof Error) return err.message;
@@ -26,27 +22,27 @@ const getErrorMessage = (err: unknown) => {
   return '';
 };
 
-export type OpenAIBatchModelTestModalProps = {
+export type CodexBatchModelTestModalProps = {
   open: boolean;
   onClose: () => void;
   keyIndex: number | null;
   loading: boolean;
   saving: boolean;
   disableControls: boolean;
-  form: OpenAIFormState;
+  form: ProviderFormState;
   entryPoint: 'discovery' | 'batch-test';
   onBatchComplete: (payload: {
     keyIndex: number;
-    results: Record<string, OpenAIBatchModelTestRowResult>;
+    results: Record<string, CodexBatchModelTestRowResult>;
   }) => void;
   onAddAvailableModels: (payload: {
     keyIndex: number;
-    results: Record<string, OpenAIBatchModelTestRowResult>;
+    results: Record<string, CodexBatchModelTestRowResult>;
     models: ModelInfo[];
   }) => void;
 };
 
-export function OpenAIBatchModelTestModal({
+export function CodexBatchModelTestModal({
   open,
   onClose,
   keyIndex,
@@ -57,7 +53,7 @@ export function OpenAIBatchModelTestModal({
   entryPoint = 'batch-test',
   onBatchComplete,
   onAddAvailableModels,
-}: OpenAIBatchModelTestModalProps) {
+}: CodexBatchModelTestModalProps) {
   const { t } = useTranslation();
   const [endpoint, setEndpoint] = useState('');
   const [models, setModels] = useState<ModelInfo[]>([]);
@@ -67,13 +63,9 @@ export function OpenAIBatchModelTestModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [testing, setTesting] = useState(false);
   const [testProgress, setTestProgress] = useState<BatchModelTestProgress>(null);
-  const [testResults, setTestResults] = useState<Record<string, OpenAIBatchModelTestRowResult>>(
-    {}
-  );
-  // 弹窗内部维护当前选中的 key 索引（初始用父组件传入的 keyIndex）
+  const [testResults, setTestResults] = useState<Record<string, CodexBatchModelTestRowResult>>({});
   const [selectedKeyIndex, setSelectedKeyIndex] = useState<number | null>(keyIndex);
 
-  // 同步外部 keyIndex 变化（首次打开或换入口）
   useEffect(() => {
     setSelectedKeyIndex(keyIndex);
   }, [keyIndex]);
@@ -81,7 +73,6 @@ export function OpenAIBatchModelTestModal({
   const rowKey =
     selectedKeyIndex !== null ? form.apiKeyEntries[selectedKeyIndex]?.apiKey?.trim() : '';
 
-  // 构造 key 下拉选项：仅含有 apiKey 的条目，label 显示「密钥N: 掩码 (备注)」
   const keyOptions = useMemo(() => {
     const options: { value: string; label: string }[] = [];
     form.apiKeyEntries.forEach((entry, idx) => {
@@ -99,23 +90,19 @@ export function OpenAIBatchModelTestModal({
 
   const selectedKey = selectedKeyIndex !== null ? String(selectedKeyIndex) : '';
 
-  const handleKeyChange = useCallback(
-    (value: string) => {
-      const nextIdx = Number(value);
-      if (!Number.isFinite(nextIdx)) return;
-      setSelectedKeyIndex(nextIdx);
-      // 切换 key → 重置测试结果与选中，触发重新拉取
-      setSelected(new Set());
-      setTestResults({});
-      setTestProgress(null);
-      setError('');
-    },
-    []
-  );
+  const handleKeyChange = useCallback((value: string) => {
+    const nextIdx = Number(value);
+    if (!Number.isFinite(nextIdx)) return;
+    setSelectedKeyIndex(nextIdx);
+    setSelected(new Set());
+    setTestResults({});
+    setTestProgress(null);
+    setError('');
+  }, []);
 
   const fetchModels = useCallback(
     async ({ allowFallback = true }: { allowFallback?: boolean } = {}) => {
-      const trimmedBaseUrl = form.baseUrl.trim();
+      const trimmedBaseUrl = form.baseUrl?.trim() ?? '';
       if (!trimmedBaseUrl) return;
 
       setFetching(true);
@@ -124,7 +111,7 @@ export function OpenAIBatchModelTestModal({
         const headerObject = buildHeaderObject(form.headers);
         const bearerKey = rowKey;
         const hasAuthHeader = hasHeader(headerObject, 'authorization');
-        const list = await modelsApi.fetchModelsViaApiCall(
+        const list = await modelsApi.fetchV1ModelsViaApiCall(
           trimmedBaseUrl,
           hasAuthHeader ? undefined : bearerKey || undefined,
           headerObject
@@ -133,17 +120,17 @@ export function OpenAIBatchModelTestModal({
       } catch (err: unknown) {
         if (allowFallback && rowKey) {
           try {
-            const list = await modelsApi.fetchModelsViaApiCall(trimmedBaseUrl);
+            const list = await modelsApi.fetchV1ModelsViaApiCall(trimmedBaseUrl);
             setModels(list);
             return;
           } catch (fallbackErr: unknown) {
             const message = getErrorMessage(fallbackErr) || getErrorMessage(err);
             setModels([]);
-            setError(`${t('ai_providers.openai_models_fetch_error')}: ${message}`);
+            setError(`${t('ai_providers.codex_models_fetch_error')}: ${message}`);
           }
         } else {
           setModels([]);
-          setError(`${t('ai_providers.openai_models_fetch_error')}: ${getErrorMessage(err)}`);
+          setError(`${t('ai_providers.codex_models_fetch_error')}: ${getErrorMessage(err)}`);
         }
       } finally {
         setFetching(false);
@@ -154,7 +141,8 @@ export function OpenAIBatchModelTestModal({
 
   useEffect(() => {
     if (!open) return;
-    setEndpoint(buildOpenAIModelsEndpoint(form.baseUrl));
+    const baseUrl = form.baseUrl?.trim() ?? '';
+    setEndpoint(baseUrl ? modelsApi.buildV1ModelsEndpoint(baseUrl) : '');
     setError('');
     setTestProgress(null);
     setTestResults({});
@@ -235,7 +223,7 @@ export function OpenAIBatchModelTestModal({
     if (selectedKeyIndex === null || !rowKey) {
       return;
     }
-    const baseUrl = form.baseUrl.trim();
+    const baseUrl = form.baseUrl?.trim() ?? '';
     const chatEndpoint = buildOpenAIChatCompletionsEndpoint(baseUrl);
     if (!chatEndpoint) {
       setError(t('notification.openai_test_url_required'));
@@ -282,7 +270,7 @@ export function OpenAIBatchModelTestModal({
                   max_tokens: 5,
                 }),
               },
-              { timeout: OPENAI_TEST_TIMEOUT_MS }
+              { timeout: CODEX_TEST_TIMEOUT_MS }
             );
 
             const ok = result.statusCode >= 200 && result.statusCode < 300;
@@ -292,7 +280,7 @@ export function OpenAIBatchModelTestModal({
               message: ok ? '' : getApiCallErrorMessage(result),
             };
           } catch (err: unknown) {
-            return buildBatchModelTestFailure(err, OPENAI_TEST_TIMEOUT_MS, (seconds) =>
+            return buildBatchModelTestFailure(err, CODEX_TEST_TIMEOUT_MS, (seconds) =>
               t('ai_providers.openai_test_timeout', { seconds })
             );
           }
@@ -320,7 +308,7 @@ export function OpenAIBatchModelTestModal({
     );
     if (selectedAvailable.length === 0) return;
 
-    const selectedResults: Record<string, OpenAIBatchModelTestRowResult> = {};
+    const selectedResults: Record<string, CodexBatchModelTestRowResult> = {};
     selectedAvailable.forEach((m) => {
       selectedResults[m.name] = testResults[m.name];
     });
@@ -354,16 +342,16 @@ export function OpenAIBatchModelTestModal({
       onClose={onClose}
       keyIndex={selectedKeyIndex}
       entryPoint={entryPoint}
-      hint={t('ai_providers.openai_batch_model_test_hint')}
+      hint={t('ai_providers.codex_batch_model_test_hint')}
       modelCount={models.length}
       endpoint={endpoint}
-      endpointLabel={t('ai_providers.openai_models_fetch_url_label')}
-      refreshLabel={t('ai_providers.openai_models_fetch_refresh')}
+      endpointLabel={t('ai_providers.codex_models_fetch_url_label')}
+      refreshLabel={t('ai_providers.codex_models_fetch_refresh')}
       onRefresh={() => void fetchModels({ allowFallback: true })}
       fetching={fetching}
-      fetchingLoadingText={t('ai_providers.openai_models_fetch_loading')}
-      fetchingEmptyText={t('ai_providers.openai_models_fetch_empty')}
-      searchEmptyText={t('ai_providers.openai_models_search_empty')}
+      fetchingLoadingText={t('ai_providers.codex_models_fetch_loading')}
+      fetchingEmptyText={t('ai_providers.codex_models_fetch_empty')}
+      searchEmptyText={t('ai_providers.codex_models_search_empty')}
       error={error}
       search={search}
       onSearchChange={setSearch}

@@ -12,13 +12,12 @@ import {
 } from '@/stores';
 import { entriesToModels, modelsToEntries } from '@/components/ui/modelInputListUtils';
 import type { ApiKeyEntry, OpenAIProviderConfig } from '@/types';
-import type { ModelInfo } from '@/utils/models';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
 import { areKeyValueEntriesEqual, areModelEntriesEqual } from '@/utils/compare';
 import { buildApiKeyEntry } from '@/components/providers/utils';
 import type { ModelEntry, OpenAIFormState } from '@/components/providers/types';
 import type { KeyTestStatus, OpenAIEditBaseline } from '@/stores/useOpenAIEditDraftStore';
-import { OpenAIModelDiscoveryModal } from './OpenAIModelDiscoveryModal';
+
 
 type LocationState = { fromAiProviders?: boolean } | null;
 
@@ -44,8 +43,6 @@ export type OpenAIEditOutletContext = {
   availableModels: string[];
   handleBack: () => void;
   handleSave: () => Promise<void>;
-  mergeDiscoveredModels: (selectedModels: ModelInfo[]) => void;
-  requestOpenModelDiscovery: () => void;
 };
 
 const buildEmptyForm = (): OpenAIFormState => ({
@@ -167,8 +164,6 @@ export function AiProvidersOpenAIEditLayout() {
   );
   const [loading, setLoading] = useState(() => !isCacheValid('openai-compatibility'));
   const [saving, setSaving] = useState(false);
-  const [modelDiscoveryOpen, setModelDiscoveryOpen] = useState(false);
-
   const draftKey = useMemo(() => {
     if (invalidIndexParam) return `openai:invalid:${params.index ?? 'unknown'}`;
     if (editIndex === null) return 'openai:new';
@@ -366,47 +361,6 @@ export function AiProvidersOpenAIEditLayout() {
     }
   }, [availableModels, loading, setTestMessage, setTestModel, setTestStatus, testModel]);
 
-  const mergeDiscoveredModels = useCallback(
-    (selectedModels: ModelInfo[]) => {
-      if (!selectedModels.length) return;
-
-      let addedCount = 0;
-      setForm((prev) => {
-        const mergedMap = new Map<string, ModelEntry>();
-        prev.modelEntries.forEach((entry) => {
-          const name = entry.name.trim();
-          if (!name) return;
-          mergedMap.set(name, { ...entry, name, alias: entry.alias?.trim() || '' });
-        });
-
-        selectedModels.forEach((model) => {
-          const name = model.name.trim();
-          if (!name || mergedMap.has(name)) return;
-          mergedMap.set(name, { name, alias: model.alias ?? '' });
-          addedCount += 1;
-        });
-
-        const mergedEntries = Array.from(mergedMap.values());
-        return {
-          ...prev,
-          modelEntries: mergedEntries.length ? mergedEntries : [{ name: '', alias: '' }],
-        };
-      });
-
-      if (addedCount > 0) {
-        showNotification(
-          t('ai_providers.openai_models_fetch_added', { count: addedCount }),
-          'success'
-        );
-      }
-    },
-    [setForm, showNotification, t]
-  );
-
-  const requestOpenModelDiscovery = useCallback(() => {
-    setModelDiscoveryOpen(true);
-  }, []);
-
   const resolvedLoading = !draft?.initialized;
   const baseline = draft?.baseline ?? null;
   const normalizedHeaders = useMemo(() => normalizeHeaderEntries(form.headers), [form.headers]);
@@ -576,19 +530,8 @@ export function AiProvidersOpenAIEditLayout() {
             availableModels,
             handleBack,
             handleSave,
-            mergeDiscoveredModels,
-            requestOpenModelDiscovery,
           } satisfies OpenAIEditOutletContext
         }
-      />
-      <OpenAIModelDiscoveryModal
-        open={modelDiscoveryOpen}
-        onClose={() => setModelDiscoveryOpen(false)}
-        loading={resolvedLoading}
-        saving={saving}
-        disableControls={disableControls}
-        form={form}
-        mergeDiscoveredModels={mergeDiscoveredModels}
       />
     </Fragment>
   );

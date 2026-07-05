@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { Select } from '@/components/ui/Select';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { classifyModelsByMode, type ModelGroupingMode, type ModelInfo } from '@/utils/models';
 import styles from './AiProvidersPage.module.scss';
@@ -22,8 +23,9 @@ export type BatchModelTestProgress = {
 export type BatchModelTestModalShellProps = {
   open: boolean;
   onClose: () => void;
-  keyIndex: number;
+  keyIndex: number | null;
   hint: string;
+  entryPoint: 'discovery' | 'batch-test';
   modelCount: number;
   endpoint: string;
   endpointLabel: string;
@@ -52,6 +54,10 @@ export type BatchModelTestModalShellProps = {
   onAddAvailableModels: () => void;
   canRun: boolean;
   canAddAvailable: boolean;
+  // API 密钥下拉选择（用于切换"拉取列表 + 测试"所用的 key）
+  keyOptions: { value: string; label: string }[];
+  selectedKey: string;
+  onKeyChange: (value: string) => void;
 };
 
 function BatchModelTestModalTitleBlock({
@@ -59,11 +65,13 @@ function BatchModelTestModalTitleBlock({
   modelCount,
   hint,
   testProgress,
+  entryPoint,
 }: {
-  keyIndex: number;
+  keyIndex: number | null;
   modelCount: number;
   hint: string;
   testProgress: BatchModelTestProgress;
+  entryPoint: 'discovery' | 'batch-test';
 }) {
   const { t } = useTranslation();
   const hintContent = testProgress
@@ -77,10 +85,19 @@ function BatchModelTestModalTitleBlock({
   return (
     <div className={styles.batchModelTestModalHeader}>
       <div className={styles.batchModelTestModalTitle}>
-        {t('ai_providers.openai_batch_model_test_title_with_count', {
-          index: keyIndex + 1,
-          count: modelCount,
-        })}
+        {entryPoint === 'discovery'
+          ? (keyIndex !== null
+              ? t('ai_providers.openai_models_fetch_title_with_count', {
+                  index: keyIndex + 1,
+                  count: modelCount,
+                })
+              : t('ai_providers.openai_models_fetch_title'))
+          : (keyIndex !== null
+              ? t('ai_providers.openai_batch_model_test_title_with_count', {
+                  index: keyIndex + 1,
+                  count: modelCount,
+                })
+              : t('ai_providers.openai_models_fetch_title'))}
       </div>
       <div
         className={`${styles.batchModelTestModalHint} ${
@@ -470,6 +487,10 @@ export function BatchModelTestModalShell({
   onAddAvailableModels,
   canRun,
   canAddAvailable,
+  keyOptions,
+  selectedKey,
+  onKeyChange,
+  entryPoint = 'batch-test',
 }: BatchModelTestModalShellProps) {
   const { t } = useTranslation();
 
@@ -502,6 +523,7 @@ export function BatchModelTestModalShell({
           modelCount={modelCount}
           hint={hint}
           testProgress={testProgress}
+          entryPoint={entryPoint}
         />
       }
       width="96vw"
@@ -514,18 +536,28 @@ export function BatchModelTestModalShell({
             <Button variant="secondary" size="sm" onClick={onClose} disabled={fetching || testing}>
               {t('common.cancel')}
             </Button>
+            <Select
+              value={selectedKey}
+              options={keyOptions}
+              onChange={onKeyChange}
+              placeholder={t('ai_providers.batch_model_key_select_placeholder')}
+              className={styles.batchModelTestKeySelect}
+              ariaLabel={t('ai_providers.batch_model_key_select_label')}
+              disabled={disableControls || saving || fetching || testing || keyOptions.length === 0}
+            />
             <Button
               variant="secondary"
               size="sm"
-              onClick={onAddAvailableModels}
-              disabled={!canAddAvailable}
+              onClick={onRunBatchTests}
+              disabled={!canRun}
+              loading={testing}
             >
+              {t('ai_providers.openai_batch_model_test_run')}
+            </Button>
+            <Button size="sm" onClick={onAddAvailableModels} disabled={!canAddAvailable}>
               {selectedAvailableCount > 0
                 ? t('ai_providers.openai_batch_model_add_selected', { count: selectedAvailableCount })
                 : t('ai_providers.openai_batch_model_add_available')}
-            </Button>
-            <Button size="sm" onClick={onRunBatchTests} disabled={!canRun} loading={testing}>
-              {t('ai_providers.openai_batch_model_test_run')}
             </Button>
           </div>
         </div>

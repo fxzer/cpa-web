@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useLocation, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -65,8 +65,16 @@ export function AiProvidersOpenAIEditPage() {
     availableModels,
     handleBack,
     handleSave,
-    requestOpenModelDiscovery,
   } = useOutletContext<OpenAIEditOutletContext>();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state && (location.state as Record<string, unknown>).openModelDiscovery) {
+      openOpenaiModelDiscovery();
+      window.history.replaceState({}, '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const title = hasIndexParam
     ? t('ai_providers.openai_edit_modal_title')
@@ -80,6 +88,7 @@ export function AiProvidersOpenAIEditPage() {
   const [curlImportOpen, setCurlImportOpen] = useState(false);
   const [batchTestModalOpen, setBatchTestModalOpen] = useState(false);
   const [batchTestKeyIndex, setBatchTestKeyIndex] = useState<number | null>(null);
+  const [batchTestEntryPoint, setBatchTestEntryPoint] = useState<'discovery' | 'batch-test'>('batch-test');
   const [batchModelTestByKey, setBatchModelTestByKey] = useState<
     Record<number, Record<string, OpenAIBatchModelTestRowResult>>
   >({});
@@ -261,6 +270,7 @@ export function AiProvidersOpenAIEditPage() {
         return;
       }
       setBatchTestKeyIndex(keyIdx);
+      setBatchTestEntryPoint('batch-test');
       setBatchTestModalOpen(true);
     },
     [form.apiKeyEntries, form.baseUrl, showNotification, t]
@@ -534,7 +544,11 @@ export function AiProvidersOpenAIEditPage() {
       showNotification(t('ai_providers.openai_models_fetch_invalid_url'), 'error');
       return;
     }
-    requestOpenModelDiscovery();
+    // 合并入口：「获取模型」复用批量测试弹窗（带 key 选择 + 测试 + 添加可用）
+    const firstValidKeyIdx = form.apiKeyEntries.findIndex((entry) => entry.apiKey?.trim());
+    setBatchTestKeyIndex(firstValidKeyIdx !== -1 ? firstValidKeyIdx : null);
+    setBatchTestEntryPoint('discovery');
+    setBatchTestModalOpen(true);
   };
 
   const applyAliasToAllModels = useCallback(
@@ -991,6 +1005,7 @@ export function AiProvidersOpenAIEditPage() {
           saving={saving}
           disableControls={disableControls}
           form={form}
+          entryPoint={batchTestEntryPoint}
           onBatchComplete={handleBatchTestComplete}
           onAddAvailableModels={handleAddBatchAvailableModels}
         />

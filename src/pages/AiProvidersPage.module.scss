@@ -1885,6 +1885,12 @@ $openai-toolbar-control-height: 36px;
   flex-wrap: wrap;
   flex-shrink: 0;
   margin-left: auto;
+
+  .batchModelTestKeySelect {
+    flex: 0 0 200px;
+    min-width: 200px;
+    @include mobile { flex: 1 1 100%; }
+  }
 }
 
 .batchModelTestFooterStatus {
@@ -2391,6 +2397,12 @@ $provider-status-bar-small-height: 14px;
     width: 200px;
     min-width: 0;
     box-sizing: border-box;
+
+    :global(.input) {
+      height: 40px;
+      padding: 0 12px;
+      box-sizing: border-box;
+    }
 
     @include mobile {
       flex: 1 1 200px;

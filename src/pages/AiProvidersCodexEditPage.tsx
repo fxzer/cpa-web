@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
@@ -6,13 +6,11 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { HeaderInputList } from '@/components/ui/HeaderInputList';
 import { ModelInputList } from '@/components/ui/ModelInputList';
-import { Modal } from '@/components/ui/Modal';
-import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
-import { modelsApi, providersApi } from '@/services/api';
+import { providersApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import type { ProviderKeyConfig } from '@/types';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
@@ -34,6 +32,10 @@ import {
 } from '@/components/providers/utils';
 import type { ModelEntry, ProviderFormState } from '@/components/providers';
 import type { ModelInfo } from '@/utils/models';
+import {
+  CodexBatchModelTestModal,
+  type CodexBatchModelTestRowResult,
+} from './CodexBatchModelTestModal';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
 import styles from './AiProvidersPage.module.scss';
 
@@ -57,12 +59,6 @@ const parseIndexParam = (value: string | undefined) => {
   if (!value) return null;
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : null;
-};
-
-const getErrorMessage = (err: unknown) => {
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
-  return '';
 };
 
 const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) =>
@@ -125,15 +121,21 @@ export function AiProvidersCodexEditPage() {
   const [form, setForm] = useState<ProviderFormState>(() => buildEmptyForm());
   const [baseline, setBaseline] = useState(() => buildCodexBaseline(buildEmptyForm()));
 
-  const [modelDiscoveryOpen, setModelDiscoveryOpen] = useState(false);
-  const [modelDiscoveryEndpoint, setModelDiscoveryEndpoint] = useState('');
-  const [discoveredModels, setDiscoveredModels] = useState<ModelInfo[]>([]);
-  const [modelDiscoveryFetching, setModelDiscoveryFetching] = useState(false);
-  const [modelDiscoveryError, setModelDiscoveryError] = useState('');
-  const [modelDiscoverySearch, setModelDiscoverySearch] = useState('');
-  const [modelDiscoverySelected, setModelDiscoverySelected] = useState<Set<string>>(new Set());
-  const autoFetchSignatureRef = useRef<string>('');
-  const modelDiscoveryRequestIdRef = useRef(0);
+  const [batchTestModalOpen, setBatchTestModalOpen] = useState(false);
+  const [batchTestKeyIndex, setBatchTestKeyIndex] = useState<number | null>(null);
+  const [batchTestEntryPoint, setBatchTestEntryPoint] = useState<'discovery' | 'batch-test'>('batch-test');
+
+  const openCodexModelDiscovery = () => {
+    const baseUrl = (form.baseUrl ?? '').trim();
+    if (!baseUrl) {
+      showNotification(t('ai_providers.codex_models_fetch_invalid_url'), 'error');
+      return;
+    }
+    const firstValidKeyIdx = form.apiKeyEntries.findIndex((entry) => entry.apiKey?.trim());
+    setBatchTestKeyIndex(firstValidKeyIdx !== -1 ? firstValidKeyIdx : null);
+    setBatchTestEntryPoint('discovery');
+    setBatchTestModalOpen(true);
+  };
 
   const hasIndexParam = typeof params.index === 'string';
   const editIndex = useMemo(() => parseIndexParam(params.index), [params.index]);
@@ -281,32 +283,19 @@ export function AiProvidersCodexEditPage() {
 
   const canSave = !disableControls && !saving && !loading && !invalidIndexParam && !invalidIndex;
 
-  const discoveredModelsFiltered = useMemo(() => {
-    const filter = modelDiscoverySearch.trim().toLowerCase();
-    if (!filter) return discoveredModels;
-    return discoveredModels.filter((model) => {
-      const name = (model.name || '').toLowerCase();
-      const alias = (model.alias || '').toLowerCase();
-      const description = (model.description || '').toLowerCase();
-      return name.includes(filter) || alias.includes(filter) || description.includes(filter);
-    });
-  }, [discoveredModels, modelDiscoverySearch]);
-  const visibleDiscoveredModelNames = useMemo(
-    () => discoveredModelsFiltered.map((model) => model.name),
-    [discoveredModelsFiltered]
-  );
-  const allVisibleDiscoveredSelected = useMemo(
-    () =>
-      visibleDiscoveredModelNames.length > 0 &&
-      visibleDiscoveredModelNames.every((name) => modelDiscoverySelected.has(name)),
-    [modelDiscoverySelected, visibleDiscoveredModelNames]
+  const handleBatchTestComplete = useCallback(
+    (_payload: { keyIndex: number; results: Record<string, CodexBatchModelTestRowResult> }) => {
+      // Codex 暂不在表格行内显示批量测试结果，仅保留回调供后续扩展
+    },
+    []
   );
 
-  const mergeDiscoveredModels = useCallback(
-    (selectedModels: ModelInfo[]) => {
-      if (!selectedModels.length) return;
-
-      let addedCount = 0;
+  const handleAddBatchAvailableModels = useCallback(
+    (payload: {
+      keyIndex: number;
+      results: Record<string, CodexBatchModelTestRowResult>;
+      models: ModelInfo[];
+    }) => {
       setForm((prev) => {
         const mergedMap = new Map<string, ModelEntry>();
         prev.modelEntries.forEach((entry) => {
@@ -315,154 +304,37 @@ export function AiProvidersCodexEditPage() {
           mergedMap.set(name.toLowerCase(), { ...entry, name, alias: entry.alias?.trim() || '' });
         });
 
-        selectedModels.forEach((model) => {
+        let addedCount = 0;
+        payload.models.forEach((model) => {
           const name = String(model.name ?? '').trim();
           if (!name) return;
           const key = name.toLowerCase();
           if (mergedMap.has(key)) return;
-          mergedMap.set(key, { name, alias: model.alias ?? '' });
+          const existingEntry = prev.modelEntries.find(
+            (e) => e.name.trim().toLowerCase() === key
+          );
+          mergedMap.set(key, {
+            name,
+            alias: (existingEntry?.alias || model.alias || '').trim(),
+          });
           addedCount += 1;
         });
 
         const mergedEntries = Array.from(mergedMap.values());
+        if (addedCount > 0) {
+          showNotification(
+            t('ai_providers.codex_models_fetch_added', { count: addedCount }),
+            'success'
+          );
+        }
         return {
           ...prev,
           modelEntries: mergedEntries.length ? mergedEntries : [{ name: '', alias: '' }],
         };
       });
-
-      if (addedCount > 0) {
-        showNotification(
-          t('ai_providers.codex_models_fetch_added', { count: addedCount }),
-          'success'
-        );
-      }
     },
     [setForm, showNotification, t]
   );
-
-  const fetchCodexModelDiscovery = useCallback(async () => {
-    const requestId = (modelDiscoveryRequestIdRef.current += 1);
-    setModelDiscoveryFetching(true);
-    setModelDiscoveryError('');
-
-    try {
-      const headerObject = buildHeaderObject(form.headers);
-      const hasCustomAuthorization = Object.keys(headerObject).some(
-        (key) => key.toLowerCase() === 'authorization'
-      );
-      const apiKey = getPrimaryApiKey(form) || undefined;
-      const list = await modelsApi.fetchV1ModelsViaApiCall(
-        form.baseUrl ?? '',
-        hasCustomAuthorization ? undefined : apiKey,
-        headerObject
-      );
-      if (modelDiscoveryRequestIdRef.current !== requestId) return;
-      setDiscoveredModels(list);
-    } catch (err: unknown) {
-      if (modelDiscoveryRequestIdRef.current !== requestId) return;
-      setDiscoveredModels([]);
-      const message = getErrorMessage(err);
-      setModelDiscoveryError(`${t('ai_providers.codex_models_fetch_error')}: ${message}`);
-    } finally {
-      if (modelDiscoveryRequestIdRef.current === requestId) {
-        setModelDiscoveryFetching(false);
-      }
-    }
-  }, [form.apiKeyEntries, form.baseUrl, form.headers, t]);
-
-  useEffect(() => {
-    if (!modelDiscoveryOpen) {
-      autoFetchSignatureRef.current = '';
-      modelDiscoveryRequestIdRef.current += 1;
-      setModelDiscoveryFetching(false);
-      return;
-    }
-
-    const nextEndpoint = modelsApi.buildV1ModelsEndpoint(form.baseUrl ?? '');
-    setModelDiscoveryEndpoint(nextEndpoint);
-    setDiscoveredModels([]);
-    setModelDiscoverySearch('');
-    setModelDiscoverySelected(new Set());
-    setModelDiscoveryError('');
-
-    if (!nextEndpoint) return;
-
-    const headerObject = buildHeaderObject(form.headers);
-    const hasCustomAuthorization = Object.keys(headerObject).some(
-      (key) => key.toLowerCase() === 'authorization'
-    );
-    const hasApiKeyField = Boolean(getPrimaryApiKey(form));
-    const canAutoFetch = hasApiKeyField || hasCustomAuthorization;
-
-    if (!canAutoFetch) return;
-
-    const headerSignature = Object.entries(headerObject)
-      .sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase()))
-      .map(([key, value]) => `${key}:${value}`)
-      .join('|');
-    const signature = `${nextEndpoint}||${getPrimaryApiKey(form)}||${headerSignature}`;
-    if (autoFetchSignatureRef.current === signature) return;
-    autoFetchSignatureRef.current = signature;
-
-    void fetchCodexModelDiscovery();
-  }, [
-    fetchCodexModelDiscovery,
-    form.apiKeyEntries,
-    form.baseUrl,
-    form.headers,
-    modelDiscoveryOpen,
-  ]);
-
-  useEffect(() => {
-    const availableNames = new Set(discoveredModels.map((model) => model.name));
-    setModelDiscoverySelected((prev) => {
-      let changed = false;
-      const next = new Set<string>();
-      prev.forEach((name) => {
-        if (availableNames.has(name)) {
-          next.add(name);
-        } else {
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [discoveredModels]);
-
-  const toggleModelDiscoverySelection = (name: string) => {
-    setModelDiscoverySelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) {
-        next.delete(name);
-      } else {
-        next.add(name);
-      }
-      return next;
-    });
-  };
-
-  const handleSelectVisibleDiscoveredModels = useCallback(() => {
-    setModelDiscoverySelected((prev) => {
-      const next = new Set(prev);
-      visibleDiscoveredModelNames.forEach((name) => next.add(name));
-      return next;
-    });
-  }, [visibleDiscoveredModelNames]);
-
-  const handleClearDiscoveredModelSelection = useCallback(() => {
-    setModelDiscoverySelected(new Set());
-  }, []);
-
-  const handleApplyDiscoveredModels = () => {
-    const selectedModels = discoveredModels.filter((model) =>
-      modelDiscoverySelected.has(model.name)
-    );
-    if (selectedModels.length) {
-      mergeDiscoveredModels(selectedModels);
-    }
-    setModelDiscoveryOpen(false);
-  };
 
   const handleSave = useCallback(async () => {
     if (!canSave) return;
@@ -530,15 +402,7 @@ export function AiProvidersCodexEditPage() {
     updateConfigValue,
   ]);
 
-  const canOpenModelDiscovery =
-    !disableControls &&
-    !saving &&
-    !loading &&
-    !invalidIndexParam &&
-    !invalidIndex &&
-    Boolean((form.baseUrl ?? '').trim());
-  const canApplyModelDiscovery =
-    !disableControls && !saving && !modelDiscoveryFetching && modelDiscoverySelected.size > 0;
+
 
   return (
     <SecondaryScreenShell
@@ -665,8 +529,8 @@ export function AiProvidersCodexEditPage() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => setModelDiscoveryOpen(true)}
-                      disabled={!canOpenModelDiscovery}
+                      onClick={openCodexModelDiscovery}
+                      disabled={disableControls || saving || loading || invalidIndexParam || invalidIndex}
                     >
                       {t('ai_providers.codex_models_fetch_button')}
                     </Button>
@@ -718,149 +582,21 @@ export function AiProvidersCodexEditPage() {
               </div>
             </div>
 
-            <Modal
-              open={modelDiscoveryOpen}
-              title={t('ai_providers.codex_models_fetch_title')}
-              onClose={() => setModelDiscoveryOpen(false)}
-              width={720}
-              footer={
-                <>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setModelDiscoveryOpen(false)}
-                    disabled={modelDiscoveryFetching}
-                  >
-                    {t('common.cancel')}
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleApplyDiscoveredModels}
-                    disabled={!canApplyModelDiscovery}
-                  >
-                    {t('ai_providers.codex_models_fetch_apply')}
-                  </Button>
-                </>
-              }
-            >
-              <div className={styles.openaiModelsContent}>
-                <div className={styles.sectionHint}>
-                  {t('ai_providers.codex_models_fetch_hint')}
-                </div>
-                <div className={styles.openaiModelsEndpointSection}>
-                  <label className={styles.openaiModelsEndpointLabel}>
-                    {t('ai_providers.codex_models_fetch_url_label')}
-                  </label>
-                  <div className={styles.openaiModelsEndpointControls}>
-                    <input
-                      className={`input ${styles.openaiModelsEndpointInput}`}
-                      readOnly
-                      value={modelDiscoveryEndpoint}
-                    />
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void fetchCodexModelDiscovery()}
-                      loading={modelDiscoveryFetching}
-                      disabled={disableControls || saving}
-                    >
-                      {t('ai_providers.codex_models_fetch_refresh')}
-                    </Button>
-                  </div>
-                </div>
-                <Input
-                  label={t('ai_providers.codex_models_search_label')}
-                  placeholder={t('ai_providers.codex_models_search_placeholder')}
-                  value={modelDiscoverySearch}
-                  onChange={(e) => setModelDiscoverySearch(e.target.value)}
-                  disabled={modelDiscoveryFetching}
-                />
-                {discoveredModels.length > 0 && (
-                  <div className={styles.modelDiscoveryToolbar}>
-                    <div className={styles.modelDiscoveryToolbarActions}>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleSelectVisibleDiscoveredModels}
-                        disabled={
-                          disableControls ||
-                          saving ||
-                          modelDiscoveryFetching ||
-                          discoveredModelsFiltered.length === 0 ||
-                          allVisibleDiscoveredSelected
-                        }
-                      >
-                        {t('ai_providers.model_discovery_select_visible')}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleClearDiscoveredModelSelection}
-                        disabled={
-                          disableControls ||
-                          saving ||
-                          modelDiscoveryFetching ||
-                          modelDiscoverySelected.size === 0
-                        }
-                      >
-                        {t('ai_providers.model_discovery_clear_selection')}
-                      </Button>
-                    </div>
-                    <div className={styles.modelDiscoverySelectionSummary}>
-                      {t('ai_providers.model_discovery_selected_count', {
-                        count: modelDiscoverySelected.size,
-                      })}
-                    </div>
-                  </div>
-                )}
-                {modelDiscoveryError && <div className="error-box">{modelDiscoveryError}</div>}
-                {modelDiscoveryFetching ? (
-                  <div className={styles.sectionHint}>
-                    {t('ai_providers.codex_models_fetch_loading')}
-                  </div>
-                ) : discoveredModels.length === 0 ? (
-                  <div className={styles.sectionHint}>
-                    {t('ai_providers.codex_models_fetch_empty')}
-                  </div>
-                ) : discoveredModelsFiltered.length === 0 ? (
-                  <div className={styles.sectionHint}>
-                    {t('ai_providers.codex_models_search_empty')}
-                  </div>
-                ) : (
-                  <div className={styles.modelDiscoveryList}>
-                    {discoveredModelsFiltered.map((model) => {
-                      const checked = modelDiscoverySelected.has(model.name);
-                      return (
-                        <SelectionCheckbox
-                          key={model.name}
-                          checked={checked}
-                          onChange={() => toggleModelDiscoverySelection(model.name)}
-                          disabled={disableControls || saving || modelDiscoveryFetching}
-                          ariaLabel={model.name}
-                          className={`${styles.modelDiscoveryRow} ${
-                            checked ? styles.modelDiscoveryRowSelected : ''
-                          }`}
-                          labelClassName={styles.modelDiscoverySelectionLabel}
-                          label={
-                            <div className={styles.modelDiscoveryMeta}>
-                              <div className={styles.modelDiscoveryName}>
-                                {model.name}
-                                {model.alias && (
-                                  <span className={styles.modelDiscoveryAlias}>{model.alias}</span>
-                                )}
-                              </div>
-                              {model.description && (
-                                <div className={styles.modelDiscoveryDesc}>{model.description}</div>
-                              )}
-                            </div>
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </Modal>
+            <CodexBatchModelTestModal
+              open={batchTestModalOpen}
+              onClose={() => {
+                setBatchTestModalOpen(false);
+                setBatchTestKeyIndex(null);
+              }}
+              keyIndex={batchTestKeyIndex}
+              loading={loading}
+              saving={saving}
+              disableControls={disableControls}
+              form={form}
+              entryPoint={batchTestEntryPoint}
+              onBatchComplete={handleBatchTestComplete}
+              onAddAvailableModels={handleAddBatchAvailableModels}
+            />
           </>
         )}
       </Card>

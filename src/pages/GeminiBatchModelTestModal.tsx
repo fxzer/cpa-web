@@ -33,6 +33,7 @@ export type GeminiBatchModelTestModalProps = {
   saving: boolean;
   disableControls: boolean;
   form: GeminiFormState;
+  entryPoint: 'discovery' | 'batch-test';
   onBatchComplete: (payload: {
     keyIndex: number;
     results: Record<string, GeminiBatchModelTestRowResult>;
@@ -52,6 +53,7 @@ export function GeminiBatchModelTestModal({
   saving,
   disableControls,
   form,
+  entryPoint = 'batch-test',
   onBatchComplete,
   onAddAvailableModels,
 }: GeminiBatchModelTestModalProps) {
@@ -67,12 +69,45 @@ export function GeminiBatchModelTestModal({
   const [testResults, setTestResults] = useState<Record<string, GeminiBatchModelTestRowResult>>(
     {}
   );
+  const [selectedKeyIndex, setSelectedKeyIndex] = useState<number | null>(keyIndex);
 
-  const rowKey = keyIndex !== null ? form.apiKeyEntries[keyIndex]?.apiKey?.trim() : '';
+  useEffect(() => {
+    setSelectedKeyIndex(keyIndex);
+  }, [keyIndex]);
+
+  const rowKey =
+    selectedKeyIndex !== null ? form.apiKeyEntries[selectedKeyIndex]?.apiKey?.trim() : '';
+
+  const keyOptions = useMemo(() => {
+    const options: { value: string; label: string }[] = [];
+    form.apiKeyEntries.forEach((entry, idx) => {
+      const rawKey = entry.apiKey?.trim() ?? '';
+      if (!rawKey) return;
+      const masked = rawKey.length > 6 ? `${rawKey.slice(0, 3)}...${rawKey.slice(-3)}` : rawKey;
+      const remark = entry.remark?.trim();
+      const label = remark
+        ? t('ai_providers.batch_model_key_option_with_remark', { index: idx + 1, key: masked, remark })
+        : t('ai_providers.batch_model_key_option', { index: idx + 1, key: masked });
+      options.push({ value: String(idx), label });
+    });
+    return options;
+  }, [form.apiKeyEntries, t]);
+
+  const selectedKey = selectedKeyIndex !== null ? String(selectedKeyIndex) : '';
+
+  const handleKeyChange = useCallback((value: string) => {
+    const nextIdx = Number(value);
+    if (!Number.isFinite(nextIdx)) return;
+    setSelectedKeyIndex(nextIdx);
+    setSelected(new Set());
+    setTestResults({});
+    setTestProgress(null);
+    setError('');
+  }, []);
 
   const fetchModels = useCallback(async () => {
     const trimmedBaseUrl = form.baseUrl?.trim() ?? '';
-    if (!trimmedBaseUrl || keyIndex === null) return;
+    if (!trimmedBaseUrl) return;
 
     setFetching(true);
     setError('');
@@ -90,20 +125,24 @@ export function GeminiBatchModelTestModal({
     } finally {
       setFetching(false);
     }
-  }, [form.baseUrl, form.headers, keyIndex, rowKey, t]);
+  }, [form.baseUrl, form.headers, selectedKeyIndex, rowKey, t]);
 
   useEffect(() => {
-    if (!open || keyIndex === null) return;
-    if (loading) return;
+    if (!open) return;
     setEndpoint(buildGeminiModelsEndpoint(form.baseUrl ?? ''));
-    setModels([]);
-    setSearch('');
-    setSelected(new Set());
     setError('');
     setTestProgress(null);
     setTestResults({});
+  }, [open, form.baseUrl]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (loading) return;
+    setModels([]);
+    setSearch('');
+    setSelected(new Set());
     void fetchModels();
-  }, [open, loading, keyIndex, form.baseUrl, fetchModels]);
+  }, [open, loading, selectedKeyIndex, fetchModels]);
 
   useEffect(() => {
     if (!open) return;
@@ -168,7 +207,7 @@ export function GeminiBatchModelTestModal({
   }, []);
 
   const runBatchTests = useCallback(async () => {
-    if (keyIndex === null || !rowKey) {
+    if (selectedKeyIndex === null || !rowKey) {
       return;
     }
     const baseUrl = form.baseUrl?.trim() ?? '';
@@ -180,7 +219,7 @@ export function GeminiBatchModelTestModal({
     const modelNames = Array.from(selected);
     if (modelNames.length === 0) return;
 
-    const keyEntry = form.apiKeyEntries[keyIndex];
+    const keyEntry = form.apiKeyEntries[selectedKeyIndex];
     if (!keyEntry?.apiKey?.trim()) {
       setError(t('notification.openai_test_key_required'));
       return;
@@ -241,12 +280,12 @@ export function GeminiBatchModelTestModal({
         onResult: setTestResults,
       });
 
-      onBatchComplete({ keyIndex, results });
+      onBatchComplete({ keyIndex: selectedKeyIndex, results });
     } finally {
       setTesting(false);
       setTestProgress(null);
     }
-  }, [form.apiKeyEntries, form.baseUrl, form.headers, keyIndex, onBatchComplete, rowKey, selected, t]);
+  }, [form.apiKeyEntries, form.baseUrl, form.headers, selectedKeyIndex, onBatchComplete, rowKey, selected, t]);
 
   const selectedAvailableCount = useMemo(
     () => models.filter((m) => selected.has(m.name) && testResults[m.name]?.success).length,
@@ -254,7 +293,7 @@ export function GeminiBatchModelTestModal({
   );
 
   const handleAddAvailableModels = useCallback(() => {
-    if (keyIndex === null) return;
+    if (selectedKeyIndex === null) return;
     const selectedAvailable = models.filter(
       (m) => selected.has(m.name) && testResults[m.name]?.success
     );
@@ -266,12 +305,12 @@ export function GeminiBatchModelTestModal({
     });
 
     onAddAvailableModels({
-      keyIndex,
+      keyIndex: selectedKeyIndex,
       results: selectedResults,
       models: selectedAvailable,
     });
     onClose();
-  }, [keyIndex, models, selected, testResults, onAddAvailableModels, onClose]);
+  }, [selectedKeyIndex, models, selected, testResults, onAddAvailableModels, onClose]);
 
   const canRun =
     !disableControls &&
@@ -280,11 +319,11 @@ export function GeminiBatchModelTestModal({
     !testing &&
     selected.size > 0 &&
     Boolean(rowKey) &&
-    keyIndex !== null;
+    selectedKeyIndex !== null;
   const canAddAvailable =
     !disableControls && !saving && !fetching && !testing && selectedAvailableCount > 0;
 
-  if (!open || keyIndex === null) {
+  if (!open) {
     return null;
   }
 
@@ -292,7 +331,8 @@ export function GeminiBatchModelTestModal({
     <BatchModelTestModalShell
       open={open}
       onClose={onClose}
-      keyIndex={keyIndex}
+      keyIndex={selectedKeyIndex}
+      entryPoint={entryPoint}
       hint={t('ai_providers.gemini_batch_model_test_hint')}
       modelCount={models.length}
       endpoint={endpoint}
@@ -322,6 +362,9 @@ export function GeminiBatchModelTestModal({
       onAddAvailableModels={handleAddAvailableModels}
       canRun={canRun}
       canAddAvailable={canAddAvailable}
+      keyOptions={keyOptions}
+      selectedKey={selectedKey}
+      onKeyChange={handleKeyChange}
     />
   );
 }
