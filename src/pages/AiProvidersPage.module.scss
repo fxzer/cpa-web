@@ -2645,9 +2645,9 @@ $provider-status-bar-small-height: 14px;
   .keyTableHeader,
   .keyTableRow {
     grid-template-columns:
-      46px minmax(240px, 1.2fr) minmax(150px, 0.8fr) minmax(150px, 0.8fr)
-      minmax(80px, auto);
-    min-width: 800px;
+      36px minmax(240px, 1.2fr) minmax(130px, 0.8fr) minmax(130px, 0.8fr)
+      minmax(60px, auto);
+    min-width: 760px;
   }
 }
 
@@ -2656,9 +2656,9 @@ $provider-status-bar-small-height: 14px;
   .keyTableHeader,
   .keyTableRow {
     grid-template-columns:
-      46px 56px minmax(220px, 1.2fr) minmax(140px, 1fr) minmax(140px, 1fr)
-      minmax(260px, auto);
-    min-width: 1000px;
+      26px 46px minmax(290px, 1.2fr) minmax(120px, 1fr) minmax(120px, 1fr)
+      minmax(170px, auto);
+    min-width: 940px;
   }
 }
 
@@ -2666,10 +2666,10 @@ $provider-status-bar-small-height: 14px;
 .keyTableHeader {
   display: grid;
   grid-template-columns:
-    46px 56px minmax(220px, 1.2fr) minmax(140px, 1fr) minmax(140px, 1fr)
-    minmax(260px, auto);
+26px 46px minmax(290px, 1.2fr) minmax(120px, 1fr) minmax(120px, 1fr)
+      minmax(170px, auto);
   gap: $spacing-sm;
-  min-width: 1000px;
+  min-width: 940px;
   padding: 10px $spacing-md;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
@@ -2687,10 +2687,10 @@ $provider-status-bar-small-height: 14px;
 .keyTableRow {
   display: grid;
   grid-template-columns:
-    46px 56px minmax(220px, 1.2fr) minmax(140px, 1fr) minmax(140px, 1fr)
-    minmax(260px, auto);
+26px 46px minmax(290px, 1.2fr) minmax(120px, 1fr) minmax(120px, 1fr)
+      minmax(170px, auto);
   gap: $spacing-sm;
-  min-width: 1000px;
+  min-width: 940px;
   padding: 10px $spacing-md;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
