@@ -4,7 +4,7 @@ interface ProviderPrioritySignalProps {
   value?: number;
 }
 
-const BLOCK_COUNT = 5;
+const BLOCK_COUNT = 10;
 
 function getDisplayPriority(value?: number) {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
@@ -27,7 +27,7 @@ function getPriorityTone(value: number) {
 export function ProviderPrioritySignal({ value }: ProviderPrioritySignalProps) {
   const priority = getDisplayPriority(value);
   const visualPriority = getVisualPriority(priority);
-  const filledCount = Math.ceil(visualPriority / 2);
+  const filledCount = visualPriority;
   const toneClassName = getPriorityTone(visualPriority);
 
   return (

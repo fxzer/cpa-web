@@ -14,6 +14,7 @@ import { providersApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import type { ProviderKeyConfig } from '@/types';
 import { ProviderApiKeyEntriesEditor } from '@/components/providers/ProviderApiKeyEntriesEditor';
+import { ProviderPrioritySelector } from '@/components/providers';
 import {
   areNormalizedApiKeyEntriesEqual,
   buildApiKeyEntry,
@@ -386,22 +387,10 @@ export function AiProvidersVertexEditPage() {
                   hint={t('ai_providers.provider_name_hint')}
                   disabled={disableControls || saving}
                 />
-                <Input
+                <ProviderPrioritySelector
                   label={t('ai_providers.priority_label')}
-                  hint={t('ai_providers.priority_hint')}
-                  type="number"
-                  step={1}
-                  min={0}
-                  value={form.priority ?? ''}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const parsed = raw.trim() === '' ? undefined : Number(raw);
-                    setForm((prev) => ({
-                      ...prev,
-                      priority:
-                        parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
-                    }));
-                  }}
+                  value={form.priority}
+                  onChange={(val) => setForm((prev) => ({ ...prev, priority: val }))}
                   disabled={disableControls || saving}
                 />
                 <Input

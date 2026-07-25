@@ -9,6 +9,7 @@ export { ProviderAliasOverviewModal } from './ProviderAliasOverviewModal';
 export { ProviderStatusBar } from './ProviderStatusBar';
 export { ProviderConfigToggle } from './ProviderConfigToggle';
 export { ProviderPrefixPriorityRow } from './ProviderPrefixPriorityRow';
+export { ProviderPrioritySelector } from './ProviderPrioritySelector';
 export { ProviderNav } from './ProviderNav';
 export * from './hooks/useProviderRecentRequests';
 export * from './types';

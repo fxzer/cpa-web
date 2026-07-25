@@ -454,7 +454,19 @@ export function OpenAISection({
             <button
               key={value}
               type="button"
-              className={`${styles.disabledFilterItem} ${disabledFilter === value ? `${styles.disabledFilterItemActive} ${value === 'enabled' ? styles.disabledFilterItemEnabled : value === 'disabled' ? styles.disabledFilterItemDisabled : ''}` : ''}`}
+              className={`${styles.disabledFilterItem} ${
+                disabledFilter === value
+                  ? `${styles.disabledFilterItemActive} ${
+                      value === 'all'
+                        ? styles.disabledFilterItemAll
+                        : value === 'enabled'
+                          ? styles.disabledFilterItemEnabled
+                          : value === 'disabled'
+                            ? styles.disabledFilterItemDisabled
+                            : ''
+                    }`
+                  : ''
+              }`}
               onClick={() => setDisabledFilter(value)}
               disabled={actionsDisabled}
             >

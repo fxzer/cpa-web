@@ -43,6 +43,9 @@ export type BatchModelTestModalShellProps = {
   selected: Set<string>;
   onToggleSelection: (name: string) => void;
   onSelectVisible: () => void;
+  onInvertSelection?: () => void;
+  onSelectAvailable?: () => void;
+  availableModelCount?: number;
   onClearSelection: () => void;
   allVisibleSelected: boolean;
   disableControls: boolean;
@@ -229,6 +232,9 @@ function BatchModelTestModalBody({
   selected,
   onToggleSelection,
   onSelectVisible,
+  onInvertSelection,
+  onSelectAvailable,
+  availableModelCount = 0,
   onClearSelection,
   allVisibleSelected,
   disableControls,
@@ -253,6 +259,9 @@ function BatchModelTestModalBody({
   | 'selected'
   | 'onToggleSelection'
   | 'onSelectVisible'
+  | 'onInvertSelection'
+  | 'onSelectAvailable'
+  | 'availableModelCount'
   | 'onClearSelection'
   | 'allVisibleSelected'
   | 'disableControls'
@@ -436,6 +445,28 @@ function BatchModelTestModalBody({
             >
               {t('ai_providers.model_discovery_select_all')}
             </Button>
+            {onInvertSelection && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onInvertSelection}
+                disabled={controlsDisabled || filteredModels.length === 0}
+              >
+                {t('ai_providers.model_discovery_invert_selection')}
+              </Button>
+            )}
+            {onSelectAvailable && availableModelCount > 0 && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onSelectAvailable}
+                disabled={controlsDisabled}
+              >
+                {t('ai_providers.model_discovery_select_available_with_count', {
+                  count: availableModelCount,
+                })}
+              </Button>
+            )}
             <Button
               variant="secondary"
               size="sm"
@@ -476,6 +507,9 @@ export function BatchModelTestModalShell({
   selected,
   onToggleSelection,
   onSelectVisible,
+  onInvertSelection,
+  onSelectAvailable,
+  availableModelCount,
   onClearSelection,
   allVisibleSelected,
   disableControls,
@@ -501,13 +535,7 @@ export function BatchModelTestModalShell({
     return { success, failed, total: values.length };
   })();
 
-  const selectedAvailableCount = useMemo(() => {
-    let count = 0;
-    for (const name of selected) {
-      if (testResults[name]?.success) count++;
-    }
-    return count;
-  }, [selected, testResults]);
+  const selectedAvailableCount = selected.size;
 
   if (!open) {
     return null;
@@ -552,7 +580,11 @@ export function BatchModelTestModalShell({
               disabled={!canRun}
               loading={testing}
             >
-              {t('ai_providers.openai_batch_model_test_run')}
+              {selectedAvailableCount > 0
+                ? t('ai_providers.openai_batch_model_test_run_selected', {
+                    count: selectedAvailableCount,
+                  })
+                : t('ai_providers.openai_batch_model_test_run')}
             </Button>
             <Button size="sm" onClick={onAddAvailableModels} disabled={!canAddAvailable}>
               {selectedAvailableCount > 0
@@ -580,6 +612,9 @@ export function BatchModelTestModalShell({
         selected={selected}
         onToggleSelection={onToggleSelection}
         onSelectVisible={onSelectVisible}
+        onInvertSelection={onInvertSelection}
+        onSelectAvailable={onSelectAvailable}
+        availableModelCount={availableModelCount}
         onClearSelection={onClearSelection}
         allVisibleSelected={allVisibleSelected}
         disableControls={disableControls}

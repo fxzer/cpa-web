@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +10,7 @@ import { configApi, versionApi } from '@/services/api';
 import { PANEL_WEBUI_GITHUB_URL, STORAGE_KEY_AUTH } from '@/utils/constants';
 import { copyToClipboard } from '@/utils/clipboard';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
+import { UsageExampleModal } from '@/components/providers/UsageExampleModal';
 import styles from './SystemPage.module.scss';
 
 const parseVersionSegments = (version?: string | null) => {
@@ -52,6 +53,35 @@ export function SystemPage() {
   const [requestLogTouched, setRequestLogTouched] = useState(false);
   const [requestLogSaving, setRequestLogSaving] = useState(false);
   const [checkingVersion, setCheckingVersion] = useState(false);
+  const [usageModalOpen, setUsageModalOpen] = useState(false);
+
+  const modalApiKeys = useMemo(() => {
+    if (config?.apiKeys && config.apiKeys.length > 0) {
+      return config.apiKeys;
+    }
+    return ['sk-your-api-key'];
+  }, [config?.apiKeys]);
+
+  const modalModels = useMemo(() => {
+    if (!config) return ['gpt-4o', 'claude-3-5-sonnet'];
+    const models = new Set<string>();
+    const addModels = (entries?: { models?: { name: string; alias?: string }[] }[]) => {
+      entries?.forEach((entry) => {
+        entry.models?.forEach((m) => {
+          const alias = m.alias?.trim() || m.name?.trim();
+          if (alias) models.add(alias);
+        });
+      });
+    };
+    addModels(config.geminiApiKeys);
+    addModels(config.codexApiKeys);
+    addModels(config.claudeApiKeys);
+    addModels(config.vertexApiKeys);
+    addModels(config.openaiCompatibility);
+
+    const list = Array.from(models);
+    return list.length > 0 ? list : ['gpt-4o', 'claude-3-5-sonnet'];
+  }, [config]);
 
   const versionTapCount = useRef(0);
   const versionTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -230,7 +260,7 @@ export function SystemPage() {
                 <div className={styles.tileLabel}>{t('footer.api_version')}</div>
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                   className={styles.tileAction}
                   onClick={() => void handleVersionCheck()}
@@ -250,7 +280,20 @@ export function SystemPage() {
             </div>
 
             <div className={styles.infoTile}>
-              <div className={styles.tileLabel}>{t('connection.status')}</div>
+              <div className={styles.tileHeader}>
+                <div className={styles.tileLabel}>{t('connection.status')}</div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className={styles.tileAction}
+                  onClick={() => setUsageModalOpen(true)}
+                  title={t('ai_providers.usage_example_title', { defaultValue: '使用示例' })}
+                  aria-label={t('ai_providers.usage_example_title', { defaultValue: '使用示例' })}
+                >
+                  {t('ai_providers.usage_example_title', { defaultValue: '使用示例' })}
+                </Button>
+              </div>
               <div
                 className={`${styles.tileValue} ${
                   auth.connectionStatus === 'connected'
@@ -387,6 +430,14 @@ export function SystemPage() {
           />
         </div>
       </Modal>
+
+      <UsageExampleModal
+        open={usageModalOpen}
+        onClose={() => setUsageModalOpen(false)}
+        baseUrl={auth.apiBase || ''}
+        apiKeys={modalApiKeys}
+        models={modalModels}
+      />
     </div>
   );
 }

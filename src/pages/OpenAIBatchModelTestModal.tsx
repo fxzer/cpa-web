@@ -229,6 +229,32 @@ export function OpenAIBatchModelTestModal({
     });
   }, [visibleModelNames]);
 
+  const handleInvertSelection = useCallback(() => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      visibleModelNames.forEach((name) => {
+        if (next.has(name)) {
+          next.delete(name);
+        } else {
+          next.add(name);
+        }
+      });
+      return next;
+    });
+  }, [visibleModelNames]);
+
+  const availableModelCount = useMemo(
+    () => models.filter((m) => testResults[m.name]?.success).length,
+    [models, testResults]
+  );
+
+  const handleSelectAvailable = useCallback(() => {
+    const availableNames = models
+      .filter((m) => testResults[m.name]?.success)
+      .map((m) => m.name);
+    setSelected(new Set(availableNames));
+  }, [models, testResults]);
+
   const handleClearSelection = useCallback(() => {
     setSelected(new Set());
   }, []);
@@ -310,27 +336,20 @@ export function OpenAIBatchModelTestModal({
     }
   }, [form.apiKeyEntries, form.baseUrl, form.headers, selectedKeyIndex, onBatchComplete, rowKey, selected, t]);
 
-  const selectedAvailableCount = useMemo(
-    () => models.filter((m) => selected.has(m.name) && testResults[m.name]?.success).length,
-    [models, selected, testResults]
-  );
-
   const handleAddAvailableModels = useCallback(() => {
     if (selectedKeyIndex === null) return;
-    const selectedAvailable = models.filter(
-      (m) => selected.has(m.name) && testResults[m.name]?.success
-    );
-    if (selectedAvailable.length === 0) return;
+    const selectedModels = models.filter((m) => selected.has(m.name));
+    if (selectedModels.length === 0) return;
 
     const selectedResults: Record<string, OpenAIBatchModelTestRowResult> = {};
-    selectedAvailable.forEach((m) => {
-      selectedResults[m.name] = testResults[m.name];
+    selectedModels.forEach((m) => {
+      selectedResults[m.name] = testResults[m.name] ?? { success: true };
     });
 
     onAddAvailableModels({
       keyIndex: selectedKeyIndex,
       results: selectedResults,
-      models: selectedAvailable,
+      models: selectedModels,
     });
     onClose();
   }, [selectedKeyIndex, models, selected, testResults, onAddAvailableModels, onClose]);
@@ -344,7 +363,7 @@ export function OpenAIBatchModelTestModal({
     Boolean(rowKey) &&
     selectedKeyIndex !== null;
   const canAddAvailable =
-    !disableControls && !saving && !fetching && !testing && selectedAvailableCount > 0;
+    !disableControls && !saving && !fetching && !testing && selected.size > 0;
 
   if (!open) {
     return null;
@@ -374,6 +393,9 @@ export function OpenAIBatchModelTestModal({
       selected={selected}
       onToggleSelection={toggleSelection}
       onSelectVisible={handleSelectVisible}
+      onInvertSelection={handleInvertSelection}
+      onSelectAvailable={handleSelectAvailable}
+      availableModelCount={availableModelCount}
       onClearSelection={handleClearSelection}
       allVisibleSelected={allVisibleSelected}
       disableControls={disableControls}

@@ -20,6 +20,7 @@ import { UsageExampleModal } from '@/components/providers/UsageExampleModal';
 import { CurlImportModal } from '@/components/providers/CurlImportModal';
 import { AliasBatchSetter } from '@/components/providers/AliasBatchSetter';
 import { collectAllProviderAliases } from '@/utils/providerModelAliasCatalog';
+import { ProviderPrioritySelector } from '@/components/providers';
 import type { OpenAIEditOutletContext } from './AiProvidersOpenAIEditLayout';
 import {
   OpenAIBatchModelTestModal,
@@ -62,6 +63,8 @@ export function AiProvidersOpenAIEditPage() {
     keyTestStatuses,
     setDraftKeyTestStatus,
     resetDraftKeyTestStatuses,
+    removeDraftKeyTestStatus,
+    addDraftKeyTestStatus,
     availableModels,
     handleBack,
     handleSave,
@@ -92,6 +95,7 @@ export function AiProvidersOpenAIEditPage() {
   const [batchModelTestByKey, setBatchModelTestByKey] = useState<
     Record<number, Record<string, OpenAIBatchModelTestRowResult>>
   >({});
+  const [newlyAddedModelNames, setNewlyAddedModelNames] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -154,14 +158,7 @@ export function AiProvidersOpenAIEditPage() {
     setTestMessage,
   ]);
 
-  const apiKeysSignature = useMemo(
-    () => form.apiKeyEntries.map((e) => `${e.apiKey ?? ''}|${e.proxyUrl ?? ''}`).join(';'),
-    [form.apiKeyEntries]
-  );
 
-  useEffect(() => {
-    setBatchModelTestByKey({});
-  }, [apiKeysSignature]);
 
   const handleBatchTestComplete = useCallback(
     ({
@@ -211,25 +208,18 @@ export function AiProvidersOpenAIEditPage() {
       }));
 
       let addedCount = 0;
-      let removedCount = 0;
+      const newNames = new Set<string>();
 
       setForm((prev) => {
-        // 取交集逻辑：
-        // 1. 原有模型若不可用 → 清理掉
-        // 2. 原有模型若可用且有别名 → 保留其别名
-        // 3. 添加新勾选的可用模型
+        // 增量合并逻辑：
+        // 1. 保留原本现有所有模型及其自定义别名
+        // 2. 追加新勾选的可用模型
         const mergedMap = new Map<string, { name: string; alias: string }>();
 
         prev.modelEntries.forEach((entry) => {
           const name = entry.name.trim();
           if (!name) return;
-          if (availableNames.has(name)) {
-            // 可用 → 保留（保持别名）
-            mergedMap.set(name, { name, alias: entry.alias?.trim() || '' });
-          } else {
-            // 不可用 → 移除
-            removedCount += 1;
-          }
+          mergedMap.set(name, { name, alias: entry.alias?.trim() || '' });
         });
 
         models.forEach((model) => {
@@ -237,6 +227,7 @@ export function AiProvidersOpenAIEditPage() {
           if (!name || !availableNames.has(name) || mergedMap.has(name)) return;
           mergedMap.set(name, { name, alias: model.alias ?? '' });
           addedCount += 1;
+          newNames.add(name);
         });
 
         const mergedEntries = Array.from(mergedMap.values());
@@ -246,7 +237,15 @@ export function AiProvidersOpenAIEditPage() {
         };
       });
 
-      if (addedCount === 0 && removedCount === 0) {
+      if (newNames.size > 0) {
+        setNewlyAddedModelNames((prev) => {
+          const next = new Set(prev);
+          newNames.forEach((n) => next.add(n));
+          return next;
+        });
+      }
+
+      if (addedCount === 0) {
         showNotification(t('ai_providers.openai_batch_model_add_available_none_new'), 'warning');
         return;
       }
@@ -576,26 +575,45 @@ export function AiProvidersOpenAIEditPage() {
     const updateEntry = (idx: number, field: keyof ApiKeyEntry, value: string) => {
       const next = list.map((entry, i) => (i === idx ? { ...entry, [field]: value } : entry));
       setForm((prev) => ({ ...prev, apiKeyEntries: next }));
-      setDraftKeyTestStatus(idx, { status: 'idle', message: '' });
+      if (field === 'apiKey' || field === 'proxyUrl') {
+        setDraftKeyTestStatus(idx, { status: 'idle', message: '' });
+        setBatchModelTestByKey((prev) => {
+          if (!(idx in prev)) return prev;
+          const nextMap = { ...prev };
+          delete nextMap[idx];
+          return nextMap;
+        });
+      }
       setTestStatus('idle');
       setTestMessage('');
     };
 
     const removeEntry = (idx: number) => {
       const next = list.filter((_, i) => i !== idx);
-      const nextLength = next.length ? next.length : 1;
       setForm((prev) => ({
         ...prev,
         apiKeyEntries: next.length ? next : [buildApiKeyEntry()],
       }));
-      resetDraftKeyTestStatuses(nextLength);
+      removeDraftKeyTestStatus(idx);
+      setBatchModelTestByKey((prev) => {
+        const nextMap: Record<number, Record<string, OpenAIBatchModelTestRowResult>> = {};
+        for (const [kStr, val] of Object.entries(prev)) {
+          const k = Number(kStr);
+          if (k < idx) {
+            nextMap[k] = val;
+          } else if (k > idx) {
+            nextMap[k - 1] = val;
+          }
+        }
+        return nextMap;
+      });
       setTestStatus('idle');
       setTestMessage('');
     };
 
     const addEntry = () => {
       setForm((prev) => ({ ...prev, apiKeyEntries: [...list, buildApiKeyEntry()] }));
-      resetDraftKeyTestStatuses(list.length + 1);
+      addDraftKeyTestStatus();
       setTestStatus('idle');
       setTestMessage('');
     };
@@ -784,22 +802,10 @@ export function AiProvidersOpenAIEditPage() {
                   onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                   disabled={saving || disableControls || isTestingKeys}
                 />
-                <Input
+                <ProviderPrioritySelector
                   label={t('ai_providers.priority_label')}
-                  hint={t('ai_providers.priority_hint')}
-                  type="number"
-                  step={1}
-                  min={0}
-                  value={form.priority ?? ''}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const parsed = raw.trim() === '' ? undefined : Number(raw);
-                    setForm((prev) => ({
-                      ...prev,
-                      priority:
-                        parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
-                    }));
-                  }}
+                  value={form.priority}
+                  onChange={(val) => setForm((prev) => ({ ...prev, priority: val }))}
                   disabled={saving || disableControls || isTestingKeys}
                 />
                 <Input
@@ -954,6 +960,10 @@ export function AiProvidersOpenAIEditPage() {
                   className={styles.modelInputList}
                   rowClassName={styles.modelInputRow}
                   inputClassName={styles.modelInputField}
+                  getRowInputClassName={(_idx, entry) => {
+                    const name = entry.name.trim();
+                    return newlyAddedModelNames.has(name) ? styles.highlightedModelInputField : '';
+                  }}
                   removeButtonClassName={styles.modelRowRemoveButton}
                   removeButtonTitle={t('common.delete')}
                   removeButtonAriaLabel={t('common.delete')}

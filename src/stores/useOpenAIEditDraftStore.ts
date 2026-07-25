@@ -58,6 +58,8 @@ interface OpenAIEditDraftState {
   setDraftTestStatus: (key: string, action: SetStateAction<OpenAITestStatus>) => void;
   setDraftTestMessage: (key: string, action: SetStateAction<string>) => void;
   setDraftKeyTestStatus: (draftKey: string, keyIndex: number, status: KeyTestStatus) => void;
+  removeDraftKeyTestStatus: (draftKey: string, keyIndex: number) => void;
+  addDraftKeyTestStatus: (draftKey: string) => void;
   resetDraftKeyTestStatuses: (draftKey: string, count: number) => void;
   clearDraft: (key: string) => void;
 }
@@ -213,6 +215,40 @@ export const useOpenAIEditDraftStore = create<OpenAIEditDraftState>((set, get) =
       const existing = state.drafts[draftKey] ?? buildEmptyDraft();
       const nextStatuses = [...existing.keyTestStatuses];
       nextStatuses[keyIndex] = status;
+      return {
+        drafts: {
+          ...state.drafts,
+          [draftKey]: { ...existing, initialized: true, keyTestStatuses: nextStatuses },
+        },
+      };
+    });
+  },
+
+  removeDraftKeyTestStatus: (draftKey, keyIndex) => {
+    if (!draftKey) return;
+    set((state) => {
+      const existing = state.drafts[draftKey] ?? buildEmptyDraft();
+      const filtered = existing.keyTestStatuses.filter((_, i) => i !== keyIndex);
+      const nextStatuses: KeyTestStatus[] = filtered.length
+        ? filtered
+        : [{ status: 'idle', message: '' }];
+      return {
+        drafts: {
+          ...state.drafts,
+          [draftKey]: { ...existing, initialized: true, keyTestStatuses: nextStatuses },
+        },
+      };
+    });
+  },
+
+  addDraftKeyTestStatus: (draftKey) => {
+    if (!draftKey) return;
+    set((state) => {
+      const existing = state.drafts[draftKey] ?? buildEmptyDraft();
+      const nextStatuses: KeyTestStatus[] = [
+        ...existing.keyTestStatuses,
+        { status: 'idle', message: '' },
+      ];
       return {
         drafts: {
           ...state.drafts,

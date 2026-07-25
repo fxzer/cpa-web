@@ -6,10 +6,15 @@ import type { ApiKeyEntry } from '@/types';
 import { buildApiKeyEntry } from './utils';
 import styles from '@/pages/AiProvidersPage.module.scss';
 
+export type KeyEntryAction =
+  | { type: 'add' }
+  | { type: 'remove'; index: number }
+  | { type: 'update'; index: number; field: keyof ApiKeyEntry };
+
 interface ProviderApiKeyEntriesEditorProps {
   entries: ApiKeyEntry[];
   disabled?: boolean;
-  onChange: (entries: ApiKeyEntry[]) => void;
+  onChange: (entries: ApiKeyEntry[], action?: KeyEntryAction) => void;
   keyTestStatuses?: KeyTestStatus[];
   isTestingKeys?: boolean;
   hasConfiguredModels?: boolean;
@@ -39,16 +44,16 @@ export function ProviderApiKeyEntriesEditor({
 
   const updateEntry = (idx: number, field: keyof ApiKeyEntry, value: string) => {
     const next = list.map((entry, i) => (i === idx ? { ...entry, [field]: value } : entry));
-    onChange(next);
+    onChange(next, { type: 'update', index: idx, field });
   };
 
   const removeEntry = (idx: number) => {
     const next = list.filter((_, i) => i !== idx);
-    onChange(next.length ? next : [buildApiKeyEntry()]);
+    onChange(next.length ? next : [buildApiKeyEntry()], { type: 'remove', index: idx });
   };
 
   const addEntry = () => {
-    onChange([...list, buildApiKeyEntry()]);
+    onChange([...list, buildApiKeyEntry()], { type: 'add' });
   };
 
   return (

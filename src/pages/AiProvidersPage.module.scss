@@ -212,45 +212,52 @@ $openai-toolbar-control-height: 36px;
 .providerPrioritySignal {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   width: fit-content;
 }
 
 .providerPriorityBlocks {
   display: flex;
+  align-items: center;
   gap: 2px;
+  width: 88px;
 }
 
 .providerPriorityBlock {
-  width: 12px;
+  flex: 1;
   height: 6px;
-  border-radius: 2px;
-  flex-shrink: 0;
+  border-radius: 1.5px;
+  box-sizing: border-box;
 }
 
 .providerPriorityBlockPurpleStrong {
-  background: #a855f7;
+  background: #9333ea;
+  border: 1px solid #7e22ce;
 }
 
 .providerPriorityBlockPurple {
   background: #c084fc;
+  border: 1px solid #a855f7;
 }
 
 .providerPriorityBlockBlue {
   background: #60a5fa;
+  border: 1px solid #3b82f6;
 }
 
 .providerPriorityBlockSlate {
-  background: #cbd5e1;
+  background: #94a3b8;
+  border: 1px solid #64748b;
 }
 
 .providerPriorityBlockEmpty {
-  background: #f1f5f9;
+  background: var(--bg-tertiary, rgba(128, 128, 128, 0.12));
+  border: 1px solid var(--border-color, rgba(128, 128, 128, 0.25));
 }
 
 .providerPriorityValue {
   width: 16px;
-  color: #94a3b8;
+  color: var(--text-secondary, #94a3b8);
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
@@ -259,7 +266,106 @@ $openai-toolbar-control-height: 36px;
 }
 
 .providerPriorityValueEmpty {
-  color: #cbd5e1;
+  color: var(--text-tertiary, #cbd5e1);
+}
+
+.prioritySelectorContainer:global(.input) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 41px;
+  padding: 6px 12px;
+  box-sizing: border-box;
+}
+
+.prioritySelectorDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.prioritySelectorBlocks {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  height: 100%;
+}
+
+.prioritySelectorBlock {
+  flex: 1;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  outline: none;
+  box-sizing: border-box;
+
+  &:hover:not(:disabled) {
+    transform: scaleY(1.15);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.priorityBlockPurpleStrong {
+  background-color: #9333ea;
+  border-color: #7e22ce;
+}
+
+.priorityBlockPurple {
+  background-color: #c084fc;
+  border-color: #a855f7;
+}
+
+.priorityBlockBlue {
+  background-color: #60a5fa;
+  border-color: #3b82f6;
+}
+
+.priorityBlockSlate {
+  background-color: #94a3b8;
+  border-color: #64748b;
+}
+
+.priorityBlockEmpty {
+  background-color: var(--bg-tertiary, rgba(128, 128, 128, 0.12));
+  border-color: var(--border-color, rgba(128, 128, 128, 0.25));
+}
+
+.prioritySelectorValue {
+  min-width: 24px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.15s ease, font-weight 0.15s ease;
+}
+
+.prioritySelectorValueHover {
+  color: var(--text-tertiary, #94a3b8);
+  opacity: 0.75;
+  font-weight: 500;
+}
+
+.prioritySelectorValueSelected {
+  color: var(--text-primary, #0f172a);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.prioritySelectorValueEmpty {
+  color: var(--text-tertiary, #cbd5e1);
+  font-weight: 500;
+}
+
+.prioritySelectorHint {
+  font-size: 12px;
+  color: var(--color-text-muted, #94a3b8);
 }
 
 .providerTablePrimary {
@@ -775,10 +881,12 @@ $openai-toolbar-control-height: 36px;
 }
 
 .disabledFilterItem.disabledFilterItemActive,
-.disabledFilterItem.disabledFilterItemActive:hover:not(:disabled) {
+.disabledFilterItem.disabledFilterItemActive:hover:not(:disabled),
+.disabledFilterItem.disabledFilterItemAll,
+.disabledFilterItem.disabledFilterItemAll:hover:not(:disabled) {
   color: var(--text-primary);
-  background: var(--bg-primary);
-  border-color: var(--border-primary);
+  background: var(--bg-tertiary, rgba(128, 128, 128, 0.14));
+  border-color: var(--border-color, rgba(128, 128, 128, 0.25));
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
@@ -2474,6 +2582,31 @@ $provider-status-bar-small-height: 14px;
   &::placeholder {
     font-size: 12px;
   }
+}
+
+.highlightedModelInputField {
+  border-color: var(--color-success, #10b981) !important;
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.25) !important;
+
+  &:focus {
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35) !important;
+  }
+}
+
+.newlyAddedTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #10b981;
+  background-color: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  line-height: 1.4;
+  white-space: nowrap;
+  user-select: none;
 }
 
 .modelRowRemoveButton {

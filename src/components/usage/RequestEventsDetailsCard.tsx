@@ -14,6 +14,7 @@ import { useNotificationStore } from '@/stores/useNotificationStore';
 import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from '@/types';
 import type { AuthFileItem } from '@/types/authFile';
 import type { CredentialInfo } from '@/types/sourceInfo';
+import { RequestEventDetailModal } from '@/components/usage/RequestEventDetailModal';
 import {
   buildConfiguredCredentialLookup,
   buildCredentialDisplay,
@@ -318,6 +319,7 @@ export function RequestEventsDetailsCard({
   );
   const [localAuthFiles, setLocalAuthFiles] = useState<AuthFileItem[]>([]);
   const [selectedFailureRow, setSelectedFailureRow] = useState<RequestEventRow | null>(null);
+  const [selectedDetailRowId, setSelectedDetailRowId] = useState<string | null>(null);
   const [downloadingRequestId, setDownloadingRequestId] = useState('');
   const [nextRefreshAtMs, setNextRefreshAtMs] = useState<number | null>(null);
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
@@ -1223,15 +1225,20 @@ export function RequestEventsDetailsCard({
                             <button
                               type="button"
                               className={`${styles.requestEventsResultFailed} ${styles.requestEventsResultButton}`}
-                              onClick={() => setSelectedFailureRow(row)}
+                              onClick={() => setSelectedDetailRowId(row.id)}
                               aria-label={t('usage_stats.request_events_failure_log_view')}
                             >
                               {t('stats.failure')}
                             </button>
                           ) : (
-                            <span className={styles.requestEventsResultSuccess}>
+                            <button
+                              type="button"
+                              className={`${styles.requestEventsResultSuccess} ${styles.requestEventsResultButton}`}
+                              onClick={() => setSelectedDetailRowId(row.id)}
+                              aria-label={t('usage_stats.request_events_detail_title')}
+                            >
                               {t('stats.success')}
-                            </span>
+                            </button>
                           )}
                           {row.cacheHitRatio !== null && (
                             <span className={styles.requestEventsCacheHitBadge}>
@@ -1518,6 +1525,11 @@ export function RequestEventsDetailsCard({
           </div>
         )}
       </Modal>
+
+      <RequestEventDetailModal
+        eventId={selectedDetailRowId}
+        onClose={() => setSelectedDetailRowId(null)}
+      />
     </div>
   );
 }

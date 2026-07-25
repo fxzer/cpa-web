@@ -13,7 +13,7 @@ import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
 import { apiCallApi, getApiCallErrorMessage, providersApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import type { KeyTestStatus } from '@/stores/useOpenAIEditDraftStore';
-import type { GeminiKeyConfig } from '@/types';
+import type { ApiKeyEntry, GeminiKeyConfig } from '@/types';
 import {
   buildHeaderObject,
   hasHeader,
@@ -27,7 +27,11 @@ import {
 } from '@/utils/compare';
 import type { ModelInfo } from '@/utils/models';
 import { entriesToModels, modelsToEntries } from '@/components/ui/modelInputListUtils';
-import { ProviderApiKeyEntriesEditor } from '@/components/providers/ProviderApiKeyEntriesEditor';
+import {
+  ProviderApiKeyEntriesEditor,
+  type KeyEntryAction,
+} from '@/components/providers/ProviderApiKeyEntriesEditor';
+import { ProviderPrioritySelector } from '@/components/providers';
 import {
   areNormalizedApiKeyEntriesEqual,
   buildApiKeyEntry,
@@ -151,6 +155,7 @@ export function AiProvidersGeminiEditPage() {
   const [batchModelTestByKey, setBatchModelTestByKey] = useState<
     Record<number, Record<string, GeminiBatchModelTestRowResult>>
   >({});
+  const [newlyAddedModelNames, setNewlyAddedModelNames] = useState<Set<string>>(new Set());
 
   const hasIndexParam = typeof params.index === 'string';
   const editIndex = useMemo(() => parseIndexParam(params.index), [params.index]);
@@ -301,15 +306,63 @@ export function AiProvidersGeminiEditPage() {
     setBatchModelTestByKey({});
   }, [connectivityConfigSignature, form.apiKeyEntries.length, resetKeyTestStatuses]);
 
-  const apiKeysSignature = useMemo(
-    () =>
-      form.apiKeyEntries.map((entry) => `${entry.apiKey ?? ''}|${entry.proxyUrl ?? ''}`).join(';'),
-    [form.apiKeyEntries]
-  );
+  const handleKeyEntriesChange = useCallback(
+    (apiKeyEntries: ApiKeyEntry[], action?: KeyEntryAction) => {
+      setForm((prev) => ({ ...prev, apiKeyEntries }));
 
-  useEffect(() => {
-    setBatchModelTestByKey({});
-  }, [apiKeysSignature]);
+      if (!action) {
+        setKeyTestStatuses((prev) => {
+          if (prev.length === apiKeyEntries.length) return prev;
+          const next = [...prev];
+          while (next.length < apiKeyEntries.length) {
+            next.push({ status: 'idle', message: '' });
+          }
+          return next.slice(0, apiKeyEntries.length);
+        });
+        return;
+      }
+
+      if (action.type === 'add') {
+        setKeyTestStatuses((prev) => [...prev, { status: 'idle', message: '' }]);
+      } else if (action.type === 'remove') {
+        setKeyTestStatuses((prev) => {
+          const filtered = prev.filter((_, i) => i !== action.index);
+          return filtered.length ? filtered : [{ status: 'idle', message: '' }];
+        });
+        setBatchModelTestByKey((prev) => {
+          const nextMap: Record<number, Record<string, GeminiBatchModelTestRowResult>> = {};
+          for (const [kStr, val] of Object.entries(prev)) {
+            const k = Number(kStr);
+            if (k < action.index) {
+              nextMap[k] = val;
+            } else if (k > action.index) {
+              nextMap[k - 1] = val;
+            }
+          }
+          return nextMap;
+        });
+      } else if (action.type === 'update') {
+        if (action.field === 'apiKey' || action.field === 'proxyUrl') {
+          setKeyTestStatuses((prev) => {
+            const next = [...prev];
+            if (next[action.index]) {
+              next[action.index] = { status: 'idle', message: '' };
+            }
+            return next;
+          });
+          setBatchModelTestByKey((prev) => {
+            if (!(action.index in prev)) return prev;
+            const nextMap = { ...prev };
+            delete nextMap[action.index];
+            return nextMap;
+          });
+        }
+      }
+      setTestStatus('idle');
+      setTestMessage('');
+    },
+    []
+  );
 
   const handleBatchTestComplete = useCallback(
     ({
@@ -359,25 +412,18 @@ export function AiProvidersGeminiEditPage() {
       }));
 
       let addedCount = 0;
-      let removedCount = 0;
+      const newNames = new Set<string>();
 
       setForm((prev) => {
-        // 取交集逻辑：
-        // 1. 原有模型若不可用 → 清理掉
-        // 2. 原有模型若可用且有别名 → 保留其别名
-        // 3. 添加新勾选的可用模型
+        // 增量合并逻辑：
+        // 1. 保留原本现有所有模型及其自定义别名
+        // 2. 追加新勾选的可用模型
         const mergedMap = new Map<string, { name: string; alias: string }>();
 
         prev.modelEntries.forEach((entry) => {
           const name = stripGeminiModelResourceName(entry.name).trim();
           if (!name) return;
-          if (availableNames.has(name)) {
-            // 可用 → 保留（保持别名）
-            mergedMap.set(name, { name, alias: entry.alias?.trim() || '' });
-          } else {
-            // 不可用 → 移除
-            removedCount += 1;
-          }
+          mergedMap.set(name, { name, alias: entry.alias?.trim() || '' });
         });
 
         models.forEach((model) => {
@@ -385,6 +431,7 @@ export function AiProvidersGeminiEditPage() {
           if (!name || !availableNames.has(name) || mergedMap.has(name)) return;
           mergedMap.set(name, { name, alias: model.alias ?? '' });
           addedCount += 1;
+          newNames.add(name);
         });
 
         const mergedEntries = Array.from(mergedMap.values());
@@ -394,7 +441,15 @@ export function AiProvidersGeminiEditPage() {
         };
       });
 
-      if (addedCount === 0 && removedCount === 0) {
+      if (newNames.size > 0) {
+        setNewlyAddedModelNames((prev) => {
+          const next = new Set(prev);
+          newNames.forEach((n) => next.add(n));
+          return next;
+        });
+      }
+
+      if (addedCount === 0) {
         showNotification(t('ai_providers.openai_batch_model_add_available_none_new'), 'warning');
         return;
       }
@@ -858,22 +913,10 @@ export function AiProvidersGeminiEditPage() {
                   hint={t('ai_providers.provider_name_hint')}
                   disabled={disableControls || saving}
                 />
-                <Input
+                <ProviderPrioritySelector
                   label={t('ai_providers.priority_label')}
-                  hint={t('ai_providers.priority_hint')}
-                  type="number"
-                  step={1}
-                  min={0}
-                  value={form.priority ?? ''}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const parsed = raw.trim() === '' ? undefined : Number(raw);
-                    setForm((prev) => ({
-                      ...prev,
-                      priority:
-                        parsed !== undefined && Number.isFinite(parsed) ? parsed : undefined,
-                    }));
-                  }}
+                  value={form.priority}
+                  onChange={(val) => setForm((prev) => ({ ...prev, priority: val }))}
                   disabled={disableControls || saving}
                 />
                 <Input
@@ -1041,6 +1084,10 @@ export function AiProvidersGeminiEditPage() {
                   className={styles.modelInputList}
                   rowClassName={styles.modelInputRow}
                   inputClassName={styles.modelInputField}
+                  getRowInputClassName={(_idx, entry) => {
+                    const name = stripGeminiModelResourceName(entry.name).trim();
+                    return newlyAddedModelNames.has(name) ? styles.highlightedModelInputField : '';
+                  }}
                   removeButtonClassName={styles.modelRowRemoveButton}
                   removeButtonTitle={t('common.delete')}
                   removeButtonAriaLabel={t('common.delete')}
@@ -1074,12 +1121,7 @@ export function AiProvidersGeminiEditPage() {
                 <ProviderApiKeyEntriesEditor
                   entries={form.apiKeyEntries}
                   disabled={disableControls || saving}
-                  onChange={(apiKeyEntries) => {
-                    setForm((prev) => ({ ...prev, apiKeyEntries }));
-                    resetKeyTestStatuses(apiKeyEntries.length);
-                    setTestStatus('idle');
-                    setTestMessage('');
-                  }}
+                  onChange={handleKeyEntriesChange}
                   keyTestStatuses={keyTestStatuses}
                   isTestingKeys={isTestingKeys}
                   hasConfiguredModels={hasConfiguredModels}

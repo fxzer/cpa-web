@@ -40,6 +40,8 @@ export type OpenAIEditOutletContext = {
   keyTestStatuses: KeyTestStatus[];
   setDraftKeyTestStatus: (keyIndex: number, status: KeyTestStatus) => void;
   resetDraftKeyTestStatuses: (count: number) => void;
+  removeDraftKeyTestStatus: (keyIndex: number) => void;
+  addDraftKeyTestStatus: () => void;
   availableModels: string[];
   handleBack: () => void;
   handleSave: () => Promise<void>;
@@ -180,6 +182,10 @@ export function AiProvidersOpenAIEditLayout() {
   const setDraftTestStatus = useOpenAIEditDraftStore((state) => state.setDraftTestStatus);
   const setDraftTestMessage = useOpenAIEditDraftStore((state) => state.setDraftTestMessage);
   const setDraftKeyTestStatus = useOpenAIEditDraftStore((state) => state.setDraftKeyTestStatus);
+  const removeDraftKeyTestStatus = useOpenAIEditDraftStore(
+    (state) => state.removeDraftKeyTestStatus
+  );
+  const addDraftKeyTestStatus = useOpenAIEditDraftStore((state) => state.addDraftKeyTestStatus);
   const resetDraftKeyTestStatuses = useOpenAIEditDraftStore(
     (state) => state.resetDraftKeyTestStatuses
   );
@@ -232,6 +238,17 @@ export function AiProvidersOpenAIEditLayout() {
     },
     [draftKey, resetDraftKeyTestStatuses]
   );
+
+  const handleRemoveDraftKeyTestStatus = useCallback(
+    (keyIndex: number) => {
+      removeDraftKeyTestStatus(draftKey, keyIndex);
+    },
+    [draftKey, removeDraftKeyTestStatus]
+  );
+
+  const handleAddDraftKeyTestStatus = useCallback(() => {
+    addDraftKeyTestStatus(draftKey);
+  }, [draftKey, addDraftKeyTestStatus]);
 
   const initialData = useMemo(() => {
     if (editIndex === null) return undefined;
@@ -527,6 +544,8 @@ export function AiProvidersOpenAIEditLayout() {
             keyTestStatuses,
             setDraftKeyTestStatus: handleSetDraftKeyTestStatus,
             resetDraftKeyTestStatuses: handleResetDraftKeyTestStatuses,
+            removeDraftKeyTestStatus: handleRemoveDraftKeyTestStatus,
+            addDraftKeyTestStatus: handleAddDraftKeyTestStatus,
             availableModels,
             handleBack,
             handleSave,

@@ -111,7 +111,18 @@
 .tileAction {
   flex-shrink: 0;
   white-space: nowrap;
-  margin: -4px -8px 0 0;
+  margin: -2px 0 0 0;
+  background-color: var(--bg-tertiary, rgba(128, 128, 128, 0.12)) !important;
+  border: 1px solid var(--border-color, rgba(128, 128, 128, 0.2)) !important;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: var(--bg-hover, rgba(128, 128, 128, 0.22)) !important;
+    border-color: var(--border-hover, rgba(128, 128, 128, 0.35)) !important;
+  }
 }
 
 .tileValue {

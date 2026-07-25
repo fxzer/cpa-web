@@ -40,7 +40,11 @@ export interface RequestEventItem {
   auth_snapshot_at_ms?: number;
   latency_ms?: number;
   failed: boolean;
+  fail_body?: string;
+  fail_status_code?: number;
   tokens: RequestEventTokens;
+  request_body?: string;
+  response_body?: string;
 }
 
 export interface RequestEventSummary {
@@ -80,6 +84,11 @@ export const requestEventsApi = {
     apiClient.get<RequestEventsListResponse>('/request-events', {
       timeout: REQUEST_EVENTS_TIMEOUT_MS,
       params,
+    }),
+
+  get: (id: string) =>
+    apiClient.get<RequestEventItem>(`/request-events/${encodeURIComponent(id)}`, {
+      timeout: REQUEST_EVENTS_TIMEOUT_MS,
     }),
 
   status: () =>

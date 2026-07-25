@@ -179,6 +179,20 @@ export function AiProvidersClaudeModelsPage() {
     });
   }, [visibleModelNames]);
 
+  const handleInvertSelection = useCallback(() => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      visibleModelNames.forEach((name) => {
+        if (next.has(name)) {
+          next.delete(name);
+        } else {
+          next.add(name);
+        }
+      });
+      return next;
+    });
+  }, [visibleModelNames]);
+
   const handleClearSelection = useCallback(() => {
     setSelected(new Set());
   }, []);
@@ -273,6 +287,14 @@ export function AiProvidersClaudeModelsPage() {
                   }
                 >
                   {t('ai_providers.model_discovery_select_visible')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleInvertSelection}
+                  disabled={disableControls || saving || fetching || filteredModels.length === 0}
+                >
+                  {t('ai_providers.model_discovery_invert_selection')}
                 </Button>
                 <Button
                   variant="ghost"
