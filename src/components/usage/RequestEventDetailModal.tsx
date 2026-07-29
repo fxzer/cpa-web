@@ -24,21 +24,36 @@ export function RequestEventDetailModal({ eventId, onClose }: RequestEventDetail
 
   useEffect(() => {
     if (!eventId) {
-      setDetail(null);
       return;
     }
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError('');
     setActiveTab('request');
     requestEventsApi
       .get(eventId)
-      .then((res) => setDetail(res))
-      .catch((err) => {
-        const message = err instanceof Error ? err.message : '';
-        setError(message || t('usage_stats.request_events_detail_error'));
-        showNotification(t('usage_stats.request_events_detail_error'), 'error');
+      .then((res) => {
+        if (!cancelled) {
+          setDetail(res);
+        }
       })
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : '';
+          setError(message || t('usage_stats.request_events_detail_error'));
+          showNotification(t('usage_stats.request_events_detail_error'), 'error');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [eventId, showNotification, t]);
 
   const parseJson = useCallback((text: string): unknown | null => {

@@ -6,10 +6,12 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { Select } from '@/components/ui/Select';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useDebounce } from '@/hooks/useDebounce';
 import { ProviderConfigToggle } from '../ProviderConfigToggle';
 import {
   IconChevronDown,
   IconChevronUp,
+  IconSearch,
   IconSlidersHorizontal,
   IconX,
 } from '@/components/ui/icons';
@@ -102,6 +104,8 @@ export function OpenAISection({
     'openai-disabled-filter',
     'all'
   );
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownLayout, setDropdownLayout] = useState({ openAbove: false, maxHeight: 300 });
@@ -211,11 +215,23 @@ export function OpenAISection({
 
   const sortedConfigs = useMemo<IndexedOpenAIProvider[]>(() => {
     const indexed = configs.map((config, originalIndex) => ({ config, originalIndex }));
+    const trimmedSearch = debouncedSearchQuery.trim().toLowerCase();
+
     const filtered = indexed.filter(({ config }) => {
       if (disabledFilter === 'enabled' && config.disabled) return false;
       if (disabledFilter === 'disabled' && !config.disabled) return false;
-      if (selectedModels.size === 0) return true;
-      return config.models?.some((model) => selectedModels.has(model.name));
+      if (selectedModels.size > 0) {
+        const matchesModel = config.models?.some((model) => selectedModels.has(model.name));
+        if (!matchesModel) return false;
+      }
+      if (trimmedSearch) {
+        const nameMatch = config.name ? config.name.toLowerCase().includes(trimmedSearch) : false;
+        const prefixMatch = config.prefix
+          ? config.prefix.toLowerCase().includes(trimmedSearch)
+          : false;
+        if (!nameMatch && !prefixMatch) return false;
+      }
+      return true;
     });
 
     const sorted = [...filtered];
@@ -275,7 +291,7 @@ export function OpenAISection({
     }
 
     return sorted;
-  }, [configs, sortOption, sortDirection, usageByProvider, selectedModels, disabledFilter]);
+  }, [configs, sortOption, sortDirection, usageByProvider, selectedModels, disabledFilter, debouncedSearchQuery]);
 
   const toggleModelSelection = (modelName: string) => {
     setSelectedModels((prev) => {
@@ -291,6 +307,15 @@ export function OpenAISection({
 
   const clearAllModels = () => {
     setSelectedModels(new Set());
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+  };
+
+  const clearAllFilters = () => {
+    setSelectedModels(new Set());
+    setSearchQuery('');
   };
 
   const handleSortOptionChange = (value: SortOption) => {
@@ -487,17 +512,45 @@ export function OpenAISection({
   };
 
   const renderStaticTitle = () => (
-    <ProviderSectionCardTitle
-      icon={
-        <img
-          src={resolvedTheme === 'dark' ? iconOpenaiDark : iconOpenaiLight}
-          alt=""
-          className={styles.cardTitleIcon}
+    <div className={styles.cardTitleHeaderGroup}>
+      <ProviderSectionCardTitle
+        icon={
+          <img
+            src={resolvedTheme === 'dark' ? iconOpenaiDark : iconOpenaiLight}
+            alt=""
+            className={styles.cardTitleIcon}
+          />
+        }
+        title={t('ai_providers.openai_title')}
+        count={sortedConfigs.length}
+      />
+      <div className={styles.titleSearchWrapper}>
+        <span className={styles.titleSearchIcon} aria-hidden="true">
+          <IconSearch size={14} />
+        </span>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t('ai_providers.openai_search_placeholder')}
+          className={styles.titleSearchInput}
+          disabled={actionsDisabled}
+          aria-label={t('ai_providers.openai_search_placeholder')}
         />
-      }
-      title={t('ai_providers.openai_title')}
-      count={sortedConfigs.length}
-    />
+        {searchQuery && (
+          <button
+            type="button"
+            className={styles.titleSearchClear}
+            onClick={clearSearch}
+            disabled={actionsDisabled}
+            title={t('ai_providers.openai_search_clear')}
+            aria-label={t('ai_providers.openai_search_clear')}
+          >
+            <IconX size={14} />
+          </button>
+        )}
+      </div>
+    </div>
   );
 
   const renderProviderCard = ({ config: provider, originalIndex }: IndexedOpenAIProvider) => {
@@ -684,7 +737,7 @@ export function OpenAISection({
             <Button
               variant="secondary"
               size="sm"
-              onClick={clearAllModels}
+              onClick={clearAllFilters}
               disabled={actionsDisabled}
             >
               {t('ai_providers.model_search_clear')}

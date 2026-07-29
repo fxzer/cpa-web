@@ -411,6 +411,8 @@
     "ampcode_lists_overwrite_confirm": "当前未成功加载服务器已有多上游/模型映射配置，继续保存可能覆盖或清空这些列表，是否继续？",
     "ampcode_mappings_overwrite_confirm": "当前未成功加载服务器已有映射，继续保存可能覆盖或清空已有映射，是否继续？",
     "openai_title": "OpenAI 兼容供应商",
+    "openai_search_placeholder": "搜索供应商名称/前缀...",
+    "openai_search_clear": "清空搜索",
     "openai_add_button": "添加供应商",
     "disabled_filter_all": "全部",
     "disabled_filter_enabled": "启用",

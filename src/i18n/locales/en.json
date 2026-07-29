@@ -410,6 +410,8 @@
     "ampcode_lists_overwrite_confirm": "Existing multi-upstream/model mapping lists could not be loaded. Continuing may overwrite or clear them. Continue?",
     "ampcode_mappings_overwrite_confirm": "Existing mappings could not be loaded. Continuing may overwrite or clear them. Continue?",
     "openai_title": "OpenAI Compatible Providers",
+    "openai_search_placeholder": "Search provider name / prefix...",
+    "openai_search_clear": "Clear search",
     "openai_add_button": "Add Provider",
     "disabled_filter_all": "All",
     "disabled_filter_enabled": "Enabled",
