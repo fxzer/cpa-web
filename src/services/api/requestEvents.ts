@@ -32,6 +32,7 @@ export interface RequestEventItem {
   auth_type?: string;
   auth_index?: string;
   source?: string;
+  source_hash?: string;
   api_key_hash?: string;
   account_snapshot?: string;
   auth_label_snapshot?: string;
@@ -77,13 +78,76 @@ export interface RequestEventsQuery {
   start?: string;
   end?: string;
   limit?: number;
+  // 分页参数（与 limit 互斥：传 page 时走分页查询）
+  page?: number;
+  page_size?: number;
+  // 过滤参数（服务端下推）
+  model?: string;
+  provider?: string;
+  source_hash?: string;
+  api_key_hash?: string;
+  result?: 'success' | 'failure';
+  search?: string;
+}
+
+/** 默认每页条数；与后端 defaultRequestEventsPageSize 保持一致 */
+export const DEFAULT_REQUEST_EVENTS_PAGE_SIZE = 10;
+/** 可选的每页条数 */
+export const REQUEST_EVENTS_PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+export interface RequestEventsPagedResponse {
+  items: RequestEventItem[];
+  summary: RequestEventSummary;
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface RequestEventTimeBucket {
+  bucket_ms: number;
+  total: number;
+  success: number;
+  failure: number;
+  tokens: number;
+}
+
+/** 聚合查询响应：页头统计与热力图用，无需拉全量数据 */
+export interface RequestEventsAggregate {
+  total_requests: number;
+  success_count: number;
+  failure_count: number;
+  total_tokens: number;
+  requests_by_day: RequestEventTimeBucket[];
+  requests_by_hour: RequestEventTimeBucket[];
+  tokens_by_day: RequestEventTimeBucket[];
+  tokens_by_hour: RequestEventTimeBucket[];
 }
 
 export const requestEventsApi = {
   list: (params?: RequestEventsQuery) =>
-    apiClient.get<RequestEventsListResponse>('/request-events', {
+    apiClient.get<RequestEventsListResponse | RequestEventsPagedResponse>('/request-events', {
       timeout: REQUEST_EVENTS_TIMEOUT_MS,
       params,
+    }),
+
+  /** 分页查询表格数据（带过滤下推） */
+  listPaged: (params: RequestEventsQuery) =>
+    apiClient.get<RequestEventsPagedResponse>('/request-events', {
+      timeout: REQUEST_EVENTS_TIMEOUT_MS,
+      params,
+    }),
+
+  aggregate: (params?: Pick<RequestEventsQuery, 'start' | 'end'>) =>
+    apiClient.get<RequestEventsAggregate>('/request-events/aggregate', {
+      timeout: REQUEST_EVENTS_TIMEOUT_MS,
+      params,
+    }),
+
+  /** 某列的去重值，用于填充过滤下拉选项 */
+  distinct: (column: 'model' | 'provider' | 'source_hash' | 'api_key_hash') =>
+    apiClient.get<{ values: string[] }>('/request-events/distinct', {
+      timeout: REQUEST_EVENTS_TIMEOUT_MS,
+      params: { column },
     }),
 
   get: (id: string) =>

@@ -10,6 +10,13 @@ import { getAuthFileStatusMessage } from '@/features/authFiles/constants';
 import { useInterval } from '@/hooks/useInterval';
 import { authFilesApi } from '@/services/api/authFiles';
 import { logsApi } from '@/services/api/logs';
+import {
+  requestEventsApi,
+  DEFAULT_REQUEST_EVENTS_PAGE_SIZE,
+  REQUEST_EVENTS_PAGE_SIZE_OPTIONS,
+  type RequestEventItem,
+  type RequestEventsPagedResponse,
+} from '@/services/api/requestEvents';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from '@/types';
 import type { AuthFileItem } from '@/types/authFile';
@@ -21,10 +28,10 @@ import {
   resolveConfiguredCredential,
   resolveProviderModelColumnDisplay,
 } from '@/utils/credentialResolver';
-import { buildSourceInfoMap, resolveSourceDisplay } from '@/utils/sourceResolver';
-import { formatRelativeTime, parseTimestampMs } from '@/utils/timestamp';
+import { buildSourceInfoMap, resolveSourceDisplay, type SourceInfoMap } from '@/utils/sourceResolver';
+import { formatRelativeTime } from '@/utils/timestamp';
+import { mapRequestEventToDetail } from '@/utils/requestEvents';
 import {
-  collectUsageDetailsWithEndpoint,
   computeCacheHitRatio,
   extractFirstByteLatencyMs,
   extractGenerationMs,
@@ -43,7 +50,17 @@ import styles from '@/pages/UsagePage.module.scss';
 const ALL_FILTER = '__all__';
 const RESULT_SUCCESS_FILTER = 'success';
 const RESULT_FAILURE_FILTER = 'failure';
-const MAX_RENDERED_EVENTS = 500;
+const SEARCH_DEBOUNCE_MS = 300;
+
+/** 搜索输入防抖：避免每次按键都触发服务端查询 */
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
+}
 
 type RequestEventRow = {
   id: string;
@@ -55,6 +72,8 @@ type RequestEventRow = {
   provider: string;
   providerTag: string;
   providerDisplayName: string;
+  /** 后端原始 provider 列值，用于服务端过滤 */
+  originalProvider: string;
   model: string;
   modelAlias: string;
   endpoint: string;
@@ -62,6 +81,8 @@ type RequestEventRow = {
   endpointPath: string;
   sourceKey: string;
   sourceRaw: string;
+  /** 后端 source_hash 值，用于服务端过滤 */
+  sourceHash: string;
   source: string;
   sourceType: string;
   authIndex: string;
@@ -97,8 +118,17 @@ export type RequestEventsFilteredStats = {
   exportJson: () => void;
 };
 
+/** 全局聚合统计，由父页从 aggregate 接口获取后传入，用于页头与导出判定 */
+export interface RequestEventsAggregateStats {
+  totalRequests: number;
+  successCount: number;
+  failureCount: number;
+  totalTokens: number;
+}
+
 export interface RequestEventsDetailsCardProps {
-  usage: unknown;
+  /** 全局聚合统计（页头数值来源）。分页后表格只持有当页数据，全局统计由父页注入 */
+  aggregate: RequestEventsAggregateStats | null;
   loading: boolean;
   geminiKeys: GeminiKeyConfig[];
   claudeConfigs: ProviderKeyConfig[];
@@ -287,8 +317,140 @@ const encodeCsv = (value: string | number): string => {
   return `"${safeText.replace(/"/g, '""')}"`;
 };
 
+/** 解析单个 RequestEventItem 为展示行。rows memo 与导出共用，避免逻辑重复。 */
+interface BuildRowDeps {
+  sourceInfoMap: SourceInfoMap;
+  authFileMap: Map<string, CredentialInfo>;
+  credentialLookup: ReturnType<typeof buildConfiguredCredentialLookup>;
+  openaiProviderNames: string[];
+  language: string;
+}
+
+function buildRequestEventRow(
+  item: RequestEventItem,
+  index: number,
+  deps: BuildRowDeps
+): RequestEventRow {
+  const { sourceInfoMap, authFileMap, credentialLookup, openaiProviderNames, language } = deps;
+  const detail = mapRequestEventToDetail(item);
+  const timestamp = detail.timestamp;
+  const timestampMs =
+    typeof detail.__timestampMs === 'number' && detail.__timestampMs > 0 ? detail.__timestampMs : 0;
+  const date = Number.isNaN(timestampMs) || timestampMs <= 0 ? null : new Date(timestampMs);
+  const requestId = firstText(detail.request_id, detail.id);
+  const usageProvider = firstText(detail.provider, detail.auth_provider_snapshot);
+  const endpoint = firstText(detail.__endpoint) || '-';
+  const endpointMethod = firstText(detail.__endpointMethod);
+  const endpointPath = firstText(detail.__endpointPath) || endpoint;
+  const sourceRaw = String(detail.source ?? '').trim();
+  const authIndexRaw = detail.auth_index as unknown;
+  const authIndex =
+    authIndexRaw === null || authIndexRaw === undefined || authIndexRaw === ''
+      ? '-'
+      : String(authIndexRaw);
+  const sourceInfo = resolveSourceDisplay(sourceRaw, authIndexRaw, sourceInfoMap, authFileMap);
+  const source = sourceInfo.displayName;
+  const sourceKey = sourceInfo.identityKey ?? `source:${sourceRaw || source}`;
+  const sourceType = sourceInfo.type;
+  const model = String(detail.__modelName ?? '').trim() || '-';
+  const modelAlias = firstText(detail.model_alias);
+  const inputTokens = Math.max(toNumber(detail.tokens?.input_tokens), 0);
+  const outputTokens = Math.max(toNumber(detail.tokens?.output_tokens), 0);
+  const reasoningTokens = Math.max(toNumber(detail.tokens?.reasoning_tokens), 0);
+  const cachedTokens = Math.max(
+    Math.max(toNumber(detail.tokens?.cached_tokens), 0),
+    Math.max(toNumber(detail.tokens?.cache_tokens), 0)
+  );
+  const totalTokens = Math.max(toNumber(detail.tokens?.total_tokens), extractTotalTokens(detail));
+  const backendId = typeof detail.id === 'string' && detail.id.trim() ? detail.id.trim() : '';
+  const apiKeyHash = firstText(detail.api_key_hash);
+  const authType = firstText(detail.auth_type) || '-';
+  const resolvedCredential = resolveConfiguredCredential(credentialLookup, {
+    authIndex: authIndexRaw,
+    apiKeyHash,
+    source: sourceRaw,
+  });
+  const authIndexKey = normalizeAuthIndex(authIndexRaw);
+  const authFileInfo = authIndexKey ? authFileMap.get(authIndexKey) : undefined;
+  const credentialDisplay = buildCredentialDisplay({
+    accountSnapshot: firstText(detail.account_snapshot),
+    authLabelSnapshot: firstText(detail.auth_label_snapshot),
+    authFileSnapshot: firstText(detail.auth_file_snapshot),
+    authIndex,
+    authType,
+    source,
+    resolvedCredential,
+  });
+  const providerColumn = resolveProviderModelColumnDisplay({
+    usageProvider,
+    resolvedCredential,
+    sourceType: sourceInfo.type,
+    sourceIdentityKey: sourceInfo.identityKey,
+    authFileType: authFileInfo?.type,
+    openaiProviderNames,
+    sourceDisplayName: sourceInfo.requestDisplayName,
+  });
+  const firstByteLatencyMs = extractFirstByteLatencyMs(detail);
+  const generationMs = extractGenerationMs(detail);
+  const latencyMs =
+    typeof detail.latency_ms === 'number' && Number.isFinite(detail.latency_ms)
+      ? detail.latency_ms
+      : null;
+  const tps = generationMs && generationMs > 0 ? outputTokens / (generationMs / 1000) : null;
+  const thinking = detail.thinking ?? null;
+  const thinkingEffort = normalizeThinkingText(detail.thinking_effort);
+  const thinkingLabel = thinkingEffort || formatThinkingLabel(thinking);
+  const cacheHitRatio = computeCacheHitRatio(inputTokens, cachedTokens);
+
+  return {
+    id: backendId || `${timestamp}-${model}-${sourceKey}-${authIndex}-${index}`,
+    timestamp,
+    timestampMs,
+    timestampLabel: date ? date.toLocaleString(language) : timestamp || '-',
+    timestampRelative: date ? formatRelativeTime(date, language) : timestamp || '-',
+    requestId,
+    provider: providerColumn.headline,
+    providerTag: providerColumn.tag,
+    providerDisplayName: providerColumn.displayName,
+    originalProvider: usageProvider,
+    model,
+    modelAlias,
+    endpoint,
+    endpointMethod,
+    endpointPath,
+    sourceKey,
+    sourceRaw: sourceRaw || '-',
+    sourceHash: item.source_hash ?? '',
+    source,
+    sourceType,
+    authIndex,
+    authType,
+    account: credentialDisplay.headline,
+    credentialBadge: credentialDisplay.badge,
+    authLabel: firstText(detail.auth_label_snapshot) || '-',
+    authFile: firstText(detail.auth_file_snapshot) || '-',
+    resolvedApiKey: credentialDisplay.resolvedApiKey,
+    credentialSubtitle: credentialDisplay.subtitle,
+    apiKeyHash,
+    apiKeyHashShort: shortHash(apiKeyHash) || '-',
+    failed: detail.failed === true,
+    firstByteLatencyMs,
+    generationMs,
+    latencyMs,
+    tps,
+    thinking,
+    thinkingLabel,
+    inputTokens,
+    outputTokens,
+    reasoningTokens,
+    cachedTokens,
+    totalTokens,
+    cacheHitRatio,
+  };
+}
+
 export function RequestEventsDetailsCard({
-  usage,
+  aggregate,
   loading,
   geminiKeys,
   claudeConfigs,
@@ -313,6 +475,12 @@ export function RequestEventsDetailsCard({
   const [sourceFilter, setSourceFilter] = useState(ALL_FILTER);
   const [apiKeyFilter, setApiKeyFilter] = useState(ALL_FILTER);
   const [resultFilter, setResultFilter] = useState(ALL_FILTER);
+  // 分页与服务端过滤相关状态
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_REQUEST_EVENTS_PAGE_SIZE);
+  const [pagedItems, setPagedItems] = useState<RequestEventItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [rowsLoading, setRowsLoading] = useState(false);
   const [autoRefreshValue, setAutoRefreshValue] = useState<AutoRefreshValue>(AUTO_REFRESH_OFF);
   const [customAutoRefreshSeconds, setCustomAutoRefreshSeconds] = useState(
     DEFAULT_CUSTOM_AUTO_REFRESH_SECONDS.toString()
@@ -463,127 +631,16 @@ export function RequestEventsDetailsCard({
   );
 
   const rows = useMemo<RequestEventRow[]>(() => {
-    const details = collectUsageDetailsWithEndpoint(usage);
-
-    const baseRows = details.map((detail, index) => {
-      const timestamp = detail.timestamp;
-      const timestampMs =
-        typeof detail.__timestampMs === 'number' && detail.__timestampMs > 0
-          ? detail.__timestampMs
-          : parseTimestampMs(timestamp);
-      const date = Number.isNaN(timestampMs) ? null : new Date(timestampMs);
-      const requestId = firstText(detail.request_id, detail.id);
-      const usageProvider = firstText(detail.provider, detail.auth_provider_snapshot);
-      const endpoint = firstText(detail.__endpoint) || '-';
-      const endpointMethod = firstText(detail.__endpointMethod);
-      const endpointPath = firstText(detail.__endpointPath) || endpoint;
-      const sourceRaw = String(detail.source ?? '').trim();
-      const authIndexRaw = detail.auth_index as unknown;
-      const authIndex =
-        authIndexRaw === null || authIndexRaw === undefined || authIndexRaw === ''
-          ? '-'
-          : String(authIndexRaw);
-      const sourceInfo = resolveSourceDisplay(sourceRaw, authIndexRaw, sourceInfoMap, authFileMap);
-      const source = sourceInfo.displayName;
-      const sourceKey = sourceInfo.identityKey ?? `source:${sourceRaw || source}`;
-      const sourceType = sourceInfo.type;
-      const model = String(detail.__modelName ?? '').trim() || '-';
-      const modelAlias = firstText(detail.model_alias);
-      const inputTokens = Math.max(toNumber(detail.tokens?.input_tokens), 0);
-      const outputTokens = Math.max(toNumber(detail.tokens?.output_tokens), 0);
-      const reasoningTokens = Math.max(toNumber(detail.tokens?.reasoning_tokens), 0);
-      const cachedTokens = Math.max(
-        Math.max(toNumber(detail.tokens?.cached_tokens), 0),
-        Math.max(toNumber(detail.tokens?.cache_tokens), 0)
-      );
-      const totalTokens = Math.max(
-        toNumber(detail.tokens?.total_tokens),
-        extractTotalTokens(detail)
-      );
-      const backendId = typeof detail.id === 'string' && detail.id.trim() ? detail.id.trim() : '';
-      const apiKeyHash = firstText(detail.api_key_hash);
-      const authType = firstText(detail.auth_type) || '-';
-      const resolvedCredential = resolveConfiguredCredential(credentialLookup, {
-        authIndex: authIndexRaw,
-        apiKeyHash,
-        source: sourceRaw,
-      });
-      const authIndexKey = normalizeAuthIndex(authIndexRaw);
-      const authFileInfo = authIndexKey ? authFileMap.get(authIndexKey) : undefined;
-      const credentialDisplay = buildCredentialDisplay({
-        accountSnapshot: firstText(detail.account_snapshot),
-        authLabelSnapshot: firstText(detail.auth_label_snapshot),
-        authFileSnapshot: firstText(detail.auth_file_snapshot),
-        authIndex,
-        authType,
-        source,
-        resolvedCredential,
-      });
-      const providerColumn = resolveProviderModelColumnDisplay({
-        usageProvider,
-        resolvedCredential,
-        sourceType: sourceInfo.type,
-        sourceIdentityKey: sourceInfo.identityKey,
-        authFileType: authFileInfo?.type,
-        openaiProviderNames,
-        sourceDisplayName: sourceInfo.requestDisplayName,
-      });
-      const firstByteLatencyMs = extractFirstByteLatencyMs(detail);
-      const generationMs = extractGenerationMs(detail);
-      const latencyMs =
-        typeof detail.latency_ms === 'number' && Number.isFinite(detail.latency_ms)
-          ? detail.latency_ms
-          : null;
-      const tps = generationMs && generationMs > 0 ? outputTokens / (generationMs / 1000) : null;
-      const thinking = detail.thinking ?? null;
-      const thinkingEffort = normalizeThinkingText(detail.thinking_effort);
-      const thinkingLabel = thinkingEffort || formatThinkingLabel(thinking);
-      const cacheHitRatio = computeCacheHitRatio(inputTokens, cachedTokens);
-
-      return {
-        id: backendId || `${timestamp}-${model}-${sourceKey}-${authIndex}-${index}`,
-        timestamp,
-        timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
-        timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
-        timestampRelative: formatRelativeTime(date, i18n.language),
-        requestId,
-        provider: providerColumn.headline,
-        providerTag: providerColumn.tag,
-        providerDisplayName: providerColumn.displayName,
-        model,
-        modelAlias,
-        endpoint,
-        endpointMethod,
-        endpointPath,
-        sourceKey,
-        sourceRaw: sourceRaw || '-',
-        source,
-        sourceType,
-        authIndex,
-        authType,
-        account: credentialDisplay.headline,
-        credentialBadge: credentialDisplay.badge,
-        authLabel: firstText(detail.auth_label_snapshot) || '-',
-        authFile: firstText(detail.auth_file_snapshot) || '-',
-        resolvedApiKey: credentialDisplay.resolvedApiKey,
-        credentialSubtitle: credentialDisplay.subtitle,
-        apiKeyHash,
-        apiKeyHashShort: shortHash(apiKeyHash) || '-',
-        failed: detail.failed === true,
-        firstByteLatencyMs,
-        generationMs,
-        latencyMs,
-        tps,
-        thinking,
-        thinkingLabel,
-        inputTokens,
-        outputTokens,
-        reasoningTokens,
-        cachedTokens,
-        totalTokens,
-        cacheHitRatio,
-      };
-    });
+    // 数据来自服务端分页接口返回的当页 items，不再从全量 usage 派生。
+    // 过滤/排序已下推到后端，这里只做展示字段的解析与凭据映射。
+    const rowDeps: BuildRowDeps = {
+      sourceInfoMap,
+      authFileMap,
+      credentialLookup,
+      openaiProviderNames,
+      language: i18n.language,
+    };
+    const baseRows = pagedItems.map((item, index) => buildRequestEventRow(item, index, rowDeps));
 
     const sourceLabelKeyMap = new Map<string, Set<string>>();
     baseRows.forEach((row) => {
@@ -613,13 +670,11 @@ export function RequestEventsDetailsCard({
       return `${row.source} · ${row.sourceKey}`;
     };
 
-    return baseRows
-      .map((row) => ({
-        ...row,
-        source: buildDisambiguatedSourceLabel(row),
-      }))
-      .sort((a, b) => b.timestampMs - a.timestampMs);
-  }, [authFileMap, credentialLookup, i18n.language, openaiProviderNames, sourceInfoMap, usage]);
+    return baseRows.map((row) => ({
+      ...row,
+      source: buildDisambiguatedSourceLabel(row),
+    }));
+  }, [authFileMap, credentialLookup, i18n.language, openaiProviderNames, pagedItems, sourceInfoMap]);
 
   const timeRangeOptions = useMemo(
     () =>
@@ -630,85 +685,103 @@ export function RequestEventsDetailsCard({
     [t]
   );
 
-  const timeFilteredRows = useMemo(() => {
-    if (timeRange === 'all') return rows;
-
-    const nowMs = Date.now();
-    const startMs = nowMs - USAGE_TIME_RANGE_MS[timeRange];
-    return rows.filter((row) => row.timestampMs >= startMs && row.timestampMs <= nowMs);
-  }, [rows, timeRange]);
-
+  // hasTimingData 仅取决于当页是否有延迟字段（用于导出列与表格性能列展示）
   const hasTimingData = useMemo(
-    () =>
-      timeFilteredRows.some((row) => row.firstByteLatencyMs !== null || row.generationMs !== null),
-    [timeFilteredRows]
+    () => rows.some((row) => row.firstByteLatencyMs !== null || row.generationMs !== null),
+    [rows]
   );
+
+  // 过滤下拉选项改为来自后端 distinct 接口（取全局去重值），不再依赖当页数据。
+  // 这样即使某 model 不在当前页，用户仍能在下拉里选到。
+  const [distinctModels, setDistinctModels] = useState<string[]>([]);
+  const [distinctProviders, setDistinctProviders] = useState<string[]>([]);
+  const [distinctSourceHashes, setDistinctSourceHashes] = useState<string[]>([]);
+  const [distinctApiKeyHashes, setDistinctApiKeyHashes] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      requestEventsApi.distinct('model').catch(() => ({ values: [] as string[] })),
+      requestEventsApi.distinct('provider').catch(() => ({ values: [] as string[] })),
+      requestEventsApi.distinct('source_hash').catch(() => ({ values: [] as string[] })),
+      requestEventsApi.distinct('api_key_hash').catch(() => ({ values: [] as string[] })),
+    ]).then(([models, providers, sources, apiKeys]) => {
+      if (cancelled) return;
+      setDistinctModels(models.values ?? []);
+      setDistinctProviders(providers.values ?? []);
+      setDistinctSourceHashes(sources.values ?? []);
+      setDistinctApiKeyHashes(apiKeys.values ?? []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // 当页行的 sourceHash→source 显示名 映射，用于 source 下拉的 label（distinct 只返回 hash）
+  const sourceLabelByHash = useMemo(() => {
+    const map = new Map<string, string>();
+    rows.forEach((row) => {
+      if (row.sourceHash && !map.has(row.sourceHash)) {
+        map.set(row.sourceHash, row.source);
+      }
+    });
+    return map;
+  }, [rows]);
+  const apiKeyLabelByHash = useMemo(() => {
+    const map = new Map<string, string>();
+    rows.forEach((row) => {
+      if (row.apiKeyHash && !map.has(row.apiKeyHash)) {
+        map.set(row.apiKeyHash, row.resolvedApiKey || row.apiKeyHashShort);
+      }
+    });
+    return map;
+  }, [rows]);
 
   const modelOptions = useMemo(
     () => [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(
-        new Set(
-          timeFilteredRows.flatMap((row) =>
-            [row.modelAlias, row.model].filter((value) => value && value !== '-')
-          )
-        )
-      ).map((model) => ({
-        value: model,
-        label: model,
-      })),
+      ...distinctModels
+        .filter((value) => value && value !== '-')
+        .map((model) => ({ value: model, label: model })),
     ],
-    [timeFilteredRows, t]
+    [distinctModels, t]
   );
 
   const providerOptions = useMemo(
     () => [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(
-        new Set(timeFilteredRows.map((row) => row.provider).filter((provider) => provider !== '-'))
-      ).map((provider) => ({
-        value: provider,
-        label: provider,
-      })),
+      ...distinctProviders
+        .filter((value) => value && value !== '-')
+        .map((provider) => ({ value: provider, label: provider })),
     ],
-    [timeFilteredRows, t]
+    [distinctProviders, t]
   );
 
-  const sourceOptions = useMemo(() => {
-    const optionMap = new Map<string, string>();
-    timeFilteredRows.forEach((row) => {
-      if (!optionMap.has(row.sourceKey)) {
-        optionMap.set(row.sourceKey, row.source);
-      }
-    });
-
-    return [
+  const sourceOptions = useMemo(
+    () => [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(optionMap.entries()).map(([value, label]) => ({
-        value,
-        label,
-      })),
-    ];
-  }, [timeFilteredRows, t]);
+      ...distinctSourceHashes
+        .filter((value) => value)
+        .map((hash) => ({
+          value: hash,
+          label: sourceLabelByHash.get(hash) ?? shortHash(hash),
+        })),
+    ],
+    [distinctSourceHashes, sourceLabelByHash, t]
+  );
 
-  const apiKeyOptions = useMemo(() => {
-    const optionMap = new Map<string, string>();
-    timeFilteredRows.forEach((row) => {
-      if (!row.apiKeyHash) return;
-      const label = row.resolvedApiKey || row.apiKeyHashShort;
-      if (!optionMap.has(row.apiKeyHash)) {
-        optionMap.set(row.apiKeyHash, label);
-      }
-    });
-
-    return [
+  const apiKeyOptions = useMemo(
+    () => [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(optionMap.entries()).map(([value, label]) => ({
-        value,
-        label,
-      })),
-    ];
-  }, [timeFilteredRows, t]);
+      ...distinctApiKeyHashes
+        .filter((value) => value)
+        .map((hash) => ({
+          value: hash,
+          label: apiKeyLabelByHash.get(hash) ?? shortHash(hash),
+        })),
+    ],
+    [distinctApiKeyHashes, apiKeyLabelByHash, t]
+  );
 
   const resultOptions = useMemo(
     () => [
@@ -727,107 +800,107 @@ export function RequestEventsDetailsCard({
     [t]
   );
 
-  const modelOptionSet = useMemo(
-    () => new Set(modelOptions.map((option) => option.value)),
-    [modelOptions]
-  );
-  const providerOptionSet = useMemo(
-    () => new Set(providerOptions.map((option) => option.value)),
-    [providerOptions]
-  );
-  const sourceOptionSet = useMemo(
-    () => new Set(sourceOptions.map((option) => option.value)),
-    [sourceOptions]
-  );
-  const apiKeyOptionSet = useMemo(
-    () => new Set(apiKeyOptions.map((option) => option.value)),
-    [apiKeyOptions]
-  );
-  const resultOptionSet = useMemo(
-    () => new Set(resultOptions.map((option) => option.value)),
-    [resultOptions]
-  );
+  // 服务端过滤值：source/apiKey 用后端原始 hash，model/provider/result 用原始值。
+  const effectiveModelFilter = modelFilter;
+  const effectiveProviderFilter = providerFilter;
+  const effectiveSourceFilter = sourceFilter;
+  const effectiveApiKeyFilter = apiKeyFilter;
+  const effectiveResultFilter = resultFilter;
+  const normalizedSearch = search.trim();
+  const debouncedSearch = useDebouncedValue(normalizedSearch, SEARCH_DEBOUNCE_MS);
 
-  const effectiveModelFilter = modelOptionSet.has(modelFilter) ? modelFilter : ALL_FILTER;
-  const effectiveProviderFilter = providerOptionSet.has(providerFilter)
-    ? providerFilter
-    : ALL_FILTER;
-  const effectiveSourceFilter = sourceOptionSet.has(sourceFilter) ? sourceFilter : ALL_FILTER;
-  const effectiveApiKeyFilter = apiKeyOptionSet.has(apiKeyFilter) ? apiKeyFilter : ALL_FILTER;
-  const effectiveResultFilter = resultOptionSet.has(resultFilter) ? resultFilter : ALL_FILTER;
-  const normalizedSearch = search.trim().toLowerCase();
+  // timeRange → 服务端时间窗（毫秒），下推到后端 WHERE。
+  const timeWindowMs = useMemo(() => {
+    if (timeRange === 'all') return null;
+    return USAGE_TIME_RANGE_MS[timeRange];
+  }, [timeRange]);
 
-  const filteredRows = useMemo(
-    () =>
-      timeFilteredRows.filter((row) => {
-        const modelMatched =
-          effectiveModelFilter === ALL_FILTER ||
-          row.model === effectiveModelFilter ||
-          row.modelAlias === effectiveModelFilter;
-        const providerMatched =
-          effectiveProviderFilter === ALL_FILTER || row.provider === effectiveProviderFilter;
-        const sourceMatched =
-          effectiveSourceFilter === ALL_FILTER || row.sourceKey === effectiveSourceFilter;
-        const apiKeyMatched =
-          effectiveApiKeyFilter === ALL_FILTER || row.apiKeyHash === effectiveApiKeyFilter;
-        const resultMatched =
-          effectiveResultFilter === ALL_FILTER ||
-          (effectiveResultFilter === RESULT_FAILURE_FILTER ? row.failed : !row.failed);
-        const searchMatched =
-          !normalizedSearch ||
-          [
-            row.requestId,
-            row.provider,
-            row.providerTag,
-            row.providerDisplayName,
-            row.model,
-            row.modelAlias,
-            row.endpoint,
-            row.endpointMethod,
-            row.endpointPath,
-            row.account,
-            row.authIndex,
-            row.authType,
-            row.authLabel,
-            row.authFile,
-            row.resolvedApiKey,
-            row.credentialSubtitle,
-            row.source,
-            row.sourceRaw,
-            row.apiKeyHash,
-            row.apiKeyHashShort,
-          ]
-            .join(' ')
-            .toLowerCase()
-            .includes(normalizedSearch);
+  // 构造发往后端的查询参数（过滤已下推，不再在前端过滤）。
+  const queryParams = useMemo(() => {
+    const nowMs = Date.now();
+    const params: Parameters<typeof requestEventsApi.listPaged>[0] = {
+      page,
+      page_size: pageSize,
+    };
+    if (timeWindowMs && timeWindowMs > 0) {
+      params.start = new Date(nowMs - timeWindowMs).toISOString();
+    }
+    if (effectiveModelFilter !== ALL_FILTER) params.model = effectiveModelFilter;
+    if (effectiveProviderFilter !== ALL_FILTER) params.provider = effectiveProviderFilter;
+    if (effectiveSourceFilter !== ALL_FILTER) params.source_hash = effectiveSourceFilter;
+    if (effectiveApiKeyFilter !== ALL_FILTER) params.api_key_hash = effectiveApiKeyFilter;
+    if (effectiveResultFilter === RESULT_SUCCESS_FILTER) params.result = 'success';
+    else if (effectiveResultFilter === RESULT_FAILURE_FILTER) params.result = 'failure';
+    if (debouncedSearch) params.search = debouncedSearch;
+    return params;
+  }, [
+    page,
+    pageSize,
+    timeWindowMs,
+    effectiveModelFilter,
+    effectiveProviderFilter,
+    effectiveSourceFilter,
+    effectiveApiKeyFilter,
+    effectiveResultFilter,
+    debouncedSearch,
+  ]);
 
-        return (
-          modelMatched &&
-          providerMatched &&
-          sourceMatched &&
-          apiKeyMatched &&
-          resultMatched &&
-          searchMatched
+  // 分页查询 effect：任一过滤/分页参数变化都重新拉取当页数据。
+  const refreshKey = lastRefreshedAt?.getTime() ?? 0;
+  useEffect(() => {
+    let cancelled = false;
+    setRowsLoading(true);
+    requestEventsApi
+      .listPaged(queryParams)
+      .then((res: RequestEventsPagedResponse) => {
+        if (cancelled) return;
+        setPagedItems(res.items ?? []);
+        setTotal(res.total ?? 0);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setPagedItems([]);
+        setTotal(0);
+        const message = err instanceof Error ? err.message : '';
+        showNotification(
+          `${t('request_monitoring.error_load_failed')}${message ? `: ${message}` : ''}`,
+          'error'
         );
-      }),
-    [
-      effectiveApiKeyFilter,
-      effectiveModelFilter,
-      effectiveProviderFilter,
-      effectiveResultFilter,
-      effectiveSourceFilter,
-      normalizedSearch,
-      timeFilteredRows,
-    ]
+      })
+      .finally(() => {
+        if (!cancelled) setRowsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [queryParams, refreshKey, showNotification, t]);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const handlePageSizeChange = useCallback((value: string) => {
+    const next = Number(value);
+    if (!Number.isFinite(next)) return;
+    setPageSize(next);
+    setPage(1);
+  }, []);
+
+  const goToPage = useCallback(
+    (next: number) => {
+      const clamped = Math.min(Math.max(1, next), totalPages);
+      setPage(clamped);
+    },
+    [totalPages]
   );
 
-  const filteredSuccessRate = useMemo(() => {
-    if (filteredRows.length === 0) return null;
-    const failedCount = filteredRows.filter((row) => row.failed).length;
-    return ((filteredRows.length - failedCount) / filteredRows.length) * 100;
-  }, [filteredRows]);
+  const handleFilterChange = useCallback((setter: (v: string) => void) => (value: string) => {
+    setter(value);
+    setPage(1);
+  }, []);
 
-  const renderedRows = useMemo(() => filteredRows.slice(0, MAX_RENDERED_EVENTS), [filteredRows]);
+  const handleTimeRangeChange = useCallback((value: string) => {
+    setTimeRange(value as UsageTimeRange);
+    setPage(1);
+  }, []);
 
   const hasActiveFilters =
     timeRange !== 'all' ||
@@ -846,83 +919,85 @@ export function RequestEventsDetailsCard({
     setSourceFilter(ALL_FILTER);
     setApiKeyFilter(ALL_FILTER);
     setResultFilter(ALL_FILTER);
+    setPage(1);
   };
 
-  const handleExportCsv = () => {
-    if (!filteredRows.length) return;
+  // 导出：分页后前端只持有当页数据，导出时按当前过滤条件循环拉取全部页拼成全集。
+  const [exporting, setExporting] = useState(false);
+  const buildCsvFromRows = useCallback(
+    (exportRows: RequestEventRow[]) => {
+      const csvHeader = [
+        'timestamp',
+        'request_id',
+        'provider',
+        'model_alias',
+        'model',
+        'endpoint',
+        'source',
+        'source_raw',
+        'credential',
+        'credential_api_key',
+        'auth_type',
+        'auth_index',
+        'api_key_hash',
+        'result',
+        ...(hasTimingData ? ['first_byte_latency_ms', 'generation_ms', 'tps'] : []),
+        'thinking_effort',
+        'input_tokens',
+        'output_tokens',
+        'reasoning_tokens',
+        'cached_tokens',
+        'total_tokens',
+        'cache_hit_ratio',
+      ];
 
-    const csvHeader = [
-      'timestamp',
-      'request_id',
-      'provider',
-      'model_alias',
-      'model',
-      'endpoint',
-      'source',
-      'source_raw',
-      'credential',
-      'credential_api_key',
-      'auth_type',
-      'auth_index',
-      'api_key_hash',
-      'result',
-      ...(hasTimingData ? ['first_byte_latency_ms', 'generation_ms', 'tps'] : []),
-      'thinking_effort',
-      'input_tokens',
-      'output_tokens',
-      'reasoning_tokens',
-      'cached_tokens',
-      'total_tokens',
-      'cache_hit_ratio',
-    ];
+      const csvRows = exportRows.map((row) =>
+        [
+          row.timestamp,
+          row.requestId,
+          row.provider,
+          row.modelAlias,
+          row.model,
+          row.endpoint,
+          row.source,
+          row.sourceRaw,
+          row.account,
+          row.resolvedApiKey,
+          row.authType,
+          row.authIndex,
+          row.apiKeyHash,
+          row.failed ? 'failed' : 'success',
+          ...(hasTimingData
+            ? [
+                row.firstByteLatencyMs ?? '',
+                row.generationMs ?? '',
+                row.tps !== null ? row.tps.toFixed(2) : '',
+              ]
+            : []),
+          row.thinkingLabel === '-' ? '' : row.thinkingLabel,
+          row.inputTokens,
+          row.outputTokens,
+          row.reasoningTokens,
+          row.cachedTokens,
+          row.totalTokens,
+          row.cacheHitRatio !== null ? row.cacheHitRatio.toFixed(4) : '',
+        ]
+          .map((value) => encodeCsv(value))
+          .join(',')
+      );
 
-    const csvRows = filteredRows.map((row) =>
-      [
-        row.timestamp,
-        row.requestId,
-        row.provider,
-        row.modelAlias,
-        row.model,
-        row.endpoint,
-        row.source,
-        row.sourceRaw,
-        row.account,
-        row.resolvedApiKey,
-        row.authType,
-        row.authIndex,
-        row.apiKeyHash,
-        row.failed ? 'failed' : 'success',
-        ...(hasTimingData
-          ? [
-              row.firstByteLatencyMs ?? '',
-              row.generationMs ?? '',
-              row.tps !== null ? row.tps.toFixed(2) : '',
-            ]
-          : []),
-        row.thinkingLabel === '-' ? '' : row.thinkingLabel,
-        row.inputTokens,
-        row.outputTokens,
-        row.reasoningTokens,
-        row.cachedTokens,
-        row.totalTokens,
-        row.cacheHitRatio !== null ? row.cacheHitRatio.toFixed(4) : '',
-      ]
-        .map((value) => encodeCsv(value))
-        .join(',')
-    );
+      const content = [csvHeader.join(','), ...csvRows].join('\n');
+      const fileTime = new Date().toISOString().replace(/[:.]/g, '-');
+      downloadBlob({
+        filename: `usage-events-${fileTime}.csv`,
+        blob: new Blob([content], { type: 'text/csv;charset=utf-8' }),
+      });
+    },
+    [hasTimingData]
+  );
 
-    const content = [csvHeader.join(','), ...csvRows].join('\n');
-    const fileTime = new Date().toISOString().replace(/[:.]/g, '-');
-    downloadBlob({
-      filename: `usage-events-${fileTime}.csv`,
-      blob: new Blob([content], { type: 'text/csv;charset=utf-8' }),
-    });
-  };
-
-  const handleExportJson = () => {
-    if (!filteredRows.length) return;
-
-    const payload = filteredRows.map((row) => ({
+  const buildJsonFromRows = useCallback((exportRows: RequestEventRow[]) => {
+    const payload = exportRows.map((row) => ({
       timestamp: row.timestamp,
       request_id: row.requestId,
       provider: row.provider,
@@ -958,7 +1033,70 @@ export function RequestEventsDetailsCard({
       filename: `usage-events-${fileTime}.json`,
       blob: new Blob([content], { type: 'application/json;charset=utf-8' }),
     });
-  };
+  }, [hasTimingData]);
+
+  // 按当前过滤条件（不含分页参数）循环拉取所有页，返回全集的展示行。
+  const fetchAllFilteredRows = useCallback(async (): Promise<RequestEventRow[]> => {
+    // 从 queryParams 中剥离分页参数，只保留过滤条件。
+    const filterParams = { ...queryParams };
+    delete (filterParams as { page?: number }).page;
+    delete (filterParams as { page_size?: number }).page_size;
+    const fetchSize = 100;
+    let collected: RequestEventItem[] = [];
+    let p = 1;
+    // 安全上限，避免异常情况下无限循环。
+    for (let guard = 0; guard < 1000; guard++) {
+      const res = await requestEventsApi.listPaged({ ...filterParams, page: p, page_size: fetchSize });
+      collected = collected.concat(res.items ?? []);
+      if (collected.length >= (res.total ?? 0) || (res.items ?? []).length === 0) break;
+      p += 1;
+    }
+    // 复用 buildRequestEventRow 解析全集，避免污染 pagedItems 这个 UI 状态。
+    const rowDeps: BuildRowDeps = {
+      sourceInfoMap,
+      authFileMap,
+      credentialLookup,
+      openaiProviderNames,
+      language: i18n.language,
+    };
+    return collected.map((item, index) => buildRequestEventRow(item, index, rowDeps));
+  }, [queryParams, sourceInfoMap, authFileMap, credentialLookup, openaiProviderNames, i18n]);
+
+  const handleExportCsv = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const exportRows = await fetchAllFilteredRows();
+      if (!exportRows.length) return;
+      buildCsvFromRows(exportRows);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      showNotification(
+        `${t('request_monitoring.error_load_failed')}${message ? `: ${message}` : ''}`,
+        'error'
+      );
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting, fetchAllFilteredRows, buildCsvFromRows, showNotification, t]);
+
+  const handleExportJson = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const exportRows = await fetchAllFilteredRows();
+      if (!exportRows.length) return;
+      buildJsonFromRows(exportRows);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      showNotification(
+        `${t('request_monitoring.error_load_failed')}${message ? `: ${message}` : ''}`,
+        'error'
+      );
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting, fetchAllFilteredRows, buildJsonFromRows, showNotification, t]);
 
   const handleCloseFailureModal = useCallback(() => {
     setSelectedFailureRow(null);
@@ -1012,16 +1150,22 @@ export function RequestEventsDetailsCard({
   exportCsvRef.current = handleExportCsv;
   exportJsonRef.current = handleExportJson;
 
+  // 分页后页头统计：count 用服务端过滤后总数 total，successRate 用父页注入的全局聚合。
+  const filteredSuccessRate = useMemo(() => {
+    if (!aggregate || aggregate.totalRequests <= 0) return null;
+    return (aggregate.successCount / aggregate.totalRequests) * 100;
+  }, [aggregate]);
+
   useEffect(() => {
     if (!onFilteredStatsChange) return;
     onFilteredStatsChange({
-      count: filteredRows.length,
+      count: total,
       successRate: filteredSuccessRate,
-      canExport: filteredRows.length > 0,
+      canExport: total > 0,
       exportCsv: () => exportCsvRef.current(),
       exportJson: () => exportJsonRef.current(),
     });
-  }, [filteredRows.length, filteredSuccessRate, onFilteredStatsChange]);
+  }, [total, filteredSuccessRate, onFilteredStatsChange]);
 
   return (
     <div
@@ -1037,7 +1181,7 @@ export function RequestEventsDetailsCard({
           <Select
             value={effectiveResultFilter}
             options={resultOptions}
-            onChange={setResultFilter}
+            onChange={handleFilterChange(setResultFilter)}
             className={`${styles.requestEventsSelect} ${styles.requestEventsResultSelect}`}
             ariaLabel={t('usage_stats.request_events_filter_result')}
             fullWidth={false}
@@ -1050,7 +1194,7 @@ export function RequestEventsDetailsCard({
           <Select
             value={timeRange}
             options={timeRangeOptions}
-            onChange={(value) => setTimeRange(value as UsageTimeRange)}
+            onChange={handleTimeRangeChange}
             className={styles.requestEventsSelect}
             ariaLabel={t('usage_stats.request_events_filter_time_range')}
             fullWidth={false}
@@ -1076,7 +1220,7 @@ export function RequestEventsDetailsCard({
           <Select
             value={effectiveProviderFilter}
             options={providerOptions}
-            onChange={setProviderFilter}
+            onChange={handleFilterChange(setProviderFilter)}
             className={styles.requestEventsSelect}
             ariaLabel={t('usage_stats.request_events_filter_provider')}
             fullWidth={false}
@@ -1089,7 +1233,7 @@ export function RequestEventsDetailsCard({
           <Select
             value={effectiveModelFilter}
             options={modelOptions}
-            onChange={setModelFilter}
+            onChange={handleFilterChange(setModelFilter)}
             className={styles.requestEventsSelect}
             ariaLabel={t('usage_stats.request_events_filter_model')}
             fullWidth={false}
@@ -1102,7 +1246,7 @@ export function RequestEventsDetailsCard({
           <Select
             value={effectiveSourceFilter}
             options={sourceOptions}
-            onChange={setSourceFilter}
+            onChange={handleFilterChange(setSourceFilter)}
             className={styles.requestEventsSelect}
             ariaLabel={t('usage_stats.request_events_filter_source')}
             fullWidth={false}
@@ -1115,7 +1259,7 @@ export function RequestEventsDetailsCard({
           <Select
             value={effectiveApiKeyFilter}
             options={apiKeyOptions}
-            onChange={setApiKeyFilter}
+            onChange={handleFilterChange(setApiKeyFilter)}
             className={styles.requestEventsSelect}
             ariaLabel={t('usage_stats.request_events_filter_api_key')}
             fullWidth={false}
@@ -1173,17 +1317,20 @@ export function RequestEventsDetailsCard({
         )}
       </div>
 
-      {loading && rows.length === 0 ? (
+      {rowsLoading && rows.length === 0 ? (
         <div className={styles.hint}>{t('common.loading')}</div>
-      ) : rows.length === 0 ? (
+      ) : total === 0 ? (
         <EmptyState
-          title={t('usage_stats.request_events_empty_title')}
-          description={t('usage_stats.request_events_empty_desc')}
-        />
-      ) : filteredRows.length === 0 ? (
-        <EmptyState
-          title={t('usage_stats.request_events_no_result_title')}
-          description={t('usage_stats.request_events_no_result_desc')}
+          title={
+            hasActiveFilters
+              ? t('usage_stats.request_events_no_result_title')
+              : t('usage_stats.request_events_empty_title')
+          }
+          description={
+            hasActiveFilters
+              ? t('usage_stats.request_events_no_result_desc')
+              : t('usage_stats.request_events_empty_desc')
+          }
         />
       ) : (
         <>
@@ -1208,7 +1355,7 @@ export function RequestEventsDetailsCard({
                 </tr>
               </thead>
               <tbody>
-                {renderedRows.map((row) => {
+                {rows.map((row) => {
                   const endpointHeadline = formatEndpointHeadline(
                     row.endpointMethod,
                     row.endpointPath
@@ -1466,6 +1613,49 @@ export function RequestEventsDetailsCard({
                 })}
               </tbody>
             </table>
+          </div>
+          <div className={styles.requestEventsPagination}>
+            <div className={styles.requestEventsPageSize}>
+              <Select
+                value={String(pageSize)}
+                options={REQUEST_EVENTS_PAGE_SIZE_OPTIONS.map((size) => ({
+                  value: String(size),
+                  label: `${size} / ${t('common.page', { defaultValue: '页' })}`,
+                }))}
+                onChange={handlePageSizeChange}
+                className={styles.requestEventsPageSizeSelect}
+                ariaLabel={t('usage_stats.request_events_page_size', {
+                  defaultValue: '每页条数',
+                })}
+                fullWidth={false}
+              />
+            </div>
+            <div className={styles.requestEventsPageInfo}>
+              {t('usage_stats.request_events_page_info', {
+                page,
+                totalPages,
+                total,
+                defaultValue: `第 ${page} / ${totalPages} 页 · 共 ${total} 条`,
+              })}
+            </div>
+            <div className={styles.requestEventsPageNav}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1 || rowsLoading}
+              >
+                {t('common.prev_page', { defaultValue: '上一页' })}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages || rowsLoading}
+              >
+                {t('common.next_page', { defaultValue: '下一页' })}
+              </Button>
+            </div>
           </div>
         </>
       )}

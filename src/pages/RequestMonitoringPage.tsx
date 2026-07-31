@@ -5,12 +5,12 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { RequestEventsDetailsCard, type RequestEventsFilteredStats } from '@/components/usage';
+import type { RequestEventsAggregateStats } from '@/components/usage';
 import usageStyles from '@/pages/UsagePage.module.scss';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { requestEventsApi, MAX_REQUEST_EVENTS_LIMIT } from '@/services/api/requestEvents';
+import { requestEventsApi, type RequestEventsAggregate } from '@/services/api/requestEvents';
 import { useAuthStore, useConfigStore } from '@/stores';
-import { buildUsageSnapshotFromRequestEvents } from '@/utils/requestEvents';
 import { getErrorMessage } from '@/utils/error';
 import { ServiceHealthHeatmapCard } from '@/components/monitor/ServiceHealthHeatmapCard';
 import { useThemeStore } from '@/stores';
@@ -26,7 +26,7 @@ export function RequestMonitoringPage() {
   const isDark = useThemeStore((state) => state.resolvedTheme) === 'dark';
   const usageStatisticsEnabled = config?.usageStatisticsEnabled ?? true;
 
-  const [usagePayload, setUsagePayload] = useState<unknown>(null);
+  const [aggregate, setAggregate] = useState<RequestEventsAggregate | null>(null);
   const [eventCount, setEventCount] = useState<number | null>(null);
   const [writerDropped, setWriterDropped] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -35,14 +35,14 @@ export function RequestMonitoringPage() {
   const [autoRefresh, setAutoRefresh] = useLocalStorage('requestMonitoringPage.autoRefresh', false);
   const [healthModalOpen, setHealthModalOpen] = useState(false);
   const [healthSnapshot, setHealthSnapshot] = useState<{
-    usagePayload: unknown;
+    aggregate: RequestEventsAggregate | null;
     loading: boolean;
-  }>({ usagePayload: null, loading: false });
+  }>({ aggregate: null, loading: false });
 
   const openHealthModal = useCallback(() => {
-    setHealthSnapshot({ usagePayload, loading });
+    setHealthSnapshot({ aggregate, loading });
     setHealthModalOpen(true);
-  }, [usagePayload, loading]);
+  }, [aggregate, loading]);
   const [filteredStats, setFilteredStats] = useState<RequestEventsFilteredStats>({
     count: 0,
     successRate: null,
@@ -55,10 +55,20 @@ export function RequestMonitoringPage() {
     setFilteredStats(stats);
   }, []);
 
+  // 把聚合接口结果映射成卡片所需的全局统计结构。
+  const cardAggregateStats: RequestEventsAggregateStats | null = aggregate
+    ? {
+        totalRequests: aggregate.total_requests,
+        successCount: aggregate.success_count,
+        failureCount: aggregate.failure_count,
+        totalTokens: aggregate.total_tokens,
+      }
+    : null;
+
   const loadData = useCallback(async () => {
     if (!managementKey) {
       setLoading(false);
-      setUsagePayload(null);
+      setAggregate(null);
       setError(t('request_monitoring.error_missing_login'));
       return;
     }
@@ -67,12 +77,13 @@ export function RequestMonitoringPage() {
     setError('');
 
     try {
-      const [eventsResponse, statusResponse] = await Promise.all([
-        requestEventsApi.list({ limit: MAX_REQUEST_EVENTS_LIMIT }),
+      // 只拉轻量聚合（全局计数 + 时间分布），表格数据由卡片按页自取。
+      const [aggregateResponse, statusResponse] = await Promise.all([
+        requestEventsApi.aggregate().catch(() => null),
         requestEventsApi.status().catch(() => null),
       ]);
-      setUsagePayload(buildUsageSnapshotFromRequestEvents(eventsResponse.items));
-      setEventCount(statusResponse?.event_count ?? eventsResponse.summary.total_requests);
+      setAggregate(aggregateResponse);
+      setEventCount(statusResponse?.event_count ?? aggregateResponse?.total_requests ?? null);
       setWriterDropped(statusResponse?.writer?.dropped ?? 0);
       setLastRefreshedAt(new Date());
     } catch (err) {
@@ -115,7 +126,7 @@ export function RequestMonitoringPage() {
 
   return (
     <div className={styles.container}>
-      {loading && !usagePayload && (
+      {loading && !aggregate && (
         <div className={styles.loadingOverlay} aria-busy="true">
           <div className={styles.loadingBox}>
             <LoadingSpinner size={28} />
@@ -207,14 +218,14 @@ export function RequestMonitoringPage() {
         width={820}
       >
         <ServiceHealthHeatmapCard
-          usagePayload={healthSnapshot.usagePayload}
+          aggregate={healthSnapshot.aggregate}
           loading={healthSnapshot.loading}
           isDark={isDark}
         />
       </Modal>
 
       <RequestEventsDetailsCard
-        usage={usagePayload}
+        aggregate={cardAggregateStats}
         loading={loading}
         geminiKeys={config?.geminiApiKeys || []}
         claudeConfigs={config?.claudeApiKeys || []}

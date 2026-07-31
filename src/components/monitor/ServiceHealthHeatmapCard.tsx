@@ -1,14 +1,15 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  buildServiceHealthGrid,
   formatCompactNumber,
   type ServiceHealthGrid,
 } from '@/utils/usage';
+import { buildServiceHealthGridFromAggregate } from '@/utils/requestEvents';
+import type { RequestEventsAggregate } from '@/services/api/requestEvents';
 import styles from '@/pages/RequestMonitoringPage.module.scss';
 
 interface ServiceHealthHeatmapCardProps {
-  usagePayload: unknown;
+  aggregate: RequestEventsAggregate | null;
   loading: boolean;
   isDark: boolean;
 }
@@ -29,16 +30,16 @@ const getCellTitle = (rate: number, success: number, failure: number): string =>
 };
 
 export function ServiceHealthHeatmapCard({
-  usagePayload,
+  aggregate,
   loading,
   isDark,
 }: ServiceHealthHeatmapCardProps) {
   const { t } = useTranslation();
 
   const grid = useMemo<ServiceHealthGrid | null>(() => {
-    if (!usagePayload) return null;
-    return buildServiceHealthGrid(usagePayload);
-  }, [usagePayload]);
+    if (!aggregate) return null;
+    return buildServiceHealthGridFromAggregate(aggregate);
+  }, [aggregate]);
 
   const weekDays = useMemo(() => {
     if (!grid) return [];
