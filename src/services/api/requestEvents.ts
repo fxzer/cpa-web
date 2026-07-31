@@ -7,9 +7,6 @@ import type { ModelPrice } from '@/utils/usage';
 
 const REQUEST_EVENTS_TIMEOUT_MS = 60 * 1000;
 
-/** 拉取请求事件列表时的默认上限 */
-export const MAX_REQUEST_EVENTS_LIMIT = 50_000;
-
 export interface RequestEventTokens {
   input_tokens: number;
   output_tokens: number;
