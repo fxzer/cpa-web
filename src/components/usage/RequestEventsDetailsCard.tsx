@@ -1317,9 +1317,7 @@ export function RequestEventsDetailsCard({
         )}
       </div>
 
-      {rowsLoading && rows.length === 0 ? (
-        <div className={styles.hint}>{t('common.loading')}</div>
-      ) : total === 0 ? (
+      {total === 0 ? (
         <EmptyState
           title={
             hasActiveFilters
