@@ -142,6 +142,8 @@ export interface RequestEventsDetailsCardProps {
   requestLogEnabled?: boolean;
   showAutoRefreshControls?: boolean;
   onFilteredStatsChange?: (stats: RequestEventsFilteredStats) => void;
+  /** 表格无数据可显示时的加载状态上报，供父页用页面级 loading 覆盖首屏 */
+  onTableLoadingChange?: (loading: boolean) => void;
 }
 
 const AUTO_REFRESH_OFF = 'off';
@@ -464,6 +466,7 @@ export function RequestEventsDetailsCard({
   requestLogEnabled = false,
   showAutoRefreshControls = true,
   onFilteredStatsChange,
+  onTableLoadingChange,
 }: RequestEventsDetailsCardProps) {
   const { t, i18n } = useTranslation();
   const { showNotification } = useNotificationStore();
@@ -874,6 +877,13 @@ export function RequestEventsDetailsCard({
       cancelled = true;
     };
   }, [queryParams, refreshKey, showNotification, t]);
+
+  // 首屏（当前无任何数据可显示）加载中时上报 true，让父页的页面级 loading 覆盖到表格首屏渲染完成，
+  // 避免「loading 已结束但表格还没出来」时闪现空状态。已有数据时的翻页/刷新不上报，避免频繁弹 loading。
+  const hasAnyData = total > 0 || pagedItems.length > 0;
+  useEffect(() => {
+    onTableLoadingChange?.(rowsLoading && !hasAnyData);
+  }, [rowsLoading, hasAnyData, onTableLoadingChange]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 

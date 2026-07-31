@@ -30,6 +30,7 @@ export function RequestMonitoringPage() {
   const [eventCount, setEventCount] = useState<number | null>(null);
   const [writerDropped, setWriterDropped] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState('');
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useLocalStorage('requestMonitoringPage.autoRefresh', false);
@@ -126,14 +127,15 @@ export function RequestMonitoringPage() {
 
   return (
     <div className={styles.container}>
-      {loading && !aggregate && (
+      {/* loading 覆盖到页面数据 + 表格首屏数据都就绪为止，避免首屏闪现空状态 */}
+      {(loading && !aggregate) || tableLoading ? (
         <div className={styles.loadingOverlay} aria-busy="true">
           <div className={styles.loadingBox}>
             <LoadingSpinner size={28} />
             <span>{t('common.loading')}</span>
           </div>
         </div>
-      )}
+      ) : null}
 
       <div className={styles.header}>
         <div>
@@ -238,6 +240,7 @@ export function RequestMonitoringPage() {
         onRefresh={loadData}
         lastRefreshedAt={lastRefreshedAt}
         onFilteredStatsChange={handleFilteredStatsChange}
+        onTableLoadingChange={setTableLoading}
       />
     </div>
   );
